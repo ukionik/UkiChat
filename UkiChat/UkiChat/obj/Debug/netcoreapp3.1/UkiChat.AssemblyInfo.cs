@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UkiChat")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+21e6a750b0387ff354b787f5e2a3852b634127da")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+652a4d2e984b74757482df066d27a146ef2457c5")]
 [assembly: System.Reflection.AssemblyProductAttribute("UkiChat")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UkiChat")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
