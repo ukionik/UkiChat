@@ -8,6 +8,6 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="https://www.twitch.tv" />
+        <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="http://localhost:5000" />
     </Grid>
 </Window>

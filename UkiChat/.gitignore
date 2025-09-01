@@ -67,3 +67,4 @@ publish/
 *.Publish.xml
 
 # ------------------------
+wwwroot/
