@@ -1,0 +1,69 @@
+# ----------------------------
+# JetBrains Rider
+# ----------------------------
+.idea/
+*.sln.iml
+
+# ----------------------------
+# Build output
+# ----------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+*.exe
+*.dll
+*.app
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.pdb
+
+# ----------------------------
+# VS user-specific files
+# ----------------------------
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ----------------------------
+# NuGet
+# ----------------------------
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+*.nuspec
+
+# ----------------------------
+# Cache, Logs, Temp
+# ----------------------------
+*.log
+*.tlog
+*.tmp
+*.temp
+*.cache
+*.db
+*.opendb
+
+# ----------------------------
+# Test results
+# ----------------------------
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# ----------------------------
+# Publish
+# ----------------------------
+publish/
+*.Publish.xml
+
+# ------------------------

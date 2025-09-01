@@ -17,3 +17,16 @@ D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.csproj.CoreC
 D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.dll
 D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.pdb
 D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.genruntimeconfig.cache
+D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.sourcelink.json
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\runtimes\win-x86\native\WebView2Loader.dll
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\runtimes\win-x64\native\WebView2Loader.dll
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\runtimes\win-arm64\native\WebView2Loader.dll
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\Microsoft.Web.WebView2.Core.dll
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\Microsoft.Web.WebView2.WinForms.dll
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\Microsoft.Web.WebView2.Wpf.dll
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\Microsoft.Web.WebView2.Core.xml
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\Microsoft.Web.WebView2.Wpf.xml
+D:\Projects\UkiChat\UkiChat\UkiChat\bin\Debug\netcoreapp3.1\Microsoft.Web.WebView2.WinForms.xml
+D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.csproj.AssemblyReference.cache
+D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat_Content.g.cs
+D:\Projects\UkiChat\UkiChat\UkiChat\obj\Debug\netcoreapp3.1\UkiChat.csproj.Up2Date
