@@ -24,11 +24,6 @@ public class HttpServer(int port = 5000)
                     RequestPath = "",
                     ServeUnknownFileTypes = true
                 });
-
-                /*app.Run(async context =>
-                {
-                    await context.Response.WriteAsync("Hello from WPF + Kestrel!");
-                });*/
             })
             .Build();
 

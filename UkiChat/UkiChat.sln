@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UkiChat", "UkiChat\UkiChat.csproj", "{A5BDFF6A-2674-4989-833B-F49DA58AE14F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UkiChat.Tests", "UkiChat.Tests\UkiChat.Tests.csproj", "{97C467EA-3BA2-4C38-A148-CF9FDF70DD94}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{A5BDFF6A-2674-4989-833B-F49DA58AE14F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5BDFF6A-2674-4989-833B-F49DA58AE14F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5BDFF6A-2674-4989-833B-F49DA58AE14F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97C467EA-3BA2-4C38-A148-CF9FDF70DD94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97C467EA-3BA2-4C38-A148-CF9FDF70DD94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97C467EA-3BA2-4C38-A148-CF9FDF70DD94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97C467EA-3BA2-4C38-A148-CF9FDF70DD94}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
