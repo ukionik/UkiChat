@@ -2,11 +2,7 @@
 import {resolve} from 'path'
 
 export default defineNuxtConfig({
-    // Режим сборки: static, если хочешь просто отдавать файлы
-    target: 'static',
-    // Путь, откуда будут браться файлы (вроде base URL)
-    /*router: {base: './'},*/
-    build: {sourcemap: false},
+    css: ['~/assets/css/main.css'],
     nitro: {
         // Меняем папку, куда будут складываться публичные файлы
         output: {
