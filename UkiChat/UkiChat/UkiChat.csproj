@@ -2,9 +2,8 @@
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
-        <UseWPF>true</UseWPF>
-        <LangVersion>12</LangVersion>
+        <TargetFramework>net9.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>        
     </PropertyGroup>
 
     <ItemGroup>
