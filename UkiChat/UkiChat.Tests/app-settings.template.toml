@@ -1,0 +1,4 @@
+﻿[twitch]
+username = "your_twitch_username"
+client_id = "your_twitch_client_id"
+client_secret = "your_twitch_client_secret"
