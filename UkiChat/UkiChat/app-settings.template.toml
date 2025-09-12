@@ -1,0 +1,6 @@
+﻿#https://twitchtokengenerator.com/
+[database]
+password = "your_database_password"
+[twitch.chat]
+username = "your_twitch_username"
+access_token = "your_twitch_access_token"

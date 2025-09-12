@@ -1,15 +1,18 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
 
-namespace UkiChat.Web;
+namespace UkiChat.Configuration;
 
-public class HttpServer(int port = 5000)
+public class HttpServer(int port = 5000) : IDisposable
 {
+    private IWebHost _host;
+
     public void Start()
     {
-        var host = new WebHostBuilder()
+        _host = new WebHostBuilder()
             .UseKestrel()
             .UseUrls($"http://localhost:{port}")
             .Configure(app =>
@@ -26,6 +29,11 @@ public class HttpServer(int port = 5000)
             })
             .Build();
 
-        host.RunAsync(); // запускаем в фоне, чтобы не блокировать UI
+        _host.RunAsync(); // запускаем в фоне, чтобы не блокировать UI
+    }
+
+    public void Dispose()
+    {
+        _host.Dispose();
     }
 }

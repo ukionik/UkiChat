@@ -1,8 +1,8 @@
 ﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using UkiChat.Configuration;
 using UkiChat.ViewModels;
-using UkiChat.Web;
 
 namespace UkiChat;
 
@@ -15,18 +15,7 @@ public partial class App
 
     public App()
     {
-        AppHost = Host.CreateDefaultBuilder()
-            .ConfigureServices((_, services) =>
-            {
-                services.Scan(scan => scan
-                    .FromAssemblyOf<App>()
-                    .AddClasses(classes => classes.InNamespaces("UkiChat.Services"))
-                    .AsImplementedInterfaces()
-                    .WithSingletonLifetime());
-
-                services.AddSingleton<MainViewModel>();
-                services.AddSingleton<MainWindow>();
-            }).Build();
+        AppHost = DIConfiguration.CreateAppHost();
         InitHttpServer();
     }
 
@@ -49,6 +38,7 @@ public partial class App
     protected override async void OnExit(ExitEventArgs e)
     {
         await AppHost!.StopAsync();
+        _server.Dispose();
         base.OnExit(e);
     }
 }
