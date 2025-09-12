@@ -4,11 +4,14 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net9.0-windows</TargetFramework>
         <UseWPF>true</UseWPF>        
+        <Nullable>enable</Nullable>        
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.8" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
       <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3296.44" />
+      <PackageReference Include="Scrutor" Version="6.1.0" />
       <PackageReference Include="TwitchLib.Client" Version="4.0.1-preview.102.3710fe93043591c998146cf5e2e621f366171b05" />
     </ItemGroup>
 

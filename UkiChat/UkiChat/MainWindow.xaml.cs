@@ -1,4 +1,5 @@
-﻿using UkiChat.Web;
+﻿using System;
+using UkiChat.ViewModels;
 
 namespace UkiChat
 {
@@ -7,17 +8,10 @@ namespace UkiChat
     /// </summary>
     public partial class MainWindow
     {
-        private HttpServer _server;
-
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-            InitHttpServer();
-        }
-        private void InitHttpServer()
-        {
-            _server = new HttpServer();
-            _server.Start();
+            DataContext = viewModel;
         }
     }
 }
