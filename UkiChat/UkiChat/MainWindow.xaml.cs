@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.AspNetCore.SignalR;
 using UkiChat.Configuration;
 using UkiChat.ViewModels;
 
@@ -10,7 +11,8 @@ namespace UkiChat
     public partial class MainWindow
     {
         public MainWindow(MainViewModel viewModel
-        , IDatabaseContext databaseContext)
+        , IDatabaseContext databaseContext
+        , IHttpServer server)
         {
             InitializeComponent();
             DataContext = viewModel;
@@ -18,6 +20,7 @@ namespace UkiChat
             Console.WriteLine(twitchGlobalSettings.Id);
             Console.WriteLine(twitchGlobalSettings.TwitchChatBotUsername);
             Console.WriteLine(twitchGlobalSettings.TwitchChatBotAccessToken);
+            server.HubContext.Clients.All.SendAsync("ReceiveMessage", "Hello from the server");
         }
     }
 }

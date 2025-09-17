@@ -28,5 +28,6 @@ public static class DIConfiguration
 
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
+        services.AddSingleton<IHttpServer>(new HttpServer());
     }
 }
