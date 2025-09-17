@@ -1,23 +1,37 @@
 ﻿using System;
 using LiteDB;
 using UkiChat.Data.AppSettingsData;
+using UkiChat.Entities;
 using UkiChat.Repositories;
 
 namespace UkiChat.Configuration;
 
 public class DatabaseContext : IDatabaseContext, IDisposable
 {
-    private readonly LiteDatabase _db;
-
     public DatabaseContext(string connectionString
         , AppSettingsTwitch appSettingsTwitch)
     {
-        _db = new LiteDatabase(connectionString);
-        TwitchGlobalSettingsRepository = new TwitchGlobalSettingsRepository(_db);
+        var db = new LiteDatabase(connectionString);
+        TwitchGlobalSettingsRepository = new TwitchGlobalSettingsRepository(db);
+        ProfileRepository = new ProfileRepository(db);
         InitDefaultData(appSettingsTwitch);
     }
 
+    public ITwitchGlobalSettingsRepository TwitchGlobalSettingsRepository { get; }
+    public IProfileRepository ProfileRepository { get; }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+
     private void InitDefaultData(AppSettingsTwitch appSettingsTwitch)
+    {
+        InitTwitchGlobalSettings(appSettingsTwitch);
+        InitDefaultProfile();
+    }
+
+    private void InitTwitchGlobalSettings(AppSettingsTwitch appSettingsTwitch)
     {
         var twitchGlobalSettings = TwitchGlobalSettingsRepository.Get();
         twitchGlobalSettings.TwitchChatBotUsername = appSettingsTwitch.ChatbotUsername;
@@ -25,10 +39,17 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         TwitchGlobalSettingsRepository.Save(twitchGlobalSettings);
     }
 
-    public ITwitchGlobalSettingsRepository TwitchGlobalSettingsRepository { get; }
-
-    public void Dispose()
+    private void InitDefaultProfile()
     {
-        _db.Dispose();
+        if (ProfileRepository.Count() != 0)
+            return;
+
+        var profile = new Profile
+        {
+            Name = "Default",
+            Active = true,
+            Default = true
+        };
+        ProfileRepository.Save(profile);
     }
 }
