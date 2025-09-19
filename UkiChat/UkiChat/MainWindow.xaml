@@ -4,7 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:mvvm="http://prismlibrary.com/"
         mc:Ignorable="d"
+        mvvm:ViewModelLocator.AutoWireViewModel="True"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="http://localhost:5000" />

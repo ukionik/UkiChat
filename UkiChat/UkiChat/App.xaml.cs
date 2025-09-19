@@ -1,7 +1,17 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
+using DryIoc;
+using DryIoc.Microsoft.DependencyInjection;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Prism.Container.DryIoc;
+using Prism.Events;
+using Prism.Ioc;
+using Prism.Mvvm;
 using UkiChat.Configuration;
+using UkiChat.Hubs;
+using UkiChat.Services;
 
 namespace UkiChat;
 
@@ -10,27 +20,51 @@ namespace UkiChat;
 /// </summary>
 public partial class App
 {
-    private IHttpServer? HttpServer => AppHost?.Services.GetRequiredService<IHttpServer>();
+    private readonly IWebHost _webHost = HttpServerConfiguration.CreateHost();
 
-    public App()
+    protected override async void OnInitialized()
     {
-        AppHost = DIConfiguration.CreateAppHost();
+        base.OnInitialized();
+        await _webHost.StartAsync();
     }
 
-    private static IHost? AppHost { get; set; }
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
-        await AppHost!.StartAsync();
-        await HttpServer!.StartAsync()!;
-        var mainWindow = AppHost.Services.GetRequiredService<MainWindow>();
-        mainWindow.Show();
-        base.OnStartup(e);
+        ViewModelLocationProvider.SetDefaultViewTypeToViewModelTypeResolver(viewType =>
+        {
+            var viewName = viewType.FullName;
+            var viewAssemblyName = viewType.Assembly.FullName;
+            // Меняем namespace с Views на ViewModels
+            var viewModelName = viewName!.Replace("UkiChat", "UkiChat.ViewModels") + "ViewModel";
+            return Type.GetType($"{viewModelName}, {viewAssemblyName}");
+        });
+        
+        // Prism сервисы
+        containerRegistry.RegisterSingleton<IWindowService, WindowService>();
+        // EventAggregator
+        containerRegistry.RegisterSingleton<IEventAggregator, EventAggregator>();
+        
+        // MS.DI контейнер
+        var services = DIConfiguration.CreateServices();
+        services.AddSingleton<IWebHost>(_ => _webHost);
+        var hubContext = _webHost.Services.GetRequiredService<IHubContext<AppHub>>();
+        
+        // Интеграция MS.DI с DryIoc
+        var container = containerRegistry.GetContainer();
+        // Запуск SignalR клиента
+        container.Populate(services);
+        container.RegisterInstance(hubContext);
+    }
+
+    protected override Window CreateShell()
+    {
+        return Container.Resolve<MainWindow>();
     }
 
     protected override async void OnExit(ExitEventArgs e)
     {
-        await AppHost!.StopAsync();
-        await HttpServer!.StopAsync();
+        await _webHost.StopAsync();
+        _webHost.Dispose();
         base.OnExit(e);
     }
 }

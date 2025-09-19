@@ -1,29 +1,24 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
+﻿using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using UkiChat.Hubs;
 
 namespace UkiChat.Configuration;
 
-public class HttpServer : IHttpServer, IDisposable
+public static class HttpServerConfiguration
 {
-    private readonly IWebHost _host;
-    public IHubContext<AppHub>? HubContext { get; private set; }
-
-    public HttpServer(int port = 5000)
+    public static IWebHost CreateHost(int port = 5000)
     {
         var staticFilesPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        _host = new WebHostBuilder()
+        
+        return new WebHostBuilder()
             .UseKestrel()
             .UseUrls($"http://localhost:{port}")
             .ConfigureServices(services =>
             {
-                #if DEBUG
+#if DEBUG
                 services.AddCors(options =>
                 {
                     options.AddDefaultPolicy(builder =>
@@ -36,14 +31,14 @@ public class HttpServer : IHttpServer, IDisposable
                     });
 
                 });
-                #endif
+#endif
                 services.AddSignalR();
             })
             .Configure(app =>
             {
-                #if DEBUG
+#if DEBUG
                 app.UseCors(); // обязательно до MapHub
-                #endif
+#endif
                 app.UseRouting();
                 app.UseDefaultFiles();  // Раздаём статику Vue
                 app.UseStaticFiles(new StaticFileOptions
@@ -57,18 +52,7 @@ public class HttpServer : IHttpServer, IDisposable
                 {
                     endpoints.MapHub<AppHub>("/apphub");
                 });
-                
-                // Достаём HubContext после старта
-                var sp = app.ApplicationServices;
-                HubContext = sp.GetRequiredService<IHubContext<AppHub>>();
             })
             .Build();
-    }
-    public Task StartAsync() => _host.StartAsync();
-    public Task StopAsync() => _host.StopAsync();
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 }

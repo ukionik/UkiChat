@@ -5,6 +5,7 @@
       <li v-for="(msg, i) in messages" :key="i">{{ msg }}</li>
     </ul>
     <button @click="sendMessage">Отправить сообщение</button>
+    <button @click="openSettings">Настройки</button>
   </div>
 </template>
 
@@ -32,4 +33,11 @@ async function sendMessage() {
     await connection.invoke("SendMessage", "VueClient", "Привет из Vue!");
   }
 }
+
+async function openSettings() {
+  if (connection) {
+    await connection.invoke("OpenSettingsWindow");
+  }
+}
+
 </script>

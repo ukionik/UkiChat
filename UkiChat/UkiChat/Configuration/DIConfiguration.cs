@@ -1,20 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using UkiChat.ViewModels;
 using AppSettingsReader = UkiChat.Data.AppSettingsData.AppSettingsReader;
 
 namespace UkiChat.Configuration;
 
 public static class DIConfiguration
 {
-    public static IHost CreateAppHost()
+    public static IServiceCollection CreateServices()
     {
-        return Host.CreateDefaultBuilder()
-            .ConfigureServices((_, services) => { Init(services); }).Build();
-    }
-
-    private static void Init(IServiceCollection services)
-    {
+        var services = new ServiceCollection();
+        
         services.Scan(scan => scan
             .FromAssemblyOf<App>()
             .AddClasses(classes => classes.InNamespaces("UkiChat.Services"))
@@ -26,8 +20,6 @@ public static class DIConfiguration
             new DatabaseContext($@"Filename={appSettings.Database.Filename};Password={appSettings.Database.Password}", appSettings.Twitch)
         );
 
-        services.AddSingleton<MainViewModel>();
-        services.AddSingleton<MainWindow>();
-        services.AddSingleton<IHttpServer>(new HttpServer());
+        return services;
     }
 }
