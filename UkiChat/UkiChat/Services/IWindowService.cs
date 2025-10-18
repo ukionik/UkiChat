@@ -5,5 +5,6 @@ namespace UkiChat.Services;
 public interface IWindowService
 {
     void ShowWindow<TWindow>()
-        where TWindow : Window, new();
+        where TWindow : Window
+    ;
 }

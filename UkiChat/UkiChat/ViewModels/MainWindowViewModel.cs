@@ -11,15 +11,14 @@ public class MainWindowViewModel : BindableBase
     private readonly IWindowService _windowService;
     public DelegateCommand OpenProfileWindowCommand { get; }
     public DelegateCommand OpenSettingsWindowCommand { get; }
-    private string _webSource;
+    private readonly string _webSource;
 
     public string WebSource
     {
         get => _webSource;
-        set => SetProperty(ref _webSource, value);
+        init => SetProperty(ref _webSource, value);
     }
     
-
     public MainWindowViewModel(IWindowService windowService
         , IDatabaseContext databaseContext
         )
@@ -37,7 +36,6 @@ public class MainWindowViewModel : BindableBase
         OpenProfileWindowCommand = new DelegateCommand(OpenProfileWindow);
         OpenSettingsWindowCommand = new DelegateCommand(OnOpenSettingsWindow);
         WebSource = $"http://localhost:5000?ts={DateTime.Now.Ticks}";
-        Console.WriteLine($"Web Source: {WebSource}");
     }
 
     private void OpenProfileWindow()

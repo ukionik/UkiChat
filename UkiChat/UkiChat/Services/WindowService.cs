@@ -1,29 +1,46 @@
-﻿using System.Windows;
+﻿using System;
+using System.Collections.Generic;
+using System.Windows;
+using Prism.Ioc;
+using Prism.Mvvm;
 
 namespace UkiChat.Services;
 
 public class WindowService : IWindowService
 {
-    private Window? _window;
+    private readonly Dictionary<Type, Window> _windows = new();
 
     public void ShowWindow<TWindow>()
-        where TWindow : Window, new()
+        where TWindow : Window
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            if (_window is not { IsVisible: true })
+            // Если окно уже открыто — активируем
+            if (_windows.TryGetValue(typeof(TWindow), out var existingWindow) && existingWindow is { IsVisible: true })
             {
-                _window = new TWindow();
+                existingWindow.Activate();
+                return;
+            }
 
-                // Когда окно закрывается — обнуляем ссылку
-                _window.Closed += (s, e) => _window = null;
-                _window.Show();
-            }
-            else
+            // Создаём окно через контейнер (DI)
+            var window = ContainerLocator.Container.Resolve<TWindow>();
+
+            ViewModelLocator.SetAutoWireViewModel(window, true);
+            // Привязываем ViewModel через ViewModelLocator
+            if (window.DataContext == null)
             {
-                // Если окно уже открыто, просто активируем его
-                _window.Activate();
+                var viewModel = ViewModelLocator.GetAutoWireViewModel(window);
+                if (viewModel != null)
+                {
+                    window.DataContext = viewModel;
+                }
             }
+
+            _windows[typeof(TWindow)] = window;
+
+            window.Closed += (s, e) => _windows.Remove(typeof(TWindow));
+
+            window.Show();
         });
     }
 }
