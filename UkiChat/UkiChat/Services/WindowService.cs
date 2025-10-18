@@ -4,25 +4,25 @@ namespace UkiChat.Services;
 
 public class WindowService : IWindowService
 {
-    private Window? _settingsWindow;
-    public void ShowSettingsWindow(string message)
+    private Window? _window;
+
+    public void ShowWindow<TWindow>()
+        where TWindow : Window, new()
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
-            if (_settingsWindow is not { IsVisible: true })
+            if (_window is not { IsVisible: true })
             {
-                _settingsWindow = new SettingsWindow();
-                _settingsWindow.DataContext = message;
+                _window = new TWindow();
 
                 // Когда окно закрывается — обнуляем ссылку
-                _settingsWindow.Closed += (s, e) => _settingsWindow = null;
-
-                _settingsWindow.Show();
+                _window.Closed += (s, e) => _window = null;
+                _window.Show();
             }
             else
             {
                 // Если окно уже открыто, просто активируем его
-                _settingsWindow.Activate();
+                _window.Activate();
             }
         });
     }

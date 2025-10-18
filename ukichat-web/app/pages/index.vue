@@ -1,8 +1,8 @@
 <template>
   <div>
-    <button>{{ t('Settings.Title') }}</button>
-    <button @click="changeLanguage('ru')">RU</button>
-    <button @click="changeLanguage('en')">EN</button>
+    <button>{{ t('settings.title') }}</button>
+    <button @click="changeLanguage('ru')">RU1</button>
+    <button @click="changeLanguage('en')">EN1</button>
 <!--    <Icon icon="mdi:cog" width="24" height="24"/>-->
   </div>
 </template>

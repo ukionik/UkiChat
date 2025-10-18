@@ -1,12 +1,12 @@
-﻿<mah:MetroWindow x:Class="UkiChat.SettingsWindow"
+﻿<mah:MetroWindow x:Class="UkiChat.ProfileWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
-        Title="Настройки" Height="450" Width="800" TitleCharacterCasing="Normal">
+        Title="ProfileWindow" Height="450" Width="800" TitleCharacterCasing="Normal">
     <Grid>
-        <Label>Settings Window</Label>
+        <Label>Profile Window</Label>
     </Grid>
 </mah:MetroWindow>

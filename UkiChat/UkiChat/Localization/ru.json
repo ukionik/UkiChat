@@ -1,5 +1,8 @@
 ﻿{
-  "Settings": {
-    "Title": "Настройки"
+  "profile": {
+    "title": "Профиль"
+  },
+  "settings": {
+    "title": "Настройки"
   }
 }

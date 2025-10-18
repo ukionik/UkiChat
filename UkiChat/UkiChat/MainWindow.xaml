@@ -13,13 +13,17 @@
         Title="UkiChat v0.1" Height="450" Width="800" TitleCharacterCasing="Normal">
     <mah:MetroWindow.RightWindowCommands>
         <mah:WindowCommands ShowSeparators="False">
-            <Button ToolTip="{extensions:Loc Key=Settings.Title }"
-                    Command="{Binding DataContext.OpenSettingsCommand, RelativeSource={RelativeSource AncestorType=mah:MetroWindow}}">
+            <Button ToolTip="{extensions:Loc Key=profile.title }"
+                    Command="{Binding DataContext.OpenProfileWindowCommand, RelativeSource={RelativeSource AncestorType=mah:MetroWindow}}">
+                <iconPacks:PackIconMaterial Kind="Account" Width="20" Height="20"/>
+            </Button>
+            <Button ToolTip="{extensions:Loc Key=settings.title }"
+                    Command="{Binding DataContext.OpenSettingsWindowCommand, RelativeSource={RelativeSource AncestorType=mah:MetroWindow}}">
                 <iconPacks:PackIconMaterial Kind="Cog" Width="20" Height="20"/>
             </Button>
         </mah:WindowCommands>
     </mah:MetroWindow.RightWindowCommands>
     <Grid>
-        <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="http://localhost:5000" />
+        <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
 </mah:MetroWindow>

@@ -1,6 +1,9 @@
-﻿namespace UkiChat.Services;
+﻿using System.Windows;
+
+namespace UkiChat.Services;
 
 public interface IWindowService
 {
-    void ShowSettingsWindow(string message);
+    void ShowWindow<TWindow>()
+        where TWindow : Window, new();
 }

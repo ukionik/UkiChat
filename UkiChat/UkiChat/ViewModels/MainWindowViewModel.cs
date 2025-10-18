@@ -1,27 +1,30 @@
 ﻿using System;
-using Microsoft.AspNetCore.SignalR;
 using Prism.Commands;
-using Prism.Events;
+using Prism.Mvvm;
 using UkiChat.Configuration;
-using UkiChat.Events;
-using UkiChat.Hubs;
 using UkiChat.Services;
 
 namespace UkiChat.ViewModels;
 
-public class MainWindowViewModel
+public class MainWindowViewModel : BindableBase
 {
     private readonly IWindowService _windowService;
-    private readonly ILocalizationService _localizationService;
-    public DelegateCommand OpenSettingsCommand { get; }
+    public DelegateCommand OpenProfileWindowCommand { get; }
+    public DelegateCommand OpenSettingsWindowCommand { get; }
+    private string _webSource;
+
+    public string WebSource
+    {
+        get => _webSource;
+        set => SetProperty(ref _webSource, value);
+    }
+    
 
     public MainWindowViewModel(IWindowService windowService
         , IDatabaseContext databaseContext
-        , ILocalizationService localizationService
         )
     {
         _windowService = windowService;
-        _localizationService = localizationService;
         var twitchGlobalSettings = databaseContext.TwitchGlobalSettingsRepository.Get();
         var defaultProfile = databaseContext.ProfileRepository.GetDefaultProfile();
         Console.WriteLine(twitchGlobalSettings.Id);
@@ -31,12 +34,19 @@ public class MainWindowViewModel
         Console.WriteLine(twitchGlobalSettings.TwitchChatBotAccessToken);
         Console.WriteLine(defaultProfile.Id);
         Console.WriteLine(defaultProfile.Name);
-        OpenSettingsCommand = new DelegateCommand(OnOpenSettingsWindow);
-        //hubContext.Clients.All.SendAsync("ReceiveMessage", "Hello from the server");
+        OpenProfileWindowCommand = new DelegateCommand(OpenProfileWindow);
+        OpenSettingsWindowCommand = new DelegateCommand(OnOpenSettingsWindow);
+        WebSource = $"http://localhost:5000?ts={DateTime.Now.Ticks}";
+        Console.WriteLine($"Web Source: {WebSource}");
+    }
+
+    private void OpenProfileWindow()
+    {
+        _windowService.ShowWindow<ProfileWindow>();        
     }
 
     private void OnOpenSettingsWindow()
     {
-        _windowService.ShowSettingsWindow("Test");
+        _windowService.ShowWindow<SettingsWindow>();
     }
 }
