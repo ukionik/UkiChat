@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.SignalR;
+using Prism.Commands;
 using Prism.Events;
 using UkiChat.Configuration;
 using UkiChat.Events;
@@ -11,6 +12,7 @@ namespace UkiChat.ViewModels;
 public class MainWindowViewModel
 {
     private readonly IWindowService _windowService;
+    public DelegateCommand OpenSettingsCommand { get; }
 
     public MainWindowViewModel(IEventAggregator eventAggregator
         , IWindowService windowService
@@ -18,7 +20,7 @@ public class MainWindowViewModel
         )
     {
         _windowService = windowService;
-        eventAggregator.GetEvent<OpenSettingsWindowEvent>().Subscribe(OnOpenSettingsWindow);
+        //eventAggregator.GetEvent<OpenSettingsWindowEvent>().Subscribe(OnOpenSettingsWindow);
         var twitchGlobalSettings = databaseContext.TwitchGlobalSettingsRepository.Get();
         var defaultProfile = databaseContext.ProfileRepository.GetDefaultProfile();
         Console.WriteLine(twitchGlobalSettings.Id);
@@ -28,11 +30,12 @@ public class MainWindowViewModel
         Console.WriteLine(twitchGlobalSettings.TwitchChatBotAccessToken);
         Console.WriteLine(defaultProfile.Id);
         Console.WriteLine(defaultProfile.Name);
+        OpenSettingsCommand = new DelegateCommand(OnOpenSettingsWindow);
         //hubContext.Clients.All.SendAsync("ReceiveMessage", "Hello from the server");
     }
 
-    private void OnOpenSettingsWindow(string message)
+    private void OnOpenSettingsWindow()
     {
-        _windowService.ShowSettingsWindow(message);
+        _windowService.ShowSettingsWindow("Test");
     }
 }

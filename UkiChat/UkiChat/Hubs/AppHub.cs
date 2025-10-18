@@ -9,7 +9,7 @@ namespace UkiChat.Hubs;
 
 public class AppHub : Hub
 {
-    private readonly IEventAggregator _eventAggregator = Prism.Ioc.ContainerLocator.Container.Resolve<IEventAggregator>();
+    private readonly IEventAggregator _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
 
     public async Task SendMessage(string user, string message)
     {

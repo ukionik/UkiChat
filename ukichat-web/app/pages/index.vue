@@ -6,10 +6,12 @@
     </ul>
     <button @click="sendMessage">Отправить сообщение</button>
     <button @click="openSettings">Настройки</button>
+    <Icon icon="mdi:cog" width="24" height="24" />
   </div>
 </template>
 
 <script setup>
+import { Icon } from '@iconify/vue';
 import { HubConnectionBuilder } from "@microsoft/signalr";
 import { ref, onMounted } from "vue";
 
