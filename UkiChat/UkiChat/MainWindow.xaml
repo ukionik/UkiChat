@@ -24,7 +24,7 @@
             </Button>
         </mah:WindowCommands>
     </mah:MetroWindow.RightWindowCommands>
-    <Grid>
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" >
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
 </mah:MetroWindow>

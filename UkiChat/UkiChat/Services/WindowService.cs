@@ -25,7 +25,6 @@ public class WindowService : IWindowService
             // Создаём окно через контейнер (DI)
             var window = ContainerLocator.Container.Resolve<TWindow>();
 
-            ViewModelLocator.SetAutoWireViewModel(window, true);
             // Привязываем ViewModel через ViewModelLocator
             if (window.DataContext == null)
             {

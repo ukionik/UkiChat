@@ -6,7 +6,9 @@
         xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
         xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:extensions="clr-namespace:UkiChat.Extensions"
+        xmlns:mvvm="http://prismlibrary.com/"
         mc:Ignorable="d"
+        mvvm:ViewModelLocator.AutoWireViewModel="True"
         Title="{extensions:Loc Key=settings.title}" Height="450" Width="800" TitleCharacterCasing="Normal" Background="Black">
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
