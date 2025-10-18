@@ -28,6 +28,12 @@
        <None Update="wwwroot\**\*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+       <None Update="Localization\en.json">
+         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+       </None>
+       <None Update="Localization\ru.json">
+         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+       </None>
     </ItemGroup>
 
     <ItemGroup>

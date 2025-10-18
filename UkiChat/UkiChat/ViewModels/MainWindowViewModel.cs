@@ -12,15 +12,16 @@ namespace UkiChat.ViewModels;
 public class MainWindowViewModel
 {
     private readonly IWindowService _windowService;
+    private readonly ILocalizationService _localizationService;
     public DelegateCommand OpenSettingsCommand { get; }
 
-    public MainWindowViewModel(IEventAggregator eventAggregator
-        , IWindowService windowService
+    public MainWindowViewModel(IWindowService windowService
         , IDatabaseContext databaseContext
+        , ILocalizationService localizationService
         )
     {
         _windowService = windowService;
-        //eventAggregator.GetEvent<OpenSettingsWindowEvent>().Subscribe(OnOpenSettingsWindow);
+        _localizationService = localizationService;
         var twitchGlobalSettings = databaseContext.TwitchGlobalSettingsRepository.Get();
         var defaultProfile = databaseContext.ProfileRepository.GetDefaultProfile();
         Console.WriteLine(twitchGlobalSettings.Id);

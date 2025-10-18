@@ -6,14 +6,16 @@
     </ul>
     <button @click="sendMessage">Отправить сообщение</button>
     <button @click="openSettings">Настройки</button>
-    <Icon icon="mdi:cog" width="24" height="24" />
+    <button @click="changeLanguage('ru')">RU</button>
+    <button @click="changeLanguage('en')">EN</button>
+    <Icon icon="mdi:cog" width="24" height="24"/>
   </div>
 </template>
 
 <script setup>
-import { Icon } from '@iconify/vue';
-import { HubConnectionBuilder } from "@microsoft/signalr";
-import { ref, onMounted } from "vue";
+import {Icon} from '@iconify/vue';
+import {HubConnectionBuilder} from "@microsoft/signalr";
+import {ref, onMounted} from "vue";
 
 const messages = ref([]);
 let connection;
@@ -39,6 +41,12 @@ async function sendMessage() {
 async function openSettings() {
   if (connection) {
     await connection.invoke("OpenSettingsWindow");
+  }
+}
+
+async function changeLanguage(lang) {
+  if (connection) {
+    await connection.invoke("ChangeLanguage", lang);
   }
 }
 

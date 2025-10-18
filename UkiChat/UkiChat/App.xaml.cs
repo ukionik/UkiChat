@@ -54,6 +54,9 @@ public partial class App
         // Запуск SignalR клиента
         container.Populate(services);
         container.RegisterInstance(hubContext);
+        
+        var localizationService = container.Resolve<ILocalizationService>();
+        localizationService.SetCulture("en");
     }
 
     protected override Window CreateShell()
