@@ -7,11 +7,17 @@
         xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:extensions="clr-namespace:UkiChat.Extensions"
         xmlns:mvvm="http://prismlibrary.com/"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
         mvvm:ViewModelLocator.AutoWireViewModel="True"
         Title="{extensions:Loc Key=profile.title}" Height="450" Width="800" TitleCharacterCasing="Normal"
         Background="Black">
-    <Grid>
+    <Grid  Visibility="{Binding Visibility}" >
+        <i:Interaction.Triggers>
+            <i:EventTrigger EventName="Loaded">
+                <i:InvokeCommandAction Command="{Binding LoadedCommand}" />
+            </i:EventTrigger>
+        </i:Interaction.Triggers>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
 </mah:MetroWindow>
