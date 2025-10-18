@@ -16,6 +16,5 @@ public class ProfileWindowViewModel : BindableBase
     public ProfileWindowViewModel()
     {
         WebSource = $"http://localhost:5000/profile?ts={DateTime.Now.Ticks}";
-        Console.WriteLine($"Web Source: {WebSource}");
     }
 }

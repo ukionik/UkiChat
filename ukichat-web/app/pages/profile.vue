@@ -12,7 +12,7 @@ onMounted(() => {
 </script>
 
 <template>
-
+<h1>{{ t('profile.title') }}</h1>
 </template>
 
 <style scoped>

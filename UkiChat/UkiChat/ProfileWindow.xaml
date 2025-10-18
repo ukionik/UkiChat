@@ -5,8 +5,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
         xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:extensions="clr-namespace:UkiChat.Extensions"
         mc:Ignorable="d"
-        Title="ProfileWindow" Height="450" Width="800" TitleCharacterCasing="Normal">
+        Title="{extensions:Loc Key=profile.title}" Height="450" Width="800" TitleCharacterCasing="Normal"
+        Background="Black">
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
