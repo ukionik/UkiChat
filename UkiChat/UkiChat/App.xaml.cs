@@ -56,7 +56,7 @@ public partial class App
         container.RegisterInstance(hubContext);
         
         var localizationService = container.Resolve<ILocalizationService>();
-        localizationService.SetCulture("en");
+        localizationService.SetCulture("ru");
     }
 
     protected override Window CreateShell()

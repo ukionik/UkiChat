@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Prism.Events;
 using Prism.Ioc;
@@ -23,8 +25,19 @@ public class AppHub : Hub
         _eventAggregator.GetEvent<OpenSettingsWindowEvent>().Publish("Settings");
     }
 
-    public void ChangeLanguage(string culture)
+    public async Task ChangeLanguage(string culture)
     {
         _localizationService.SetCulture(culture);
+        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{culture}.json");
+        var json = await File.ReadAllTextAsync(filePath);
+        await Clients.All.SendAsync("LanguageChanged", culture, json);
+    }
+
+    public async Task GetCurrentLanguage()
+    {
+        var culture = "ru";
+        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{culture}.json");
+        var json = await File.ReadAllTextAsync(filePath);
+        await Clients.Caller.SendAsync("LanguageChanged", culture, json);
     }
 }

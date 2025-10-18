@@ -8,11 +8,9 @@ namespace UkiChat.Services;
 public class LocalizationService : ILocalizationService
 {
     private Dictionary<string, JsonElement>? _currentStrings = new();
-    private string _currentCulture = "en";
 
     public void SetCulture(string culture)
     {
-        _currentCulture = culture;
         var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{culture}.json");
         var json = File.ReadAllText(filePath);
         _currentStrings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);

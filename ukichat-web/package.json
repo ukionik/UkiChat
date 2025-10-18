@@ -10,11 +10,13 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@iconify/vue": "^5.0.0",
     "@microsoft/signalr": "^9.0.6",
     "@nuxt/eslint": "1.9.0",
     "@nuxt/ui": "3.3.3",
+    "@nuxtjs/i18n": "^10.1.1",
     "eslint": "^9.34.0",
-    "nuxt": "^4.0.3",
+    "nuxt": "4.1.0",
     "typescript": "^5.9.2",
     "vue": "^3.5.20",
     "vue-router": "^4.5.1"

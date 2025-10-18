@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Markup;
-using System.Windows.Threading;
 using Prism.Ioc;
 using UkiChat.Services;
 
@@ -16,7 +15,7 @@ public class LocExtension : MarkupExtension
     public LocExtension()
     {
         _localizationService = ContainerLocator.Container.Resolve<ILocalizationService>();
-        _localizationService.LanguageChanged += (_, __) => UpdateTarget();
+        _localizationService.LanguageChanged += (_, _) => UpdateTarget();
     }
 
     private void UpdateTarget()
