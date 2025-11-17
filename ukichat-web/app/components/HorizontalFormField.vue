@@ -2,19 +2,18 @@
 import { defineProps } from 'vue'
 
 interface HorizontalFormFieldProps {
-  label?: string
+  label: string
   name: string
-  [key: string]: any
 }
 
 const props = defineProps<HorizontalFormFieldProps>()
 </script>
 
 <template>
-  <UFormField :name="props.name" v-slot="{ field }">
+  <UFormField :name="props.name">
     <div class="flex items-center gap-4">
       <label class="w-32 text-sm font-medium">{{ props.label }}</label>
-      <slot v-bind="field" />
+      <slot/>
     </div>
   </UFormField>
 </template>

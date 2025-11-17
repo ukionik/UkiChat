@@ -34,7 +34,7 @@ onMounted(() => {
 <template>
   <UForm :schema="schema" :state="state" class="space-y-4">
     <h2 class="text-xl font-semibold mb-4">Twitch</h2>
-    <HorizontalFormField label="Канал" name="channel">
+    <HorizontalFormField label="Канал" name="twitch-channel">
       <UInput v-model="state.settings.twitch.channel" />
     </HorizontalFormField>
   </UForm>
