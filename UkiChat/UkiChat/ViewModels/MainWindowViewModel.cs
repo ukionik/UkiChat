@@ -19,13 +19,12 @@ public class MainWindowViewModel : BindableBase
     )
     {
         _windowService = windowService;
-        var twitchGlobalSettings = databaseContext.TwitchGlobalSettingsRepository.Get();
+        var twitchSettings = databaseContext.TwitchSettingsRepository.Get();
         var defaultProfile = databaseContext.ProfileRepository.GetDefaultProfile();
-        Console.WriteLine(twitchGlobalSettings.Id);
-        Console.WriteLine(twitchGlobalSettings.TwitchChatBotUsername);
-        Console.WriteLine(twitchGlobalSettings.TwitchChatBotAccessToken);
-        Console.WriteLine(twitchGlobalSettings.TwitchChatBotAccessToken);
-        Console.WriteLine(twitchGlobalSettings.TwitchChatBotAccessToken);
+        Console.WriteLine(twitchSettings.Id);
+        Console.WriteLine(twitchSettings.ChatbotUsername);
+        Console.WriteLine(twitchSettings.ChatbotAccessToken);
+        Console.WriteLine(twitchSettings.Channel);
         Console.WriteLine(defaultProfile.Id);
         Console.WriteLine(defaultProfile.Name);
         OpenProfileWindowCommand = new DelegateCommand(OpenProfileWindow);

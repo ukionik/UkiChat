@@ -9,7 +9,7 @@ namespace UkiChat.ViewModels;
 public class ProfileWindowViewModel : BindableBase
 {
     private readonly string _webSource;
-    private Visibility _visibility = Visibility.Collapsed;
+    private Visibility _visibility = Visibility.Visible;
 
     public ProfileWindowViewModel()
     {

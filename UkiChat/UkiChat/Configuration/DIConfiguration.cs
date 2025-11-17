@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using AppSettingsReader = UkiChat.Data.AppSettingsData.AppSettingsReader;
+using UkiChat.Data.DefaultAppSettingsData;
+using UkiChat.Entities;
 
 namespace UkiChat.Configuration;
 
@@ -15,9 +16,12 @@ public static class DIConfiguration
             .AsImplementedInterfaces()
             .WithSingletonLifetime());
 
-        var appSettings = AppSettingsReader.Read();
+        services.AddSingleton(DefaultAppSettingsReader.Read());
+
+        var appSettings = services.BuildServiceProvider().GetRequiredService<DefaultAppSettings>();
+        
         services.AddSingleton<IDatabaseContext>(_ =>
-            new DatabaseContext($@"Filename={appSettings.Database.Filename};Password={appSettings.Database.Password}", appSettings.Twitch)
+            new DatabaseContext($@"Filename={appSettings.Database.Filename};Password={appSettings.Database.Password}", appSettings)
         );
 
         return services;

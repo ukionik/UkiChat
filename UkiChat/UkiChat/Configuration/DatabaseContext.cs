@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Globalization;
 using LiteDB;
-using UkiChat.Data.AppSettingsData;
+using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
 using UkiChat.Repositories;
 
@@ -9,37 +10,30 @@ namespace UkiChat.Configuration;
 public class DatabaseContext : IDatabaseContext, IDisposable
 {
     public DatabaseContext(string connectionString
-        , AppSettingsTwitch appSettingsTwitch)
+        , DefaultAppSettings defaultAppSettings)
     {
         var db = new LiteDatabase(connectionString);
-        TwitchGlobalSettingsRepository = new TwitchGlobalSettingsRepository(db);
         ProfileRepository = new ProfileRepository(db);
-        InitDefaultData(appSettingsTwitch);
+        AppSettingsRepository = new AppSettingsRepository(db);
+        TwitchSettingsRepository = new TwitchSettingsRepository(db);
+        InitDefaultData(defaultAppSettings);
     }
 
-    public ITwitchGlobalSettingsRepository TwitchGlobalSettingsRepository { get; }
+    public ITwitchSettingsRepository TwitchSettingsRepository { get; }
     public IProfileRepository ProfileRepository { get; }
+    public IAppSettingsRepository AppSettingsRepository { get; }
 
     public void Dispose()
     {
         GC.SuppressFinalize(this);
     }
 
-    private void InitDefaultData(AppSettingsTwitch appSettingsTwitch)
+    private void InitDefaultData(DefaultAppSettings defaultAppSettings)
     {
-        InitTwitchGlobalSettings(appSettingsTwitch);
-        InitDefaultProfile();
+        InitDefaultProfile(defaultAppSettings);
     }
 
-    private void InitTwitchGlobalSettings(AppSettingsTwitch appSettingsTwitch)
-    {
-        var twitchGlobalSettings = TwitchGlobalSettingsRepository.Get();
-        twitchGlobalSettings.TwitchChatBotUsername = appSettingsTwitch.ChatbotUsername;
-        twitchGlobalSettings.TwitchChatBotAccessToken = appSettingsTwitch.ChatbotAccessToken;
-        TwitchGlobalSettingsRepository.Save(twitchGlobalSettings);
-    }
-
-    private void InitDefaultProfile()
+    private void InitDefaultProfile(DefaultAppSettings defaultAppSettings)
     {
         if (ProfileRepository.Count() != 0)
             return;
@@ -51,5 +45,23 @@ public class DatabaseContext : IDatabaseContext, IDisposable
             Default = true
         };
         ProfileRepository.Save(profile);
+        InitDefaultSettings(profile, defaultAppSettings);
+    }
+
+    private void InitDefaultSettings(Profile profile, DefaultAppSettings defaultAppSettings)
+    {
+        var appSettings = new AppSettings
+        {
+            Language = CultureInfo.CurrentCulture.TwoLetterISOLanguageName,
+            Profile = profile
+        };
+        AppSettingsRepository.Save(appSettings);
+        var twitchSettings = new TwitchSettings
+        {
+            ChatbotUsername = defaultAppSettings.Twitch.ChatbotUsername,
+            ChatbotAccessToken = defaultAppSettings.Twitch.ChatbotAccessToken,
+            AppSettings = appSettings
+        };
+        TwitchSettingsRepository.Save(twitchSettings);
     }
 }

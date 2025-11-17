@@ -1,6 +1,6 @@
-﻿namespace UkiChat.Data.AppSettingsData;
+﻿namespace UkiChat.Data.DefaultAppSettingsData;
 
-public record AppSettingsTwitch
+public record DefaultAppSettingsTwitch
 {
     public string ChatbotUsername { get; init; }
     public string ChatbotAccessToken { get; init; }

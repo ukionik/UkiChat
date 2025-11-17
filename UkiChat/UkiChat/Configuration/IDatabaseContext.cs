@@ -4,6 +4,6 @@ namespace UkiChat.Configuration;
 
 public interface IDatabaseContext
 {
-    ITwitchGlobalSettingsRepository TwitchGlobalSettingsRepository { get; }
+    ITwitchSettingsRepository TwitchSettingsRepository { get; }
     IProfileRepository ProfileRepository { get; }
 }
