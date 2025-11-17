@@ -8,7 +8,6 @@
                  xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
                  xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                  xmlns:extensions="clr-namespace:UkiChat.Extensions"
-                 xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
                  mc:Ignorable="d"
                  mvvm:ViewModelLocator.AutoWireViewModel="True"
                  Title="UkiChat v0.1" Height="450" Width="800" TitleCharacterCasing="Normal"
@@ -25,12 +24,7 @@
             </Button>
         </mah:WindowCommands>
     </mah:MetroWindow.RightWindowCommands>
-    <Grid Visibility="{Binding Visibility}" >
-        <i:Interaction.Triggers>
-            <i:EventTrigger EventName="Loaded">
-                <i:InvokeCommandAction Command="{Binding LoadedCommand}" />
-            </i:EventTrigger>
-        </i:Interaction.Triggers>
+    <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
 </mah:MetroWindow>
