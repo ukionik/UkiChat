@@ -1,10 +1,10 @@
-﻿using UkiChat.Entities;
-using UkiChat.Model.Settings;
+﻿using UkiChat.Model.Settings;
 
 namespace UkiChat.Services;
 
 public interface IDatabaseService
 {
-    void UpdateTwitchSettings(TwitchSettingsData data);
     AppSettingsInfoData GetActiveAppSettingsInfo();
+    AppSettingsData GetActiveAppSettingsData();
+    void UpdateTwitchSettings(TwitchSettingsData data);
 }

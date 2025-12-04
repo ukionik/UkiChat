@@ -1,4 +1,3 @@
 ﻿namespace UkiChat.Model.Settings;
 
-public record TwitchSettingsData(string channel
-    );
+public record TwitchSettingsData(string Channel);

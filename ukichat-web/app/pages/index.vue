@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useLocalization } from '~/composables/useLocalization'
 
 const { t } = useI18n()
 

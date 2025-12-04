@@ -7,16 +7,12 @@ public class TwitchSettingsRepository(LiteDatabase db) : ITwitchSettingsReposito
 {
     private readonly ILiteCollection<TwitchSettings> _twitchSettings = db.GetCollection<TwitchSettings>();
 
-    public TwitchSettings Get()
+    public TwitchSettings GetActiveSettings()
     {
-        var settings = _twitchSettings.FindById(1);
-        if (settings == null)
-        {
-            settings = new TwitchSettings();
-            _twitchSettings.Upsert(settings);
-        }
-
-        return settings;
+        return _twitchSettings
+            .Include(x => x.AppSettings)
+            .Include(x => x.AppSettings.Profile)
+            .FindOne(x => x.AppSettings.Profile.Active);
     }
 
     public void Save(TwitchSettings twitchGlobalSettings)

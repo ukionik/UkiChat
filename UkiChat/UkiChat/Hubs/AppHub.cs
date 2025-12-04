@@ -29,19 +29,23 @@ public class AppHub : Hub
         await Clients.All.SendAsync("LanguageChanged", culture, json);
     }*/
     
-    public async Task UpdateTwitchSettings(TwitchSettingsData settings)
+    public async Task<string> GetLanguage(string language)
     {
-        _databaseService.UpdateTwitchSettings(settings);
+        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{language}.json");
+        return await File.ReadAllTextAsync(filePath);        
     }
     
     public async Task<AppSettingsInfoData> GetActiveAppSettingsInfo()
     {   
         return _databaseService.GetActiveAppSettingsInfo();
     }
-
-    public async Task<string> GetLanguage(string language)
+    
+    public async Task<AppSettingsData> GetActiveAppSettingsData()
+    {   
+        return _databaseService.GetActiveAppSettingsData();
+    }
+    public async Task UpdateTwitchSettings(TwitchSettingsData settings)
     {
-        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{language}.json");
-        return await File.ReadAllTextAsync(filePath);        
+        _databaseService.UpdateTwitchSettings(settings);
     }
 }

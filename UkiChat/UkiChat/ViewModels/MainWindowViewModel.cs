@@ -16,7 +16,7 @@ public class MainWindowViewModel : BindableBase
     )
     {
         _windowService = windowService;
-        var twitchSettings = databaseContext.TwitchSettingsRepository.Get();
+        var twitchSettings = databaseContext.TwitchSettingsRepository.GetActiveSettings();
         var defaultProfile = databaseContext.ProfileRepository.GetDefaultProfile();
         Console.WriteLine(twitchSettings.Id);
         Console.WriteLine(twitchSettings.ChatbotUsername);

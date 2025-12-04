@@ -5,7 +5,7 @@ import HorizontalFormField from "~/components/HorizontalFormField.vue";
 import {useSignalR} from "~/composables/useSignalR";
 
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
-const { loadLanguage } = useLocalization()
+const { getLanguage } = useLocalization()
 const { t } = useI18n()
 
 const appSettingsInfo = ref({
@@ -33,6 +33,10 @@ async function getActiveAppSettingsInfo() {
   return await invokeGet("GetActiveAppSettingsInfo")
 }
 
+async function getActiveAppSettingsData(){
+  return await invokeGet("GetActiveAppSettingsData")
+}
+
 async function updateSettings() {
   await invokeUpdate("UpdateTwitchSettings", state.settings.twitch)
 }
@@ -41,7 +45,8 @@ async function updateSettings() {
 onMounted(async () => {
   let connection = await startSignalR()
   appSettingsInfo.value = await getActiveAppSettingsInfo()
-  await loadLanguage(appSettingsInfo.value.language, connection)
+  await getLanguage(appSettingsInfo.value.language, connection)
+  state.settings = await getActiveAppSettingsData()
 })
 </script>
 
