@@ -3,8 +3,9 @@ import { onMounted } from 'vue'
 import { useLocalization } from '~/composables/useLocalization'
 import * as v from 'valibot'
 import HorizontalFormField from "~/components/HorizontalFormField.vue";
+import {useSignalR} from "~/composables/useSignalR";
 
-const { startSignalR, changeLanguage } = useLocalization()
+const {startSignalR, invokeUpdate} = useSignalR()
 const { t } = useI18n()
 
 const schema = v.object({
@@ -15,8 +16,6 @@ const schema = v.object({
   })
 })
 
-type Schema = v.InferOutput<typeof schema>
-
 const state = reactive({
   settings:{
     twitch: {
@@ -24,6 +23,11 @@ const state = reactive({
     }
   }
 })
+
+async function updateSettings() {
+  console.log(state.settings.twitch)
+  await invokeUpdate("UpdateTwitchSettings", state.settings.twitch)
+}
 
 // Запуск SignalR при монтировании компонента
 onMounted(() => {
@@ -35,7 +39,7 @@ onMounted(() => {
   <UForm :schema="schema" :state="state" class="space-y-4">
     <h2 class="text-xl font-semibold mb-4">Twitch</h2>
     <HorizontalFormField label="Канал" name="twitch-channel">
-      <UInput v-model="state.settings.twitch.channel" />
+      <UInput v-model="state.settings.twitch.channel" @blur="updateSettings" />
     </HorizontalFormField>
   </UForm>
 </template>

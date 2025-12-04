@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Prism.Events;
 using Prism.Ioc;
 using UkiChat.Events;
+using UkiChat.Model.Settings;
 using UkiChat.Services;
 
 namespace UkiChat.Hubs;
@@ -13,6 +14,7 @@ public class AppHub : Hub
 {
     private readonly IEventAggregator _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
     private readonly ILocalizationService _localizationService = ContainerLocator.Container.Resolve<ILocalizationService>();
+    private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
 
     public async Task SendMessage(string user, string message)
     {
@@ -39,5 +41,10 @@ public class AppHub : Hub
         var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{culture}.json");
         var json = await File.ReadAllTextAsync(filePath);
         await Clients.Caller.SendAsync("LanguageChanged", culture, json);
+    }
+
+    public async Task UpdateTwitchSettings(TwitchSettingsData settings)
+    {
+        _databaseService.UpdateTwitchSettings(settings);
     }
 }
