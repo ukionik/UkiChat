@@ -47,4 +47,9 @@ public class AppHub : Hub
     {
         _databaseService.UpdateTwitchSettings(settings);
     }
+    
+    public async Task<AppSettingsInfoData> GetActiveAppSettingsInfo()
+    {   
+        return _databaseService.GetActiveAppSettingsInfo();
+    }
 }

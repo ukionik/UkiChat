@@ -5,5 +5,5 @@ namespace UkiChat.Repositories;
 
 public interface IAppSettingsRepository : IBaseCrudRepository<AppSettings, long>
 {
-    
+    AppSettings GetActiveAppSettings();
 }

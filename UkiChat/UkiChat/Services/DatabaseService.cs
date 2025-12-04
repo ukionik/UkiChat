@@ -17,4 +17,10 @@ public class DatabaseService : IDatabaseService
     {
         Console.WriteLine("Updating twitch settings data");
     }
+
+    public AppSettingsInfoData GetActiveAppSettingsInfo()
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        return new AppSettingsInfoData(appSettings.Profile.Name, appSettings.Language);
+    }
 }

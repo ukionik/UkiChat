@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useLocalization } from '~/composables/useLocalization'
 import * as v from 'valibot'
 import HorizontalFormField from "~/components/HorizontalFormField.vue";
 import {useSignalR} from "~/composables/useSignalR";
 
-const {startSignalR, invokeUpdate} = useSignalR()
+const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const { t } = useI18n()
+
+const appSettingsInfo = ref({
+  profileName: null,
+  language: null
+})
 
 const schema = v.object({
   settings: v.object({
@@ -24,14 +28,19 @@ const state = reactive({
   }
 })
 
+async function getActiveAppSettingsInfo() {
+  return await invokeGet("GetActiveAppSettingsInfo")
+}
+
 async function updateSettings() {
-  console.log(state.settings.twitch)
   await invokeUpdate("UpdateTwitchSettings", state.settings.twitch)
 }
 
 // Запуск SignalR при монтировании компонента
-onMounted(() => {
-  startSignalR()
+onMounted(async () => {
+  await startSignalR()
+  appSettingsInfo.value = await getActiveAppSettingsInfo()
+  console.log(appSettingsInfo.value)
 })
 </script>
 

@@ -12,11 +12,17 @@ export function useSignalR() {
         await connection.start()
     }
 
+    const invokeGet = async (method: string) => {
+        if (connection) {
+            return await connection.invoke(method)
+        }
+    }
+
     const invokeUpdate = async (method: string, data: any) => {
         if (connection) {
             await connection.invoke(method, data)
         }
     }
 
-    return { startSignalR, invokeUpdate }
+    return { startSignalR, invokeGet, invokeUpdate }
 }

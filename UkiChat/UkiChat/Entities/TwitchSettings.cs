@@ -11,6 +11,6 @@ public class TwitchSettings : IBaseEntity<long>
     public string ChatbotAccessToken { get; set; }
     public string Channel { get; set; }
     
-    [BsonId]
+    [BsonRef]
     public AppSettings AppSettings { get; set; }
 }
