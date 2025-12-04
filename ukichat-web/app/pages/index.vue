@@ -2,12 +2,11 @@
 import { onMounted } from 'vue'
 import { useLocalization } from '~/composables/useLocalization'
 
-const { startSignalR, changeLanguage } = useLocalization()
 const { t } = useI18n()
 
 // Запуск SignalR при монтировании компонента
 onMounted(() => {
-  startSignalR()
+  //startSignalR()
 })
 
 </script>
@@ -15,8 +14,8 @@ onMounted(() => {
 <template>
   <div>
     <button>{{ t('settings.title') }}</button>
-    <button @click="changeLanguage('ru')">RU</button>
-    <button @click="changeLanguage('en')">EN</button>
+<!--    <button @click="changeLanguage('ru')">RU</button>
+    <button @click="changeLanguage('en')">EN</button>-->
 <!--    <Icon icon="mdi:cog" width="24" height="24"/>-->
   </div>
 </template>

@@ -1,8 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 
-let connection: signalR.HubConnection | null = null
-
 export function useSignalR() {
+    let connection: signalR.HubConnection | null = null
     const startSignalR = async () => {
         connection = new signalR.HubConnectionBuilder()
             .withUrl("http://localhost:5000/apphub") // сервер WPF
@@ -10,6 +9,7 @@ export function useSignalR() {
             .build()
 
         await connection.start()
+        return connection;
     }
 
     const invokeGet = async (method: string) => {

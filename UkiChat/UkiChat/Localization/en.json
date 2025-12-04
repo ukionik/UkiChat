@@ -3,6 +3,10 @@
     "title": "Profile"
   },
   "settings": {
-    "title": "Settings"
+    "title": "Settings",
+    "channel": "Channel",
+    "twitch": {
+      "name": "Twitch"
+    }
   }
 }

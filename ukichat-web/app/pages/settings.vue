@@ -5,11 +5,12 @@ import HorizontalFormField from "~/components/HorizontalFormField.vue";
 import {useSignalR} from "~/composables/useSignalR";
 
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
+const { loadLanguage } = useLocalization()
 const { t } = useI18n()
 
 const appSettingsInfo = ref({
-  profileName: null,
-  language: null
+  profileName: "",
+  language: "en"
 })
 
 const schema = v.object({
@@ -38,16 +39,16 @@ async function updateSettings() {
 
 // Запуск SignalR при монтировании компонента
 onMounted(async () => {
-  await startSignalR()
+  let connection = await startSignalR()
   appSettingsInfo.value = await getActiveAppSettingsInfo()
-  console.log(appSettingsInfo.value)
+  await loadLanguage(appSettingsInfo.value.language, connection)
 })
 </script>
 
 <template>
   <UForm :schema="schema" :state="state" class="space-y-4">
-    <h2 class="text-xl font-semibold mb-4">Twitch</h2>
-    <HorizontalFormField label="Канал" name="twitch-channel">
+    <h2 class="text-xl font-semibold mb-4">{{t('settings.twitch.name')}}</h2>
+    <HorizontalFormField :label="t('settings.channel')" name="twitch-channel">
       <UInput v-model="state.settings.twitch.channel" @blur="updateSettings" />
     </HorizontalFormField>
   </UForm>
