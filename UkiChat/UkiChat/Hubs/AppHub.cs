@@ -15,10 +15,11 @@ public class AppHub : Hub
     private readonly IEventAggregator _eventAggregator = ContainerLocator.Container.Resolve<IEventAggregator>();
     private readonly ILocalizationService _localizationService = ContainerLocator.Container.Resolve<ILocalizationService>();
     private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
+    private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
     
-    public void OpenSettingsWindow()
+    public async Task OpenSettingsWindow()
     {
-        _eventAggregator.GetEvent<OpenSettingsWindowEvent>().Publish("Settings");
+        _windowService.ShowWindow<SettingsWindow>();        
     }
 
     /*public async Task ChangeLanguage(string culture)

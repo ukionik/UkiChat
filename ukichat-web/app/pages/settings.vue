@@ -51,7 +51,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <UForm :schema="schema" :state="state" class="space-y-4">
+  <UForm :schema="schema" :state="state" class="space-y-4 m-4">
     <h2 class="text-xl font-semibold mb-4">{{t('settings.twitch.name')}}</h2>
     <HorizontalFormField :label="t('settings.channel')" name="twitch-channel">
       <UInput v-model="state.settings.twitch.channel" @blur="updateSettings" />
