@@ -1,4 +1,4 @@
-﻿<mah:MetroWindow x:Class="UkiChat.SettingsWindow"
+﻿<Window x:Class="UkiChat.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,8 +9,8 @@
         xmlns:mvvm="http://prismlibrary.com/"
         mc:Ignorable="d"
         mvvm:ViewModelLocator.AutoWireViewModel="True"
-        Title="{extensions:Loc Key=settings.title}" Height="450" Width="800" TitleCharacterCasing="Normal" Background="Black">
+        Title="{extensions:Loc Key=settings.title}" Height="450" Width="800" Background="Black">
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
-</mah:MetroWindow>
+</Window>
