@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Prism.Events;
 using Prism.Ioc;
 using UkiChat.Events;
+using UkiChat.Model.Info;
 using UkiChat.Model.Settings;
 using UkiChat.Services;
 
@@ -16,6 +17,7 @@ public class AppHub : Hub
     private readonly ILocalizationService _localizationService = ContainerLocator.Container.Resolve<ILocalizationService>();
     private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
+    private readonly IStreamService _streamService = ContainerLocator.Container.Resolve<IStreamService>();
     
     public async Task OpenSettingsWindow()
     {
@@ -29,6 +31,10 @@ public class AppHub : Hub
         var json = await File.ReadAllTextAsync(filePath);
         await Clients.All.SendAsync("LanguageChanged", culture, json);
     }*/
+    public async Task ConnectToTwitch(string channel)
+    {
+        await _streamService.ConnectToTwitchAsync(channel);
+    }
     
     public async Task<string> GetLanguage(string language)
     {

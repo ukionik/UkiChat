@@ -1,4 +1,5 @@
 ﻿using UkiChat.Configuration;
+using UkiChat.Model.Info;
 using UkiChat.Model.Settings;
 
 namespace UkiChat.Services;
@@ -15,7 +16,10 @@ public class DatabaseService : IDatabaseService
     public AppSettingsInfoData GetActiveAppSettingsInfo()
     {
         var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
-        return new AppSettingsInfoData(appSettings.Profile.Name, appSettings.Language);
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        return new AppSettingsInfoData(appSettings.Profile.Name, appSettings.Language, 
+            new TwitchSettingsInfo(twitchSettings.Channel)
+            );
     }
 
     public AppSettingsData GetActiveAppSettingsData()

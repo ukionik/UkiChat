@@ -8,7 +8,10 @@ const {t} = useI18n()
 
 const appSettingsInfo = ref({
   profileName: "",
-  language: "en"
+  language: "en",
+  twitch: {
+    channel: null
+  }
 })
 
 async function getActiveAppSettingsInfo() {
@@ -19,11 +22,18 @@ async function openSettingsWindow() {
   await invokeUpdate("OpenSettingsWindow")
 }
 
+async function connectToTwitch() {
+  if (appSettingsInfo.value.twitch.channel !== null) {
+    await invokeUpdate("ConnectToTwitch", appSettingsInfo.value.twitch.channel)
+  }
+}
+
 // Запуск SignalR при монтировании компонента
 onMounted(async () => {
   let connection = await startSignalR()
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
+  await connectToTwitch()
 })
 
 </script>

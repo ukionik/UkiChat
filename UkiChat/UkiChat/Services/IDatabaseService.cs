@@ -1,4 +1,5 @@
-﻿using UkiChat.Model.Settings;
+﻿using UkiChat.Model.Info;
+using UkiChat.Model.Settings;
 
 namespace UkiChat.Services;
 
