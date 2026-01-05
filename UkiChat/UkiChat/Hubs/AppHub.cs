@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Prism.Events;
 using Prism.Ioc;
+using TwitchLib.Client.Models;
 using UkiChat.Events;
+using UkiChat.Model.Chat;
 using UkiChat.Model.Info;
 using UkiChat.Model.Settings;
 using UkiChat.Services;
@@ -18,19 +20,12 @@ public class AppHub : Hub
     private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
     private readonly IStreamService _streamService = ContainerLocator.Container.Resolve<IStreamService>();
+    private readonly ISignalRService _signalRService = ContainerLocator.Container.Resolve<ISignalRService>();
     
     public async Task OpenSettingsWindow()
     {
         _windowService.ShowWindow<SettingsWindow>();        
     }
-
-    /*public async Task ChangeLanguage(string culture)
-    {
-        _localizationService.SetCulture(culture);
-        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{culture}.json");
-        var json = await File.ReadAllTextAsync(filePath);
-        await Clients.All.SendAsync("LanguageChanged", culture, json);
-    }*/
     public async Task ConnectToTwitch(string channel)
     {
         await _streamService.ConnectToTwitchAsync(channel);
@@ -54,5 +49,10 @@ public class AppHub : Hub
     public async Task UpdateTwitchSettings(TwitchSettingsData settings)
     {
         _databaseService.UpdateTwitchSettings(settings);
+    }
+
+    public async Task SendChatMessage(UkiChatMessage chatMessage)
+    {
+        await _signalRService.SendChatMessageAsync(chatMessage);
     }
 }

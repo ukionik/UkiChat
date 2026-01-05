@@ -34,6 +34,11 @@ onMounted(async () => {
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
   await connectToTwitch()
+
+  connection.on("OnChatMessage", (message) => {
+    console.log(message)
+    console.log(`${message.displayName}: ${message.message}`)
+  })
 })
 
 </script>

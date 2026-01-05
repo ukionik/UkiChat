@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
 using UkiChat.Configuration;
+using UkiChat.Hubs;
+using UkiChat.Model.Chat;
 
 namespace UkiChat.Services;
 
@@ -11,14 +14,14 @@ public class StreamService : IStreamService
     private readonly IDatabaseContext _databaseContext;
     private readonly TwitchClient _twitchClient;
 
-    public StreamService(IDatabaseContext databaseContext)
+    public StreamService(IDatabaseContext databaseContext
+    , ISignalRService signalRService)
     {
         _databaseContext = databaseContext;
         _twitchClient = new TwitchClient();
-        _twitchClient.OnMessageReceived += (sender, e) =>
+        _twitchClient.OnMessageReceived += async (sender, e) =>
         {
-            Console.WriteLine($"[{e.ChatMessage.DisplayName}]: {e.ChatMessage.Message}");
-            return null!;
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage));
         };
 
         _twitchClient.OnError += (sender, e) =>
