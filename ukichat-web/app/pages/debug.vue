@@ -14,7 +14,6 @@ onMounted(async () => {
   await startSignalR()
 })
 
-
 </script>
 
 <template>

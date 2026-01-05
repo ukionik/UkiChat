@@ -6,4 +6,5 @@ namespace UkiChat.Services;
 public interface ISignalRService
 {
     Task SendChatMessageAsync(UkiChatMessage message);
+    Task SendTwitchReconnect();
 }

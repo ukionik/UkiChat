@@ -26,9 +26,9 @@ public class AppHub : Hub
     {
         _windowService.ShowWindow<SettingsWindow>();        
     }
-    public async Task ConnectToTwitch(string channel)
+    public async Task ConnectToTwitch()
     {
-        await _streamService.ConnectToTwitchAsync(channel);
+        await _streamService.ConnectToTwitchAsync();
     }
     
     public async Task<string> GetLanguage(string language)
@@ -49,8 +49,8 @@ public class AppHub : Hub
     public async Task UpdateTwitchSettings(TwitchSettingsData settings)
     {
         _databaseService.UpdateTwitchSettings(settings);
+        await _signalRService.SendTwitchReconnect();
     }
-
     public async Task SendChatMessage(UkiChatMessage chatMessage)
     {
         await _signalRService.SendChatMessageAsync(chatMessage);

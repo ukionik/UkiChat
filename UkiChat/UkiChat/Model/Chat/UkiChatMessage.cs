@@ -8,4 +8,9 @@ public record UkiChatMessage(string DisplayName, string Message)
     {
         return new UkiChatMessage(twitchMessage.DisplayName, twitchMessage.Message);
     }
+
+    public static UkiChatMessage FromTwitchMessageNotification(string message)
+    {
+        return new UkiChatMessage("Twitch", message);
+    }
 };

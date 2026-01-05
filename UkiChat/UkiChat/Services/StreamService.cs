@@ -1,65 +1,71 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
 using UkiChat.Configuration;
-using UkiChat.Hubs;
 using UkiChat.Model.Chat;
 
 namespace UkiChat.Services;
 
-public class StreamService : IStreamService
+public class StreamService(IDatabaseContext databaseContext, SignalRService signalRService) : IStreamService
 {
-    private readonly IDatabaseContext _databaseContext;
-    private readonly TwitchClient _twitchClient;
+    private TwitchClient _twitchClient = new();
 
-    public StreamService(IDatabaseContext databaseContext
-    , ISignalRService signalRService)
+    public async Task ConnectToTwitchAsync()
     {
-        _databaseContext = databaseContext;
+        var twitchSettings = databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        var credentials = new ConnectionCredentials(twitchSettings.ChatbotUsername, twitchSettings.ChatbotAccessToken);
+        if (_twitchClient.IsConnected)
+        {
+            await _twitchClient.DisconnectAsync()!;            
+        }
+        InitTwitchClient(credentials, twitchSettings.Channel);
+        await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessageNotification($"Подключение к каналу... {twitchSettings.Channel}"));
+        await _twitchClient.ConnectAsync()!;
+    }
+
+    private void InitTwitchClient(ConnectionCredentials credentials, string channel)
+    {
         _twitchClient = new TwitchClient();
+        _twitchClient.Initialize(credentials, channel);
         _twitchClient.OnMessageReceived += async (sender, e) =>
         {
             await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage));
         };
 
-        _twitchClient.OnError += (sender, e) =>
+        _twitchClient.OnError += async (sender, e) =>
         {
             Console.WriteLine(e.Exception.ToString());
-            return null!;
+            await SendChatMessageNotification($"Ошибка");
         };
         
-        _twitchClient.OnConnected += (sender, e) =>
+        _twitchClient.OnConnected += async (sender, e) =>
         {
             Console.WriteLine("Connected");
-            return null!;
+            await SendChatMessageNotification($"Подключился к каналу {channel}");
         };
         
-        _twitchClient.OnDisconnected += (sender, e) =>
+        _twitchClient.OnDisconnected += async (sender, e) =>
         {
             Console.WriteLine("Disconnected");
-            return null!;
+            await SendChatMessageNotification($"Отключился от канала {channel}");
         };
         
-        _twitchClient.OnConnectionError += (sender, e) =>
+        _twitchClient.OnConnectionError += async (sender, e) =>
         {
             Console.WriteLine("ConnectionError");
-            return null!;
+            await SendChatMessageNotification($"Ошибка подключения к каналу {channel}");
         };
         
-        _twitchClient.OnJoinedChannel += (sender, e) =>
+        _twitchClient.OnJoinedChannel += async (sender, e) =>
         {
             Console.WriteLine("JoinedChannel");
-            return null!;
+            await SendChatMessageNotification($"Отключился от канала {channel}");
         };
     }
 
-    public async Task ConnectToTwitchAsync(string channel)
+    private async Task SendChatMessageNotification(string message)
     {
-        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
-        var credentials = new ConnectionCredentials(twitchSettings.ChatbotUsername, twitchSettings.ChatbotAccessToken);
-        _twitchClient.Initialize(credentials, channel);
-        await _twitchClient.ConnectAsync();
+        await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessageNotification(message));
     }
 }

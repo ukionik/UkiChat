@@ -4,5 +4,5 @@ namespace UkiChat.Services;
 
 public interface IStreamService
 {
-    Task ConnectToTwitchAsync(string channel);
+    Task ConnectToTwitchAsync();
 }
