@@ -31,7 +31,11 @@ async function openSettingsWindow() {
 }
 
 async function connectToTwitch() {
-  await invokeUpdate("ConnectToTwitch")
+  try{
+    await invokeUpdate("ConnectToTwitch")
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 // Запуск SignalR при монтировании компонента

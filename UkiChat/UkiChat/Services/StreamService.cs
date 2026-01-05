@@ -19,8 +19,13 @@ public class StreamService(IDatabaseContext databaseContext, SignalRService sign
         {
             await _twitchClient.DisconnectAsync()!;            
         }
+        
+        if (twitchSettings.Channel.Length == 0)
+        {
+            return;
+        }
+        
         InitTwitchClient(credentials, twitchSettings.Channel);
-        await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessageNotification($"Подключение к каналу... {twitchSettings.Channel}"));
         await _twitchClient.ConnectAsync()!;
     }
 
@@ -42,7 +47,7 @@ public class StreamService(IDatabaseContext databaseContext, SignalRService sign
         _twitchClient.OnConnected += async (sender, e) =>
         {
             Console.WriteLine("Connected");
-            await SendChatMessageNotification($"Подключился к каналу {channel}");
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessageNotification($"Подключение к каналу... {channel}"));
         };
         
         _twitchClient.OnDisconnected += async (sender, e) =>
@@ -60,7 +65,7 @@ public class StreamService(IDatabaseContext databaseContext, SignalRService sign
         _twitchClient.OnJoinedChannel += async (sender, e) =>
         {
             Console.WriteLine("JoinedChannel");
-            await SendChatMessageNotification($"Отключился от канала {channel}");
+            await SendChatMessageNotification($"Подключился к каналу {channel}");
         };
     }
 
