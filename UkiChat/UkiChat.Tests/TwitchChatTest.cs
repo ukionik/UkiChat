@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace UkiChat.Tests;
 
-public class TwitchLibSimpleTest(ITestOutputHelper testOutputHelper)
+public class TwitchChatTest(ITestOutputHelper testOutputHelper)
 {
     [Fact]
     public async Task ConnectionTest()

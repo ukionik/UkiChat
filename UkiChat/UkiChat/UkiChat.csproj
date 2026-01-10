@@ -19,6 +19,7 @@
       <PackageReference Include="Prism.Wpf" Version="9.0.537" />
       <PackageReference Include="Scrutor" Version="7.0.0" />
       <PackageReference Include="Tomlyn" Version="0.19.0" />
+      <PackageReference Include="TwitchLib.Api" Version="3.10.2" />
       <PackageReference Include="TwitchLib.Client" Version="4.0.1" />
     </ItemGroup>
 
