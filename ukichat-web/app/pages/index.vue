@@ -30,9 +30,6 @@ function scrollToBottom() {
   }
 
   chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-  console.log(chatContainer.value.scrollTop)
-  console.log(chatContainer.value.scrollHeight)
-  console.log(chatContainer.value.clientHeight)
 }
 
 function onScroll() {
@@ -42,6 +39,13 @@ function onScroll() {
 
   const threshold = 200
   autoScroll.value = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
+}
+
+function getPlatformImage(platform: string) {
+  switch (platform) {
+    case "Twitch": return "/images/twitch.svg"
+    default: return ""
+  }
 }
 
 async function getActiveAppSettingsInfo() {
@@ -76,8 +80,7 @@ onMounted(async () => {
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
-    /*console.log(chatMessages.value)
-    console.log(`${message.displayName}: ${message.message}`)*/
+    console.log(message)
   })
 
   connection.on("OnTwitchReconnect", async () => {
@@ -100,6 +103,6 @@ onMounted(async () => {
     </UButton>
   </div>
   <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
-    <div class="chat-message" v-for="message in chatMessages">{{ message.displayName }}: {{ message.message }}</div>
+    <div class="chat-message flex items-center" v-for="message in chatMessages"><img class="w-6 h-6" :alt="message.platform" :src="getPlatformImage(message.platform)"><span class="font-bold ml-1">{{ message.displayName }}</span><span class="ml-1">{{ message.message }}</span></div>
   </div>
 </template>

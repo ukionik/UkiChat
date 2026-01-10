@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +33,12 @@ public static class HttpServerConfiguration
 
                 });
 #endif
-                services.AddSignalR();
+                services.AddSignalR()
+                    .AddJsonProtocol(options =>
+                    {
+                        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    })
+                    ;
             })
             .Configure(app =>
             {
