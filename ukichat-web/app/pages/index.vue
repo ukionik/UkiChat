@@ -15,11 +15,33 @@ const appSettingsInfo = ref({
   }
 })
 
-const maxMessages = 10
+const maxMessages = 1000
 const chatMessages = ref<ChatMessage[]>([])
+const chatContainer = ref<HTMLElement | null>(null)
+const autoScroll = ref(true)
 
 function addItem(item: ChatMessage) {
   return [...chatMessages.value, item].slice(-maxMessages)
+}
+
+function scrollToBottom() {
+  if (!chatContainer.value) {
+    return
+  }
+
+  chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+  console.log(chatContainer.value.scrollTop)
+  console.log(chatContainer.value.scrollHeight)
+  console.log(chatContainer.value.clientHeight)
+}
+
+function onScroll() {
+  const el = chatContainer.value
+  if (!el)
+    return
+
+  const threshold = 200
+  autoScroll.value = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
 }
 
 async function getActiveAppSettingsInfo() {
@@ -38,6 +60,13 @@ async function connectToTwitch() {
   }
 }
 
+watch(chatMessages, async () => {
+  await nextTick()
+  if (autoScroll.value) {
+    scrollToBottom()
+  }
+})
+
 // Запуск SignalR при монтировании компонента
 onMounted(async () => {
   let connection = await startSignalR()
@@ -47,8 +76,8 @@ onMounted(async () => {
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
-    console.log(chatMessages.value)
-    console.log(`${message.displayName}: ${message.message}`)
+    /*console.log(chatMessages.value)
+    console.log(`${message.displayName}: ${message.message}`)*/
   })
 
   connection.on("OnTwitchReconnect", async () => {
@@ -70,7 +99,7 @@ onMounted(async () => {
       </UIcon>
     </UButton>
   </div>
-  <div class="chat-messages">
+  <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
     <div class="chat-message" v-for="message in chatMessages">{{ message.displayName }}: {{ message.message }}</div>
   </div>
 </template>
