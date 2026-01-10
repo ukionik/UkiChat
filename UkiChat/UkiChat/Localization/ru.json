@@ -8,5 +8,12 @@
     "twitch": {
       "name": "Twitch"
     }
+  },
+  "twitch": {
+    "error": "Ошибка",
+    "connectingToChannel": "Подключение к каналу {0}...",
+    "connectedToChannel": "Подключился к каналу {0}",
+    "disconnectedFromChannel": "Отключился от канала {0}",
+    "connectingToChannelError": "Ошибка подключения к каналу {0}"
   }
 }
