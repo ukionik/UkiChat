@@ -8,4 +8,5 @@ public interface IDatabaseService
     AppSettingsInfoData GetActiveAppSettingsInfo();
     AppSettingsData GetActiveAppSettingsData();
     void UpdateTwitchSettings(TwitchSettingsData data);
+    void UpdateTwitchApiTokens(string accessToken, string refreshToken);
 }

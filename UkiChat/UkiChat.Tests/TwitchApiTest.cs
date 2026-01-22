@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using TwitchLib.Api;
+using UkiChat.Services;
 using UkiChat.Tests.AppSettingsData;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,25 +19,102 @@ public class TwitchApiTest(ITestOutputHelper testOutputHelper)
         var res = await api.Auth.GetAccessTokenFromCodeAsync(appSettings.Twitch.Api.Code
             , appSettings.Twitch.Api.ClientSecret, "http://localhost"
             , appSettings.Twitch.Api.ClientId);
-        
     }
 
     [Fact]
-    public async Task GlobalBadgesAsyncTest()
+    public async Task TwitchApiService_ValidateAccessTokenAsync_ReturnsTrue()
     {
         var appSettings = AppSettingsReader.Read();
-        var api = new TwitchAPI
-        {
-            Settings =
-            {
-                ClientId = appSettings.Twitch.Api.ClientId,
-                AccessToken = appSettings.Twitch.Api.AccessToken
-            }
-        };
-        var validationResult = await api.Auth.ValidateAccessTokenAsync();
-        Assert.NotNull(validationResult);
-        testOutputHelper.WriteLine(validationResult.ExpiresIn + " seconds");
-        var res = await api.Helix.Chat.GetGlobalChatBadgesAsync();
-        testOutputHelper.WriteLine(res.ToString());
+        var service = new TwitchApiService();
+
+        await service.InitializeAsync(appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.AccessToken);
+
+        var isValid = await service.ValidateAccessTokenAsync();
+
+        Assert.True(isValid);
+    }
+
+    [Fact]
+    public async Task TwitchApiService_GetGlobalChatBadgesAsync_ReturnsBadges()
+    {
+        var appSettings = AppSettingsReader.Read();
+        var service = new TwitchApiService();
+
+        await service.InitializeAsync(appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.AccessToken);
+
+        var result = await service.GetGlobalChatBadgesAsync();
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.EmoteSet);
+        testOutputHelper.WriteLine($"Found {result.EmoteSet.Length} badge sets");
+    }
+
+    [Fact]
+    public async Task TwitchApiService_GetChannelChatBadgesAsync_ReturnsBadges()
+    {
+        var appSettings = AppSettingsReader.Read();
+        var service = new TwitchApiService();
+
+        await service.InitializeAsync(appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.AccessToken);
+
+        // Twitch broadcaster ID (например, официальный канал Twitch)
+        var broadcasterId = "12826";
+
+        var result = await service.GetChannelChatBadgesAsync(broadcasterId);
+
+        Assert.NotNull(result);
+        testOutputHelper.WriteLine($"Found {result.EmoteSet.Length} channel badge sets");
+    }
+
+    [Fact]
+    public async Task TwitchApiService_RefreshAccessTokenAsync_ReturnsNewTokens()
+    {
+        var appSettings = AppSettingsReader.Read();
+        var service = new TwitchApiService();
+
+        await service.InitializeAsync(appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.AccessToken);
+
+        var result = await service.RefreshAccessTokenAsync(appSettings.Twitch.Api.RefreshToken, appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.ClientSecret);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.AccessToken);
+        Assert.NotEmpty(result.RefreshToken);
+        testOutputHelper.WriteLine($"New AccessToken: {result.AccessToken}");
+        testOutputHelper.WriteLine($"New RefreshToken: {result.RefreshToken}");
+        testOutputHelper.WriteLine($"Expires in: {result.ExpiresIn} seconds");
+    }
+
+    [Fact]
+    public async Task TwitchApiService_EnsureValidTokenAsync_ReturnsNullWhenTokenValid()
+    {
+        var appSettings = AppSettingsReader.Read();
+        var service = new TwitchApiService();
+
+        await service.InitializeAsync(appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.AccessToken);
+
+        var result = await service.EnsureValidTokenAsync(appSettings.Twitch.Api.RefreshToken, appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.ClientSecret);
+
+        // Если токен валиден, возвращается null
+        Assert.Null(result);
+        testOutputHelper.WriteLine("Token is valid, no refresh needed");
+    }
+
+    [Fact]
+    public async Task TwitchApiService_EnsureValidTokenAsync_RefreshesWhenTokenInvalid()
+    {
+        var appSettings = AppSettingsReader.Read();
+        var service = new TwitchApiService();
+
+        // Инициализируем с невалидным токеном
+        await service.InitializeAsync(
+            appSettings.Twitch.Api.ClientId, "invalid_access_token");
+
+        var result = await service.EnsureValidTokenAsync(appSettings.Twitch.Api.RefreshToken, appSettings.Twitch.Api.ClientId, appSettings.Twitch.Api.ClientSecret);
+
+        // Токен был невалиден, должен быть обновлён
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.AccessToken);
+        Assert.NotEmpty(result.RefreshToken);
+        testOutputHelper.WriteLine($"Token was refreshed. New AccessToken: {result.AccessToken}");
     }
 }

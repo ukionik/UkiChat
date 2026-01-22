@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
 using UkiChat.Configuration;
+using UkiChat.Entities;
 using UkiChat.Model.Chat;
 
 namespace UkiChat.Services;
@@ -11,18 +12,24 @@ namespace UkiChat.Services;
 public class StreamService : IStreamService
 {
     private readonly IDatabaseContext _databaseContext;
-    private readonly ISignalRService _signalRService;
+    private readonly IDatabaseService _databaseService;
     private readonly ILocalizationService _localizationService;
+    private readonly ISignalRService _signalRService;
+    private readonly ITwitchApiService _twitchApiService;
     private readonly TwitchClient _twitchClient = new();
     private string _channelName = "";
 
     public StreamService(IDatabaseContext databaseContext
         , ISignalRService signalRService
-        , ILocalizationService localizationService)
+        , ILocalizationService localizationService
+        , ITwitchApiService twitchApiService
+        , IDatabaseService databaseService)
     {
         _databaseContext = databaseContext;
         _signalRService = signalRService;
         _localizationService = localizationService;
+        _twitchApiService = twitchApiService;
+        _databaseService = databaseService;
         _twitchClient.OnMessageReceived += async (sender, e) =>
         {
             await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage));
@@ -69,32 +76,52 @@ public class StreamService : IStreamService
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         var oldChannel = _channelName;
         var newChannel = twitchSettings.Channel;
-        
+
+        // Инициализация Twitch API (если есть credentials)
+        await InitializeTwitchApiAsync(twitchSettings);
+
         if (!_twitchClient.IsConnected)
         {
-            var credentials = new ConnectionCredentials(twitchSettings.ChatbotUsername, twitchSettings.ChatbotAccessToken);
+            var credentials =
+                new ConnectionCredentials(twitchSettings.ChatbotUsername, twitchSettings.ChatbotAccessToken);
             _twitchClient.Initialize(credentials);
-            await _twitchClient.ConnectAsync();            
+            await _twitchClient.ConnectAsync();
         }
 
-        if (oldChannel == newChannel)
-        {
-            return;
-        }
-        
+        if (oldChannel == newChannel) return;
+
         if (_twitchClient.JoinedChannels.Any(x => x.Channel == oldChannel))
             await _twitchClient.LeaveChannelAsync(oldChannel);
-        
-        if (newChannel.Length == 0)
-        {
-            return;
-        }
+
+        if (newChannel.Length == 0) return;
 
         _channelName = newChannel;
         await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"),
             _channelName));
-        
+
         await _twitchClient.JoinChannelAsync(newChannel, true);
+    }
+
+    private async Task InitializeTwitchApiAsync(TwitchSettings twitchSettings)
+    {
+        if (string.IsNullOrEmpty(twitchSettings.ApiClientId) ||
+            string.IsNullOrEmpty(twitchSettings.ApiClientSecret))
+            return;
+
+        await _twitchApiService.InitializeAsync(
+            twitchSettings.ApiClientId,
+            twitchSettings.ApiAccessToken ?? "");
+
+        // Проверяем валидность токена и обновляем при необходимости
+        if (!string.IsNullOrEmpty(twitchSettings.ApiRefreshToken) && !string.IsNullOrEmpty(twitchSettings.ApiClientSecret))
+        {
+            var newTokens = await _twitchApiService.EnsureValidTokenAsync(twitchSettings.ApiRefreshToken, twitchSettings.ApiClientId, twitchSettings.ApiClientSecret);
+            if (newTokens != null)
+            {
+                _databaseService.UpdateTwitchApiTokens(newTokens.AccessToken, newTokens.RefreshToken);
+                Console.WriteLine("Twitch API tokens refreshed");
+            }
+        }
     }
 
     private async Task SendChatMessageNotification(string message)

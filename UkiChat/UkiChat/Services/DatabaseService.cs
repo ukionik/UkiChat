@@ -25,13 +25,23 @@ public class DatabaseService : IDatabaseService
     public AppSettingsData GetActiveAppSettingsData()
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
-        return new AppSettingsData(new TwitchSettingsData(twitchSettings.Channel));
+        return new AppSettingsData(new TwitchSettingsData(
+            twitchSettings.Channel
+        ));
     }
 
     public void UpdateTwitchSettings(TwitchSettingsData data)
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         twitchSettings.Channel = data.Channel;
+        _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
+    }
+
+    public void UpdateTwitchApiTokens(string accessToken, string refreshToken)
+    {
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        twitchSettings.ApiAccessToken = accessToken;
+        twitchSettings.ApiRefreshToken = refreshToken;
         _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
     }
 }
