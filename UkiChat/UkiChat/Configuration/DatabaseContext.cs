@@ -4,6 +4,7 @@ using LiteDB;
 using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
 using UkiChat.Repositories;
+using UkiChat.Repositories.Database;
 
 namespace UkiChat.Configuration;
 

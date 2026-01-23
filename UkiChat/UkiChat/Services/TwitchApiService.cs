@@ -56,6 +56,14 @@ public class TwitchApiService : ITwitchApiService
         return response;
     }
 
+    public async Task<string?> GetBroadcasterIdAsync(string channelName)
+    {
+        EnsureInitialized();
+
+        var users = await _api!.Helix.Users.GetUsersAsync(logins: [channelName.ToLower()]);
+        return users.Users.Length > 0 ? users.Users[0].Id : null;
+    }
+
     public async Task<RefreshResponse?> EnsureValidTokenAsync(string refreshToken, string clientId, string clientSecret)
     {
         EnsureInitialized();

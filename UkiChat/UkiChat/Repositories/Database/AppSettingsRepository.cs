@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using DryIoc.ImTools;
-using LiteDB;
+﻿using LiteDB;
 using UkiChat.Core;
 using UkiChat.Entities;
 
-namespace UkiChat.Repositories;
+namespace UkiChat.Repositories.Database;
 
 public class AppSettingsRepository(LiteDatabase db) : BaseRepository<AppSettings, long>(db)
     , IAppSettingsRepository

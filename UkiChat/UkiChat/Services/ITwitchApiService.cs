@@ -14,6 +14,13 @@ public interface ITwitchApiService
     Task<RefreshResponse> RefreshAccessTokenAsync(string refreshToken, string clientId, string clientSecret);
 
     /// <summary>
+    /// Получает broadcaster ID по имени канала
+    /// </summary>
+    /// <param name="channelName">Имя канала</param>
+    /// <returns>Broadcaster ID или null если пользователь не найден</returns>
+    Task<string?> GetBroadcasterIdAsync(string channelName);
+
+    /// <summary>
     /// Проверяет валидность токена и обновляет его при необходимости.
     /// </summary>
     /// <param name="refreshToken">Refresh token для обновления</param>

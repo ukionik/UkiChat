@@ -12,7 +12,7 @@ public static class DIConfiguration
         
         services.Scan(scan => scan
             .FromAssemblyOf<App>()
-            .AddClasses(classes => classes.InNamespaces("UkiChat.Services"))
+            .AddClasses(classes => classes.InNamespaces("UkiChat.Services", "UkiChat.Repositories.Memory"))
             .AsImplementedInterfaces()
             .WithSingletonLifetime());
 

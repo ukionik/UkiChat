@@ -2,7 +2,7 @@
 using UkiChat.Core;
 using UkiChat.Entities;
 
-namespace UkiChat.Repositories;
+namespace UkiChat.Repositories.Database;
 
 public class ProfileRepository(LiteDatabase db) : BaseRepository<Profile, long>(db)
     , IProfileRepository

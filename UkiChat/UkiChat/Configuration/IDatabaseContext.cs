@@ -1,4 +1,5 @@
 ﻿using UkiChat.Repositories;
+using UkiChat.Repositories.Database;
 
 namespace UkiChat.Configuration;
 

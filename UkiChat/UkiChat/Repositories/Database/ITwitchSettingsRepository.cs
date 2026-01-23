@@ -1,6 +1,6 @@
 ﻿using UkiChat.Entities;
 
-namespace UkiChat.Repositories;
+namespace UkiChat.Repositories.Database;
 
 public interface ITwitchSettingsRepository
 {

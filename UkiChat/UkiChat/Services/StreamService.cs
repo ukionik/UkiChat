@@ -6,6 +6,8 @@ using TwitchLib.Client.Models;
 using UkiChat.Configuration;
 using UkiChat.Entities;
 using UkiChat.Model.Chat;
+using UkiChat.Repositories;
+using UkiChat.Repositories.Memory;
 
 namespace UkiChat.Services;
 
@@ -16,6 +18,7 @@ public class StreamService : IStreamService
     private readonly ILocalizationService _localizationService;
     private readonly ISignalRService _signalRService;
     private readonly ITwitchApiService _twitchApiService;
+    private readonly IChatBadgesRepository _chatBadgesRepository;
     private readonly TwitchClient _twitchClient = new();
     private string _channelName = "";
 
@@ -23,13 +26,15 @@ public class StreamService : IStreamService
         , ISignalRService signalRService
         , ILocalizationService localizationService
         , ITwitchApiService twitchApiService
-        , IDatabaseService databaseService)
+        , IDatabaseService databaseService
+        , IChatBadgesRepository chatBadgesRepository)
     {
         _databaseContext = databaseContext;
         _signalRService = signalRService;
         _localizationService = localizationService;
         _twitchApiService = twitchApiService;
         _databaseService = databaseService;
+        _chatBadgesRepository = chatBadgesRepository;
         _twitchClient.OnMessageReceived += async (sender, e) =>
         {
             await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage));
@@ -80,6 +85,9 @@ public class StreamService : IStreamService
         // Инициализация Twitch API (если есть credentials)
         await InitializeTwitchApiAsync(twitchSettings);
 
+        // Загрузка бейджей чата
+        await LoadChatBadgesAsync(twitchSettings);
+
         if (!_twitchClient.IsConnected)
         {
             var credentials =
@@ -113,14 +121,52 @@ public class StreamService : IStreamService
             twitchSettings.ApiAccessToken ?? "");
 
         // Проверяем валидность токена и обновляем при необходимости
-        if (!string.IsNullOrEmpty(twitchSettings.ApiRefreshToken) && !string.IsNullOrEmpty(twitchSettings.ApiClientSecret))
+        await RefreshTwitchApiTokensAsync(twitchSettings);
+    }
+
+    private async Task RefreshTwitchApiTokensAsync(TwitchSettings twitchSettings)
+    {
+        if (string.IsNullOrEmpty(twitchSettings.ApiRefreshToken) ||
+            string.IsNullOrEmpty(twitchSettings.ApiClientId) ||
+            string.IsNullOrEmpty(twitchSettings.ApiClientSecret))
+            return;
+
+        var newTokens = await _twitchApiService.EnsureValidTokenAsync(
+            twitchSettings.ApiRefreshToken,
+            twitchSettings.ApiClientId,
+            twitchSettings.ApiClientSecret);
+
+        if (newTokens != null)
         {
-            var newTokens = await _twitchApiService.EnsureValidTokenAsync(twitchSettings.ApiRefreshToken, twitchSettings.ApiClientId, twitchSettings.ApiClientSecret);
-            if (newTokens != null)
+            _databaseService.UpdateTwitchApiTokens(newTokens.AccessToken, newTokens.RefreshToken);
+            Console.WriteLine("Twitch API tokens refreshed");
+        }
+    }
+
+    private async Task LoadChatBadgesAsync(TwitchSettings twitchSettings)
+    {
+        try
+        {
+            // Загружаем глобальные бейджи
+            var globalBadges = await _twitchApiService.GetGlobalChatBadgesAsync();
+            _chatBadgesRepository.SetGlobalBadges(globalBadges);
+            Console.WriteLine($"Loaded {globalBadges.EmoteSet.Length} global badge sets");
+
+            // Загружаем бейджи канала (если есть имя канала)
+            if (!string.IsNullOrEmpty(twitchSettings.Channel))
             {
-                _databaseService.UpdateTwitchApiTokens(newTokens.AccessToken, newTokens.RefreshToken);
-                Console.WriteLine("Twitch API tokens refreshed");
+                var broadcasterId = await _twitchApiService.GetBroadcasterIdAsync(twitchSettings.Channel);
+                if (!string.IsNullOrEmpty(broadcasterId))
+                {
+                    var channelBadges = await _twitchApiService.GetChannelChatBadgesAsync(broadcasterId);
+                    _chatBadgesRepository.SetChannelBadges(broadcasterId, channelBadges);
+                    Console.WriteLine($"Loaded {channelBadges.EmoteSet.Length} channel badge sets for {twitchSettings.Channel}");
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading chat badges: {ex.Message}");
         }
     }
 
