@@ -45,7 +45,8 @@ public record UkiChatMessage(ChatPlatform Platform
             }
 
             // Добавляем эмоут (URL изображения)
-            parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Emote, emote.ImageUrl));
+            var emoteUrl = $"https://static-cdn.jtvnw.net/emoticons/v2/{emote.Id}/default/dark/3.0";
+            parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Emote, emoteUrl));
 
             currentIndex = emote.EndIndex + 1;
         }
