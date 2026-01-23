@@ -103,6 +103,6 @@ onMounted(async () => {
     </UButton>
   </div>
   <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
-    <div class="chat-message flex items-center" v-for="message in chatMessages"><img class="w-6 h-6" :alt="message.platform" :src="getPlatformImage(message.platform)"><span class="font-bold ml-1">{{ message.displayName }}</span><span class="ml-1">{{ message.message }}</span></div>
+    <div class="chat-message flex items-center" v-for="message in chatMessages"><img class="w-6 h-6" :alt="message.platform" :src="getPlatformImage(message.platform)"><img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="w-4 h-4 ml-1"><span class="font-bold ml-1">{{ message.displayName }}</span><span class="ml-1">{{ message.message }}</span></div>
   </div>
 </template>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TwitchLib.Client;
@@ -21,6 +22,7 @@ public class StreamService : IStreamService
     private readonly IChatBadgesRepository _chatBadgesRepository;
     private readonly TwitchClient _twitchClient = new();
     private string _channelName = "";
+    private string _broadcasterId = "";
 
     public StreamService(IDatabaseContext databaseContext
         , ISignalRService signalRService
@@ -37,7 +39,8 @@ public class StreamService : IStreamService
         _chatBadgesRepository = chatBadgesRepository;
         _twitchClient.OnMessageReceived += async (sender, e) =>
         {
-            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage));
+            var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls));
         };
 
         _twitchClient.OnError += async (sender, e) =>
@@ -158,6 +161,7 @@ public class StreamService : IStreamService
                 var broadcasterId = await _twitchApiService.GetBroadcasterIdAsync(twitchSettings.Channel);
                 if (!string.IsNullOrEmpty(broadcasterId))
                 {
+                    _broadcasterId = broadcasterId;
                     var channelBadges = await _twitchApiService.GetChannelChatBadgesAsync(broadcasterId);
                     _chatBadgesRepository.SetChannelBadges(broadcasterId, channelBadges);
                     Console.WriteLine($"Loaded {channelBadges.EmoteSet.Length} channel badge sets for {twitchSettings.Channel}");
@@ -168,6 +172,11 @@ public class StreamService : IStreamService
         {
             Console.WriteLine($"Error loading chat badges: {ex.Message}");
         }
+    }
+
+    private List<string> ResolveBadgeUrls(ChatMessage chatMessage)
+    {
+        return _chatBadgesRepository.GetBadgeUrls(chatMessage.Badges, _broadcasterId);
     }
 
     private async Task SendChatMessageNotification(string message)
