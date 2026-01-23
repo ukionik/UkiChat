@@ -54,13 +54,12 @@ public class ChatBadgesRepository : IChatBadgesRepository
         if (badges.Count == 0)
             return badgeUrls;
 
-        var channelBadges = !string.IsNullOrEmpty(broadcasterId) && _channelBadges.ContainsKey(broadcasterId)
-            ? _channelBadges[broadcasterId]
+        var channelBadges = !string.IsNullOrEmpty(broadcasterId) && _channelBadges.TryGetValue(broadcasterId, out var channelBadge)
+            ? channelBadge
             : null;
 
-        foreach (var badge in badges)
+        foreach (var (setId, versionId) in badges)
         {
-            var setId = badge.Key;
             BadgeVersion[]? badgeVersions = null;
 
             // Сначала ищем в бейджах канала, затем в глобальных
@@ -73,10 +72,14 @@ public class ChatBadgesRepository : IChatBadgesRepository
                 badgeVersions = globalBadgeVersions;
             }
 
-            // Берем первую версию из массива (TODO: позже учитывать конкретную версию из badge.Value)
+            // Ищем конкретную версию по badge.Value
             if (badgeVersions is { Length: > 0 })
             {
-                badgeUrls.Add(badgeVersions[0].ImageUrl4x);
+                var badgeVersion = badgeVersions.FirstOrDefault(v => v.Id == versionId);
+                if (badgeVersion != null)
+                {
+                    badgeUrls.Add(badgeVersion.ImageUrl4x);
+                }
             }
         }
 
