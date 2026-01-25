@@ -103,14 +103,14 @@ onMounted(async () => {
     </UButton>
   </div>
   <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
-    <div class="chat-message leading-6 py-0.5" v-for="message in chatMessages">
-      <img class="inline-block w-5 h-5 align-middle" :alt="message.platform" :src="getPlatformImage(message.platform)">
-      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline-block w-4 h-4 align-middle ml-1">
+    <div class="chat-message" v-for="message in chatMessages">
+      <img class="inline h-4" :alt="message.platform" :src="getPlatformImage(message.platform)">
+      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline h-4 ml-1">
       <span class="font-bold ml-1 align-middle">{{ message.displayName }}</span>
-      <span class="ml-1">
+      <span class="ml-1 align-middle">
         <template v-for="(part, index) in message.messageParts" :key="index">
           <span v-if="part.type === 'Text'">{{ part.content }}</span>
-          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline-block w-7 h-7 align-middle">
+          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline h-7">
         </template>
       </span>
     </div>

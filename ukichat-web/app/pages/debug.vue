@@ -4,13 +4,24 @@ import {useSignalR} from "~/composables/useSignalR";
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 
 async function sendTestMessage() {
-  await invokeUpdate("SendChatMessage", {
-    displayName: "Player 1",
-    messageParts: [{
-      type: "Text",
-      content: "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled"
-    }]
-  })
+  await invokeUpdate("SendChatMessage", generateMessage1())
+}
+
+function generateMessage1() {
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/3",
+      "https://static-cdn.jtvnw.net/badges/v1/3ffa9565-c35b-4cad-800b-041e60659cf2/3"
+    ],
+    displayName: "Nightbot",
+    messageParts: [
+      {
+        type: "Text",
+        content: "Короче мой вам совет. Не лезьте вообще в ретро и ни в коем случае никогда не покупайте консоли. Иначе закончите лудоманством как я, когда чтобы вывести более чётко один грёбаный пиксель вы тратите на это дополнительные 10к 😁Ставишь просто эмуляторы на комп и радуешься жизни, а не вот это всё"
+      }
+    ]
+  }
 }
 
 onMounted(async () => {
