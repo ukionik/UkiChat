@@ -104,12 +104,12 @@ onMounted(async () => {
   </div>
   <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
     <div class="chat-message" v-for="message in chatMessages">
-      <img class="inline h-4" :alt="message.platform" :src="getPlatformImage(message.platform)">
-      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline h-4 ml-1">
+      <img class="inline h-5" :alt="message.platform" :src="getPlatformImage(message.platform)">
+      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline h-5 ml-1">
       <span class="font-bold ml-1 align-middle">{{ message.displayName }}</span>
-      <span class="ml-1 align-middle">
+      <span class="ml-1 inline align-middle">
         <template v-for="(part, index) in message.messageParts" :key="index">
-          <span v-if="part.type === 'Text'">{{ part.content }}</span>
+          <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
           <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline h-7">
         </template>
       </span>
