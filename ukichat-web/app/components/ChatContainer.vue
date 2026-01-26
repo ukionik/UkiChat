@@ -4,8 +4,10 @@ import type {ChatMessage} from "~/types/ChatMessage";
 const props = withDefaults(defineProps<{
   messages: ChatMessage[]
   scale?: number
+  hideVerticalScrollbar?: boolean
 }>(), {
-  scale: 1
+  scale: 1,
+  hideVerticalScrollbar: false
 })
 
 const chatContainer = ref<HTMLElement | null>(null)
@@ -43,6 +45,10 @@ const platformIconSize = computed(() => `${1.25 * props.scale}rem`)
 const badgeIconSize = computed(() => `${1.25 * props.scale}rem`)
 const emoteIconSize = computed(() => `${1.75 * props.scale}rem`)
 
+const containerClass = computed(() => ({
+  'hide-scrollbar': props.hideVerticalScrollbar
+}))
+
 watch(() => props.messages, async () => {
   await nextTick()
   if (autoScroll.value) {
@@ -52,7 +58,7 @@ watch(() => props.messages, async () => {
 </script>
 
 <template>
-  <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
+  <div class="chat-container h-dvh overflow-y-auto" :class="containerClass" ref="chatContainer" @scroll="onScroll">
     <div class="chat-message py-0.5" v-for="message in messages" :style="messageStyle">
       <img class="inline" :style="{ height: platformIconSize }" :alt="message.platform" :src="getPlatformImage(message.platform)">
       <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline ml-1" :style="{ height: badgeIconSize }">
@@ -66,3 +72,14 @@ watch(() => props.messages, async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+</style>
