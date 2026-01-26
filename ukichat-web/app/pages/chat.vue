@@ -50,5 +50,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" />
+  <ChatContainer class="overflow-x-hidden" :messages="chatMessages" :scale="2.5" />
 </template>

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type {ChatMessage} from "~/types/ChatMessage";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   messages: ChatMessage[]
-}>()
+  scale?: number
+}>(), {
+  scale: 1
+})
 
 const chatContainer = ref<HTMLElement | null>(null)
 const autoScroll = ref(true)
@@ -32,6 +35,14 @@ function getPlatformImage(platform: string) {
   }
 }
 
+const messageStyle = computed(() => ({
+  fontSize: `${props.scale}rem`
+}))
+
+const platformIconSize = computed(() => `${1.25 * props.scale}rem`)
+const badgeIconSize = computed(() => `${1.25 * props.scale}rem`)
+const emoteIconSize = computed(() => `${1.75 * props.scale}rem`)
+
 watch(() => props.messages, async () => {
   await nextTick()
   if (autoScroll.value) {
@@ -42,14 +53,14 @@ watch(() => props.messages, async () => {
 
 <template>
   <div class="chat-container h-dvh overflow-y-auto" ref="chatContainer" @scroll="onScroll">
-    <div class="chat-message py-0.5" v-for="message in messages">
-      <img class="inline h-5" :alt="message.platform" :src="getPlatformImage(message.platform)">
-      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline h-5 ml-1">
+    <div class="chat-message py-0.5" v-for="message in messages" :style="messageStyle">
+      <img class="inline" :style="{ height: platformIconSize }" :alt="message.platform" :src="getPlatformImage(message.platform)">
+      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline ml-1" :style="{ height: badgeIconSize }">
       <span class="font-bold ml-1 align-middle">{{ message.displayName }}</span>
       <span class="ml-1 inline">
         <template v-for="(part, index) in message.messageParts" :key="index">
           <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
-          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline h-7">
+          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline" :style="{ height: emoteIconSize }">
         </template>
       </span>
     </div>

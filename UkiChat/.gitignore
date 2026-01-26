@@ -69,3 +69,4 @@ publish/
 # ------------------------
 wwwroot/
 *.local.*
+.claude/
