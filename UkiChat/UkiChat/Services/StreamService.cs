@@ -19,7 +19,9 @@ public class StreamService : IStreamService
     private readonly ILocalizationService _localizationService;
     private readonly ISignalRService _signalRService;
     private readonly ITwitchApiService _twitchApiService;
+    private readonly ISevenTvApiService _sevenTvApiService;
     private readonly IChatBadgesRepository _chatBadgesRepository;
+    private readonly ISevenTvEmotesRepository _sevenTvEmotesRepository;
     private readonly TwitchClient _twitchClient = new();
     private string _channelName = "";
     private string _broadcasterId = "";
@@ -28,19 +30,24 @@ public class StreamService : IStreamService
         , ISignalRService signalRService
         , ILocalizationService localizationService
         , ITwitchApiService twitchApiService
+        , ISevenTvApiService sevenTvApiService
         , IDatabaseService databaseService
-        , IChatBadgesRepository chatBadgesRepository)
+        , IChatBadgesRepository chatBadgesRepository
+        , ISevenTvEmotesRepository sevenTvEmotesRepository)
     {
         _databaseContext = databaseContext;
         _signalRService = signalRService;
         _localizationService = localizationService;
         _twitchApiService = twitchApiService;
+        _sevenTvApiService = sevenTvApiService;
         _databaseService = databaseService;
         _chatBadgesRepository = chatBadgesRepository;
+        _sevenTvEmotesRepository = sevenTvEmotesRepository;
         _twitchClient.OnMessageReceived += async (sender, e) =>
         {
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
-            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls));
+            var sevenTvEmotes = GetSevenTvEmotes();
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, sevenTvEmotes));
         };
 
         _twitchClient.OnError += async (sender, e) =>
@@ -90,6 +97,9 @@ public class StreamService : IStreamService
 
         // Загрузка бейджей чата
         await LoadChatBadgesAsync(twitchSettings);
+
+        // Загрузка 7TV эмоутов
+        await LoadSevenTvEmotesAsync(twitchSettings);
 
         if (!_twitchClient.IsConnected)
         {
@@ -177,6 +187,51 @@ public class StreamService : IStreamService
     private List<string> ResolveBadgeUrls(ChatMessage chatMessage)
     {
         return _chatBadgesRepository.GetBadgeUrls(chatMessage.Badges, _broadcasterId);
+    }
+
+    private async Task LoadSevenTvEmotesAsync(TwitchSettings twitchSettings)
+    {
+        try
+        {
+            // Загружаем глобальные эмоуты 7TV
+            var globalEmotes = await _sevenTvApiService.GetGlobalEmotesAsync();
+            _sevenTvEmotesRepository.SetGlobalEmotes(globalEmotes);
+            Console.WriteLine($"Loaded {globalEmotes.Count} global 7TV emotes");
+
+            // Загружаем эмоуты канала (если есть broadcaster ID)
+            if (!string.IsNullOrEmpty(_broadcasterId))
+            {
+                var channelEmotes = await _sevenTvApiService.GetChannelEmotesAsync(_broadcasterId);
+                _sevenTvEmotesRepository.SetChannelEmotes(_broadcasterId, channelEmotes);
+                Console.WriteLine($"Loaded {channelEmotes.Count} channel 7TV emotes for {twitchSettings.Channel}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading 7TV emotes: {ex.Message}");
+        }
+    }
+
+    private Dictionary<string, Model.SevenTv.SevenTvEmote> GetSevenTvEmotes()
+    {
+        var emotes = new Dictionary<string, Model.SevenTv.SevenTvEmote>();
+
+        // Добавляем глобальные эмоуты
+        foreach (var (name, emote) in _sevenTvEmotesRepository.GetGlobalEmotes())
+        {
+            emotes[name] = emote;
+        }
+
+        // Добавляем эмоуты канала (они перезаписывают глобальные с таким же именем)
+        if (!string.IsNullOrEmpty(_broadcasterId))
+        {
+            foreach (var (name, emote) in _sevenTvEmotesRepository.GetChannelEmotes(_broadcasterId))
+            {
+                emotes[name] = emote;
+            }
+        }
+
+        return emotes;
     }
 
     private async Task SendChatMessageNotification(string message)
