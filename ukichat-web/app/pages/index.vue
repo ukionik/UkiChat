@@ -69,5 +69,5 @@ onMounted(async () => {
       </UIcon>
     </UButton>
   </div>
-  <ChatContainer :messages="chatMessages" />
+  <ChatContainer :messages="chatMessages" :scale="2.0" />
 </template>

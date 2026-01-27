@@ -40,8 +40,7 @@ function getPlatformImage(platform: string) {
 }
 
 const messageStyle = computed(() => ({
-  fontSize: `${props.scale}rem`,
-  padding: `${0.1 * props.scale}rem 0`,
+  fontSize: `${props.scale}rem`
 }))
 
 const chatStyle = computed(() => ({
