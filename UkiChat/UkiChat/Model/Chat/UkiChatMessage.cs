@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using TwitchLib.Client.Models;
+using UkiChat.Utils;
 
 namespace UkiChat.Model.Chat;
 
@@ -13,7 +14,8 @@ public record UkiChatMessage(ChatPlatform Platform
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls)
     {
         var messageParts = ParseMessageParts(twitchMessage.Message, twitchMessage.EmoteSet);
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, twitchMessage.HexColor, messageParts);
+        var displayNameColor = ColorUtil.GetDisplayNameColor(twitchMessage.DisplayName, twitchMessage.HexColor);
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts);
     }
 
     public static UkiChatMessage FromTwitchMessageNotification(string message)
