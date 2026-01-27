@@ -40,12 +40,25 @@ function getPlatformImage(platform: string) {
 }
 
 const messageStyle = computed(() => ({
-  fontSize: `${props.scale}rem`
+  fontSize: `${props.scale}rem`,
+  padding: `${0.1 * props.scale}rem 0`,
 }))
 
-const platformIconSize = computed(() => `${1.25 * props.scale}rem`)
-const badgeIconSize = computed(() => `${1.25 * props.scale}rem`)
-const emoteIconSize = computed(() => `${1.75 * props.scale}rem`)
+const chatStyle = computed(() => ({
+  padding: `${0.25 * props.scale}rem ${0.5 * props.scale}rem`,
+}))
+
+const marginRight = computed(() => `${0.25 * props.scale}rem`)
+const iconStyle = computed(() => ({
+  display: "inline",
+  height: `${1.25 * props.scale}rem`,
+  marginRight: marginRight.value,
+}))
+
+const emoteStyle = computed(() => ({
+  display: "inline",
+  height: `${1.5 * props.scale}rem`
+}))
 
 const containerClass = computed(() => {
   return props.hideVerticalScrollbar ? 'overflow-y-hidden' : 'overflow-y-auto'
@@ -60,18 +73,16 @@ watch(() => props.messages, async () => {
 </script>
 
 <template>
-  <div class="chat-container h-dvh px-4 py-2 overflow-x-hidden" :class="containerClass" ref="chatContainer" @scroll="onScroll">
-    <div class="chat-message py-0.5" v-for="message in messages" :style="messageStyle">
-      <img class="inline" :style="{ height: platformIconSize }" :alt="message.platform"
-           :src="getPlatformImage(message.platform)">
-      <img v-for="badge in message.badges" :key="badge" :src="badge" alt="badge" class="inline ml-1"
-           :style="{ height: badgeIconSize }">
-      <span class="font-bold ml-1 align-middle">{{ message.displayName }}</span>
-      <span class="ml-1 inline">
+  <div class="chat-container h-dvh overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
+       @scroll="onScroll">
+    <div class="chat-message" v-for="message in messages" :style="messageStyle">
+      <img :style="iconStyle" :alt="message.platform" :src="getPlatformImage(message.platform)">
+      <img :style="iconStyle" v-for="badge in message.badges" :key="badge" :src="badge" alt="badge">
+      <span class="font-bold align-middle" :style="{marginRight: marginRight}">{{ message.displayName }}</span>
+      <span class="inline">
         <template v-for="(part, index) in message.messageParts" :key="index">
           <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
-          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline"
-               :style="{ height: emoteIconSize }">
+          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline" :style="emoteStyle">
         </template>
       </span>
     </div>
