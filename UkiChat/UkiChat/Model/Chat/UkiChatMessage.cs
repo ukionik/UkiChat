@@ -7,17 +7,18 @@ namespace UkiChat.Model.Chat;
 public record UkiChatMessage(ChatPlatform Platform
     , List<string> Badges
     , string DisplayName
+    , string DisplayNameColor
     , List<UkiChatMessagePart> MessageParts)
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls)
     {
         var messageParts = ParseMessageParts(twitchMessage.Message, twitchMessage.EmoteSet);
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, messageParts);
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, twitchMessage.HexColor, messageParts);
     }
 
     public static UkiChatMessage FromTwitchMessageNotification(string message)
     {
-        return new UkiChatMessage(ChatPlatform.Twitch, [], ChatPlatform.Twitch.ToString(),
+        return new UkiChatMessage(ChatPlatform.Twitch, [], ChatPlatform.Twitch.ToString(), "#FFFFFF",
             [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)]);
     }
 

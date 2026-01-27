@@ -78,7 +78,7 @@ watch(() => props.messages, async () => {
     <div class="chat-message" v-for="message in messages" :style="messageStyle">
       <img :style="iconStyle" :alt="message.platform" :src="getPlatformImage(message.platform)">
       <img :style="iconStyle" v-for="badge in message.badges" :key="badge" :src="badge" alt="badge">
-      <span class="font-bold align-middle" :style="{marginRight: marginRight}">{{ message.displayName }}</span>
+      <span class="font-bold align-middle" :style="{marginRight: marginRight, color: message.displayNameColor}">{{ message.displayName }}</span>
       <span class="inline">
         <template v-for="(part, index) in message.messageParts" :key="index">
           <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
