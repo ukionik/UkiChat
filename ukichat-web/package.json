@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@iconify/vue": "^5.0.0",
     "@microsoft/signalr": "^9.0.6",
     "@nuxt/eslint": "1.9.0",
