@@ -106,4 +106,27 @@ public class VkVideoLiveApiService : IVkVideoLiveApiService
 
         return channelInfoResponse;
     }
+
+    public async Task<VkVideoLiveWebSocketTokenResponse> GetWebSocketTokenAsync(string accessToken)
+    {
+        // Создаем HTTP запрос
+        var requestUri = BaseUrl + "/v1/websocket/token";
+        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+
+        // Добавляем Bearer авторизацию
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        // Отправляем запрос
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        // Парсим ответ
+        var json = await response.Content.ReadAsStringAsync();
+        var wsTokenResponse = JsonSerializer.Deserialize<VkVideoLiveWebSocketTokenResponse>(json);
+
+        if (wsTokenResponse == null)
+            throw new InvalidOperationException("Failed to deserialize websocket token response");
+
+        return wsTokenResponse;
+    }
 }

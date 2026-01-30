@@ -10,6 +10,11 @@
     <ItemGroup>
       <PackageReference Include="Centrifugal.Centrifuge" Version="0.0.13" />
       <PackageReference Include="DryIoc.Microsoft.DependencyInjection" Version="6.2.0" />
+      <PackageReference Include="Google.Protobuf" Version="3.33.5" />
+      <PackageReference Include="Grpc.Tools" Version="2.76.0">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PrivateAssets>all</PrivateAssets>
+      </PackageReference>
       <PackageReference Include="LiteDB" Version="5.0.21" />
       <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.8" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
@@ -39,5 +44,9 @@
     <ItemGroup>
       <None Remove="app-settings.local.toml" />
       <EmbeddedResource Include="app-settings.local.toml" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Protobuf Include="Protos\centrifuge_client.proto" GrpcServices="None" />
     </ItemGroup>
 </Project>

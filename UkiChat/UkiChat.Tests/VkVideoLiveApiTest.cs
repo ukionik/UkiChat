@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+using System;
+using System.Threading.Tasks;
 using UkiChat.Services;
 using UkiChat.Tests.AppSettingsData;
 using Xunit;
@@ -59,7 +60,6 @@ public class VkVideoLiveApiTest(ITestOutputHelper testOutputHelper)
 
         // Assert
         testOutputHelper.WriteLine($"Token Type: {result.Data.Type}");
-        testOutputHelper.WriteLine($"Expired At: {result.Data.ExpiredAt}");
 
         Assert.NotNull(result);
         Assert.NotNull(result.Data);
@@ -136,5 +136,34 @@ public class VkVideoLiveApiTest(ITestOutputHelper testOutputHelper)
             await service.GetChannelInfoAsync(tokenResponse.AccessToken, "invalid_channel_that_does_not_exist"));
 
         testOutputHelper.WriteLine("Correctly threw exception for invalid channel");
+    }
+
+    [Fact]
+    public async Task VkVideoLiveApiService_GetWebSocketTokenAsync_ReturnsToken()
+    {
+        // Arrange
+        var appSettings = AppSettingsReader.Read();
+        var service = new VkVideoLiveApiService();
+
+        // Act
+        var result = await service.GetWebSocketTokenAsync(appSettings.VkVideoLive.Api.AccessToken);
+
+        // Assert
+        testOutputHelper.WriteLine($"WebSocket Token: {result.Data.Token.Substring(0, Math.Min(20, result.Data.Token.Length))}...");
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
+        Assert.NotEmpty(result.Data.Token);
+    }
+
+    [Fact]
+    public async Task VkVideoLiveApiService_GetWebSocketTokenAsync_WithInvalidToken_ThrowsException()
+    {
+        // Arrange
+        var service = new VkVideoLiveApiService();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<System.Net.Http.HttpRequestException>(async () =>
+            await service.GetWebSocketTokenAsync("invalid_token"));
     }
 }

@@ -30,4 +30,11 @@ public interface IVkVideoLiveApiService
     /// <param name="channelUrl">URL канала</param>
     /// <returns>Информация о канале</returns>
     Task<VkVideoLiveChannelInfoResponse> GetChannelInfoAsync(string accessToken, string channelUrl);
+
+    /// <summary>
+    /// Получить токен для подключения к WebSocket (PubSub)
+    /// </summary>
+    /// <param name="accessToken">Токен доступа</param>
+    /// <returns>Токен для WebSocket подключения</returns>
+    Task<VkVideoLiveWebSocketTokenResponse> GetWebSocketTokenAsync(string accessToken);
 }
