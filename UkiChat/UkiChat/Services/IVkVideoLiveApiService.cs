@@ -15,4 +15,11 @@ public interface IVkVideoLiveApiService
     /// <param name="clientSecret">Секретный ключ приложения</param>
     /// <returns>Ответ с access token</returns>
     Task<VkVideoLiveTokenResponse> GetAccessTokenAsync(string clientId, string clientSecret);
+
+    /// <summary>
+    /// Проверить валидность access token
+    /// </summary>
+    /// <param name="accessToken">Токен для проверки</param>
+    /// <returns>Информация о токене</returns>
+    Task<VkVideoLiveTokenInfoResponse> ValidateAccessTokenAsync(string accessToken);
 }
