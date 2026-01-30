@@ -70,3 +70,4 @@ publish/
 wwwroot/
 *.local.*
 .claude/
+claude/

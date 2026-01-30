@@ -13,3 +13,8 @@ channel = "your_twitch_channel"
 #На всякий случай сохраним
 client_id = "your_twitch_client_id"
 refresh_token = "your_twitch_refresh_token"
+[vk_video_live_api]
+client_id = "your_vkvideolive_client_id"
+client_secret = "your_vkvideolive_client_secret"
+access_token = "your_vkvideolive_access_token"
+refresh_token = "your_vkvideolive_refresh_token"
