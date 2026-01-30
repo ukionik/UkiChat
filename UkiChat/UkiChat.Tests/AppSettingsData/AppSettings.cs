@@ -3,5 +3,5 @@
 public record AppSettings
 {
     public AppSettingsTwitch Twitch { get; init; }
-    public AppSettingsVkVideoLiveApi VkVideoLiveApi { get; init; }
+    public AppSettingsVkVideoLive VkVideoLive { get; init; }
 }

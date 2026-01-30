@@ -10,6 +10,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Centrifugal.Centrifuge" Version="0.0.13" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
       <PackageReference Include="Tomlyn" Version="0.19.0" />
       <PackageReference Include="TwitchLib.Api" Version="3.10.2" />

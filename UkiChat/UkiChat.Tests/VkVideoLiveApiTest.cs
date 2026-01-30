@@ -17,8 +17,8 @@ public class VkVideoLiveApiTest(ITestOutputHelper testOutputHelper)
 
         // Act
         var result = await service.GetAccessTokenAsync(
-            appSettings.VkVideoLiveApi.ClientId,
-            appSettings.VkVideoLiveApi.ClientSecret);
+            appSettings.VkVideoLive.Api.ClientId,
+            appSettings.VkVideoLive.Api.ClientSecret);
 
         // Assert
         testOutputHelper.WriteLine($"Access Token: {result.AccessToken}");
@@ -51,8 +51,8 @@ public class VkVideoLiveApiTest(ITestOutputHelper testOutputHelper)
 
         // Сначала получаем токен
         var tokenResponse = await service.GetAccessTokenAsync(
-            appSettings.VkVideoLiveApi.ClientId,
-            appSettings.VkVideoLiveApi.ClientSecret);
+            appSettings.VkVideoLive.Api.ClientId,
+            appSettings.VkVideoLive.Api.ClientSecret);
 
         // Act
         var result = await service.ValidateAccessTokenAsync(tokenResponse.AccessToken);

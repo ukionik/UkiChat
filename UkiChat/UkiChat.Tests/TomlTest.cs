@@ -22,11 +22,13 @@ public class TomlTest(ITestOutputHelper testOutputHelper)
         Assert.Equal("your_twitch_channel", model.Twitch.Chat.Channel);
         Assert.Equal("your_twitch_client_id", model.Twitch.Chat.ClientId);
         Assert.Equal("your_twitch_refresh_token", model.Twitch.Chat.RefreshToken);
-        Assert.NotNull(model.VkVideoLiveApi);
-        Assert.Equal("your_vkvideolive_client_id", model.VkVideoLiveApi.ClientId);
-        Assert.Equal("your_vkvideolive_client_secret", model.VkVideoLiveApi.ClientSecret);
-        Assert.Equal("your_vkvideolive_access_token", model.VkVideoLiveApi.AccessToken);
-        Assert.Equal("your_vkvideolive_refresh_token", model.VkVideoLiveApi.RefreshToken);
+        Assert.NotNull(model.VkVideoLive);
+        Assert.NotNull(model.VkVideoLive.Chat);
+        Assert.Equal("your_vkvideolive_channel", model.VkVideoLive.Chat.Channel);
+        Assert.NotNull(model.VkVideoLive.Api);
+        Assert.Equal("your_vkvideolive_client_id", model.VkVideoLive.Api.ClientId);
+        Assert.Equal("your_vkvideolive_client_secret", model.VkVideoLive.Api.ClientSecret);
+        Assert.Equal("your_vkvideolive_access_token", model.VkVideoLive.Api.AccessToken);
     }
     
     [Fact]
@@ -39,10 +41,11 @@ public class TomlTest(ITestOutputHelper testOutputHelper)
         testOutputHelper.WriteLine(model.Twitch.Chat.Channel);
         testOutputHelper.WriteLine(model.Twitch.Chat.ClientId);
         testOutputHelper.WriteLine(model.Twitch.Chat.RefreshToken);
+        testOutputHelper.WriteLine("[VkVideoLiveChat]");
+        testOutputHelper.WriteLine(model.VkVideoLive.Chat.Channel);
         testOutputHelper.WriteLine("[VkVideoLiveApi]");
-        testOutputHelper.WriteLine(model.VkVideoLiveApi.ClientId);
-        testOutputHelper.WriteLine(model.VkVideoLiveApi.ClientSecret);
-        testOutputHelper.WriteLine(model.VkVideoLiveApi.AccessToken);
-        testOutputHelper.WriteLine(model.VkVideoLiveApi.RefreshToken);
+        testOutputHelper.WriteLine(model.VkVideoLive.Api.ClientId);
+        testOutputHelper.WriteLine(model.VkVideoLive.Api.ClientSecret);
+        testOutputHelper.WriteLine(model.VkVideoLive.Api.AccessToken);
     }
 }
