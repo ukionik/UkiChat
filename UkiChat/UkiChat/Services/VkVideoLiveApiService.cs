@@ -83,4 +83,27 @@ public class VkVideoLiveApiService : IVkVideoLiveApiService
 
         return tokenInfoResponse;
     }
+
+    public async Task<VkVideoLiveChannelInfoResponse> GetChannelInfoAsync(string accessToken, string channelUrl)
+    {
+        // Создаем HTTP запрос
+        var requestUri = $"{BaseUrl}/v1/channel?channel_url={Uri.EscapeDataString(channelUrl)}";
+        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+
+        // Добавляем Bearer авторизацию
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        // Отправляем запрос
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        // Парсим ответ
+        var json = await response.Content.ReadAsStringAsync();
+        var channelInfoResponse = JsonSerializer.Deserialize<VkVideoLiveChannelInfoResponse>(json);
+
+        if (channelInfoResponse == null)
+            throw new InvalidOperationException("Failed to deserialize channel info response");
+
+        return channelInfoResponse;
+    }
 }

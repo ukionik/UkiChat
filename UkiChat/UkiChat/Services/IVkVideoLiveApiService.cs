@@ -22,4 +22,12 @@ public interface IVkVideoLiveApiService
     /// <param name="accessToken">Токен для проверки</param>
     /// <returns>Информация о токене</returns>
     Task<VkVideoLiveTokenInfoResponse> ValidateAccessTokenAsync(string accessToken);
+
+    /// <summary>
+    /// Получить информацию о канале
+    /// </summary>
+    /// <param name="accessToken">Токен доступа</param>
+    /// <param name="channelUrl">URL канала</param>
+    /// <returns>Информация о канале</returns>
+    Task<VkVideoLiveChannelInfoResponse> GetChannelInfoAsync(string accessToken, string channelUrl);
 }
