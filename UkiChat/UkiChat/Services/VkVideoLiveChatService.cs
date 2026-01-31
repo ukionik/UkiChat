@@ -175,6 +175,32 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
     }
 
     /// <summary>
+    /// Отправляет pong ответ на ping от сервера
+    /// </summary>
+    private async Task SendPongAsync()
+    {
+        try
+        {
+            if (_webSocket == null || _webSocket.State != WebSocketState.Open)
+            {
+                return;
+            }
+
+            // В Centrifuge v2 протоколе pong - это пустой JSON объект
+            var pongJson = "{}";
+            var bytes = Encoding.UTF8.GetBytes(pongJson);
+            var buffer = new ArraySegment<byte>(bytes);
+
+            await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, _cancellationTokenSource?.Token ?? CancellationToken.None);
+            Console.WriteLine("[VkVideoLiveChat] Pong отправлен");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[VkVideoLiveChat] Ошибка отправки pong: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Цикл получения сообщений из WebSocket
     /// </summary>
     private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
@@ -226,8 +252,24 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
     {
         try
         {
+            // Проверяем на ping от сервера (пустой JSON объект)
+            if (json.Trim() == "{}")
+            {
+                Console.WriteLine("[VkVideoLiveChat] Получен ping от сервера, отправляем pong");
+                await SendPongAsync();
+                return;
+            }
+
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
+
+            // Проверяем на пустой объект (ping)
+            if (root.ValueKind == JsonValueKind.Object && root.EnumerateObject().MoveNext() == false)
+            {
+                Console.WriteLine("[VkVideoLiveChat] Получен ping (пустой объект), отправляем pong");
+                await SendPongAsync();
+                return;
+            }
 
             // Получаем ID сообщения (0 для push от сервера)
             var id = root.TryGetProperty("id", out var idProp) ? idProp.GetUInt32() : 0;
@@ -247,8 +289,15 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
             if (root.TryGetProperty("connect", out var connectProp))
             {
                 _clientId = connectProp.TryGetProperty("client", out var clientProp) ? clientProp.GetString() : "";
-                Console.WriteLine($"[VkVideoLiveChat] Подключено. Client ID: {_clientId}");
+
+                // Получаем ping интервал из ответа сервера (для информации)
+                var pingInterval = connectProp.TryGetProperty("ping", out var pingProp)
+                    ? pingProp.GetInt32()
+                    : 25;
+
+                Console.WriteLine($"[VkVideoLiveChat] Подключено. Client ID: {_clientId}, Ping interval: {pingInterval}s");
                 _isConnected = true;
+
                 OnConnected();
             }
 
