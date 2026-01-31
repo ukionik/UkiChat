@@ -36,6 +36,8 @@ public record UkiChatMessage(ChatPlatform Platform
 
         // Собираем бейджи
         var badges = new List<string>();
+
+        // Добавляем обычные бейджи
         if (author?.Badges != null)
         {
             foreach (var badge in author.Badges)
@@ -45,6 +47,17 @@ public record UkiChatMessage(ChatPlatform Platform
                 {
                     badges.Add(badgeUrl);
                 }
+            }
+        }
+        
+        // Добавляем первую роль как бейдж (если есть)
+        var firstRole = author?.Roles?.FirstOrDefault();
+        if (firstRole != null)
+        {
+            var roleUrl = firstRole.SmallUrl ?? firstRole.MediumUrl ?? firstRole.LargeUrl;
+            if (!string.IsNullOrEmpty(roleUrl))
+            {
+                badges.Add(roleUrl);
             }
         }
 

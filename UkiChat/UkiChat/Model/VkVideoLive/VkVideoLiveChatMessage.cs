@@ -110,6 +110,33 @@ public record VkVideoLiveChatAuthor
 
     [JsonPropertyName("badges")]
     public List<VkVideoLiveChatBadge>? Badges { get; init; }
+
+    [JsonPropertyName("roles")]
+    public List<VkVideoLiveChatRole>? Roles { get; init; }
+}
+
+/// <summary>
+/// Роль пользователя на канале
+/// </summary>
+public record VkVideoLiveChatRole
+{
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+
+    [JsonPropertyName("priority")]
+    public int Priority { get; init; }
+
+    [JsonPropertyName("smallUrl")]
+    public string? SmallUrl { get; init; }
+
+    [JsonPropertyName("mediumUrl")]
+    public string? MediumUrl { get; init; }
+
+    [JsonPropertyName("largeUrl")]
+    public string? LargeUrl { get; init; }
 }
 
 /// <summary>
