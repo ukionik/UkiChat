@@ -19,7 +19,6 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
     private readonly IVkVideoLiveApiService _apiService;
     private ClientWebSocket? _webSocket;
     private CancellationTokenSource? _cancellationTokenSource;
-    private string? _accessToken;
     private string? _chatChannel;
     private string? _clientId;
     private uint _commandId;
@@ -40,7 +39,6 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
     {
         try
         {
-            _accessToken = accessToken;
             // Убираем префикс "api-" из названия канала если он есть
             _chatChannel = chatChannel.Replace("api-channel-", "channel-");
             _commandId = 0;

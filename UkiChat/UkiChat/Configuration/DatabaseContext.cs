@@ -17,10 +17,12 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         ProfileRepository = new ProfileRepository(db);
         AppSettingsRepository = new AppSettingsRepository(db);
         TwitchSettingsRepository = new TwitchSettingsRepository(db);
+        VkVideoLiveSettingsRepository = new VkVideoLiveSettingsRepository(db);
         InitDefaultData(defaultAppSettings);
     }
 
     public ITwitchSettingsRepository TwitchSettingsRepository { get; }
+    public IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
     public IProfileRepository ProfileRepository { get; }
     public IAppSettingsRepository AppSettingsRepository { get; }
 
@@ -67,5 +69,13 @@ public class DatabaseContext : IDatabaseContext, IDisposable
             AppSettings = appSettings
         };
         TwitchSettingsRepository.Save(twitchSettings);
+
+        var vkVideoLiveSettings = new VkVideoLiveSettings
+        {
+            ApiClientId = defaultAppSettings.VkVideoLive?.ApiClientId,
+            ApiClientSecret = defaultAppSettings.VkVideoLive?.ApiClientSecret,
+            AppSettings = appSettings
+        };
+        VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
 }

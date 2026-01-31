@@ -7,3 +7,6 @@ api_client_secret = "your_api_client_secret"
 api_refresh_token = "your_api_refresh_token"
 chatbot_username = "your_twitch_username"
 chatbot_access_token = "your_twitch_access_token"
+[vkvideolive]
+api_client_id = "your_api_client_id"
+api_client_secret = "your_api_client_secret"
