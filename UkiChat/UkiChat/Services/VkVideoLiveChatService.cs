@@ -250,6 +250,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
     private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
     {
         var buffer = new byte[8192];
+        var messageBuilder = new StringBuilder();
         WriteLog("[RECEIVE] Начало получения сообщений");
 
         try
@@ -268,10 +269,25 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    WriteLog($"[RAW_RECEIVE] {json}");
-                    Console.WriteLine($"[VkVideoLiveChat] Получено {result.Count} байт (JSON): {json}");
-                    await ProcessJsonMessageAsync(json);
+                    // Накапливаем фрагменты сообщения
+                    var chunk = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    messageBuilder.Append(chunk);
+
+                    // Обрабатываем только когда получено полное сообщение
+                    if (result.EndOfMessage)
+                    {
+                        var json = messageBuilder.ToString();
+                        messageBuilder.Clear();
+
+                        WriteLog($"[RAW_RECEIVE] {json}");
+                        Console.WriteLine($"[VkVideoLiveChat] Получено полное сообщение ({json.Length} символов)");
+                        await ProcessJsonMessageAsync(json);
+                    }
+                    else
+                    {
+                        WriteLog($"[FRAGMENT] Получен фрагмент {result.Count} байт, ожидаем продолжение...");
+                        Console.WriteLine($"[VkVideoLiveChat] Получен фрагмент {result.Count} байт, накоплено {messageBuilder.Length} символов");
+                    }
                 }
             }
         }
