@@ -37,6 +37,36 @@ public record VkVideoLiveChatMessageData
 
     [JsonPropertyName("isPrivate")]
     public bool IsPrivate { get; init; }
+
+    [JsonPropertyName("threadId")]
+    public string? ThreadId { get; init; }
+
+    [JsonPropertyName("parent")]
+    public VkVideoLiveChatParentMessage? Parent { get; init; }
+}
+
+/// <summary>
+/// Родительское сообщение (для ответов)
+/// </summary>
+public record VkVideoLiveChatParentMessage
+{
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
+
+    [JsonPropertyName("author")]
+    public VkVideoLiveChatAuthor? Author { get; init; }
+
+    [JsonPropertyName("data")]
+    public List<VkVideoLiveChatContent>? Content { get; init; }
+
+    [JsonPropertyName("createdAt")]
+    public long CreatedAt { get; init; }
+
+    [JsonPropertyName("isDeleted")]
+    public bool IsDeleted { get; init; }
+
+    [JsonPropertyName("isPrivate")]
+    public bool IsPrivate { get; init; }
 }
 
 /// <summary>

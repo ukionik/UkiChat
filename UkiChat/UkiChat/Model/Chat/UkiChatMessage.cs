@@ -12,7 +12,8 @@ public record UkiChatMessage(ChatPlatform Platform
     , List<string> Badges
     , string DisplayName
     , string DisplayNameColor
-    , List<UkiChatMessagePart> MessageParts)
+    , List<UkiChatMessagePart> MessageParts
+    , UkiChatReplyInfo? ReplyTo = null)
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, SevenTvEmote>? sevenTvEmotes = null)
     {
@@ -50,7 +51,20 @@ public record UkiChatMessage(ChatPlatform Platform
         // Парсим контент сообщения
         var messageParts = ParseVkVideoLiveContent(chatMessage.Data?.Content);
 
-        return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts);
+        // Парсим информацию об ответе (если есть)
+        UkiChatReplyInfo? replyTo = null;
+        var parent = chatMessage.Data?.Parent;
+        if (parent != null)
+        {
+            var parentAuthor = parent.Author;
+            var parentDisplayName = parentAuthor?.DisplayName ?? parentAuthor?.Nick ?? "Unknown";
+            var parentDisplayNameColor = ColorUtil.GetVkVideoLiveNickColor(parentAuthor?.NickColor ?? 0);
+            var parentMessageParts = ParseVkVideoLiveContent(parent.Content);
+
+            replyTo = new UkiChatReplyInfo(parentDisplayName, parentDisplayNameColor, parentMessageParts);
+        }
+
+        return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts, replyTo);
     }
 
     private static List<UkiChatMessagePart> ParseVkVideoLiveContent(List<VkVideoLiveChatContent>? content)
@@ -199,4 +213,13 @@ public record UkiChatMessage(ChatPlatform Platform
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
         }
     }
-};
+}
+
+/// <summary>
+/// Информация об ответе на сообщение
+/// </summary>
+public record UkiChatReplyInfo(
+    string DisplayName,
+    string DisplayNameColor,
+    List<UkiChatMessagePart> MessageParts
+);
