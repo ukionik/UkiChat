@@ -10,6 +10,15 @@ public static class ColorUtil
         "#5F9EA0", "#1E90FF", "#FF69B4", "#8A2BE2", "#00FF7F"
     ];
 
+    // Цвета ников VK Video Live (индексы 0-15)
+    private static readonly string[] VkVideoLiveColors =
+    [
+        "#D66E34", "#B8AAFF", "#1D90FF", "#9961F9",
+        "#59A840", "#E73629", "#DE6489", "#20BBA1",
+        "#F8B301", "#0099BB", "#7BBEFF", "#E542FF",
+        "#A36C59", "#8BA259", "#00A9FF", "#A20BFF"
+    ];
+
     /// <summary>
     /// Возвращает цвет для отображения имени пользователя.
     /// Если hexColor задан, возвращает его, иначе генерирует цвет на основе хэша displayName.
@@ -24,5 +33,16 @@ public static class ColorUtil
         var hash = displayName.GetHashCode();
         var index = (hash & 0x7FFFFFFF) % DefaultColors.Length; // Используем абсолютное значение
         return DefaultColors[index];
+    }
+
+    /// <summary>
+    /// Возвращает цвет ника VK Video Live по индексу (0-15).
+    /// </summary>
+    public static string GetVkVideoLiveNickColor(int colorIndex)
+    {
+        if (colorIndex < 0 || colorIndex >= VkVideoLiveColors.Length)
+            return VkVideoLiveColors[0]; // Возвращаем первый цвет по умолчанию
+
+        return VkVideoLiveColors[colorIndex];
     }
 }

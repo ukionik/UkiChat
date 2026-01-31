@@ -31,7 +31,7 @@ public record UkiChatMessage(ChatPlatform Platform
     {
         var author = chatMessage.Data?.Author;
         var displayName = author?.DisplayName ?? author?.Nick ?? "Unknown";
-        var displayNameColor = ColorUtil.GetDisplayNameColor(displayName, "");
+        var displayNameColor = ColorUtil.GetVkVideoLiveNickColor(author?.NickColor ?? 0);
 
         // Собираем бейджи
         var badges = new List<string>();
