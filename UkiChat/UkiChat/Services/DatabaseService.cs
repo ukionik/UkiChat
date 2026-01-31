@@ -25,9 +25,11 @@ public class DatabaseService : IDatabaseService
     public AppSettingsData GetActiveAppSettingsData()
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
-        return new AppSettingsData(new TwitchSettingsData(
-            twitchSettings.Channel
-        ));
+        var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+        return new AppSettingsData(
+            new TwitchSettingsData(twitchSettings.Channel),
+            new VkVideoLiveSettingsData(vkVideoLiveSettings.Channel)
+        );
     }
 
     public void UpdateTwitchSettings(TwitchSettingsData data)
