@@ -473,6 +473,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
         try
         {
             var message = JsonSerializer.Deserialize<VkVideoLiveChatMessage>(data);
+            WriteLog($"[PARSED] Type: {message?.Type}, Author: {message?.Data?.Author?.DisplayName}, ContentParts: {message?.Data?.Content?.Count ?? 0}");
             MessageReceived?.Invoke(this, new ChatMessageEventArgs
             {
                 Message = message,
@@ -481,6 +482,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
         }
         catch (Exception ex)
         {
+            WriteLog($"[PARSE_ERROR] {ex.Message}\nData: {data}");
             Console.WriteLine($"[VkVideoLiveChat] Ошибка парсинга сообщения: {ex.Message}");
             OnError($"Ошибка парсинга сообщения: {ex.Message}", ex);
         }

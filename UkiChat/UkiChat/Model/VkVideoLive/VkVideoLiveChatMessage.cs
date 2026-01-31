@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace UkiChat.Model.VkVideoLive;
@@ -148,7 +149,7 @@ public record VkVideoLiveChatBadgeAchievement
 }
 
 /// <summary>
-/// Контент сообщения (текст, эмоут и т.д.)
+/// Контент сообщения (текст, эмоут, упоминание и т.д.)
 /// </summary>
 public record VkVideoLiveChatContent
 {
@@ -162,13 +163,14 @@ public record VkVideoLiveChatContent
     [JsonPropertyName("modificator")]
     public string Modificator { get; init; } = string.Empty;
 
-    // Для типа "smile"
+    // Для типов "smile" и "mention" - может быть строкой (GUID) или числом
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public JsonElement? Id { get; init; }
 
     [JsonPropertyName("name")]
     public string? Name { get; init; }
 
+    // Для типа "smile"
     [JsonPropertyName("smallUrl")]
     public string? SmallUrl { get; init; }
 
@@ -183,4 +185,17 @@ public record VkVideoLiveChatContent
 
     [JsonPropertyName("isAnimated")]
     public bool IsAnimated { get; init; }
+
+    // Для типа "mention"
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; init; }
+
+    [JsonPropertyName("nick")]
+    public string? Nick { get; init; }
+
+    [JsonPropertyName("blogUrl")]
+    public string? BlogUrl { get; init; }
+
+    [JsonPropertyName("nickColor")]
+    public JsonElement? NickColor { get; init; }
 }

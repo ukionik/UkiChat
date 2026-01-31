@@ -112,6 +112,15 @@ public record UkiChatMessage(ChatPlatform Platform
                     parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Emote, emoteUrl));
                 }
             }
+            else if (item.Type == "mention")
+            {
+                // Упоминание пользователя - отображаем как текст с @
+                var mentionName = item.DisplayName ?? item.Nick ?? item.Name ?? "";
+                if (!string.IsNullOrEmpty(mentionName))
+                {
+                    parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, $"@{mentionName}"));
+                }
+            }
         }
 
         return parts;
