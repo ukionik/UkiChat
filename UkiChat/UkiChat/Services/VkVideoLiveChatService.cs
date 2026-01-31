@@ -1,11 +1,10 @@
 using System;
-using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using UkiChat.Model.VkVideoLive;
 
 namespace UkiChat.Services;
 
@@ -385,11 +384,20 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService, IDisposable
 
     private void OnMessageReceived(string data, string channel)
     {
-        MessageReceived?.Invoke(this, new ChatMessageEventArgs
+        try
         {
-            Data = data,
-            Channel = channel
-        });
+            var message = JsonSerializer.Deserialize<VkVideoLiveChatMessage>(data);
+            MessageReceived?.Invoke(this, new ChatMessageEventArgs
+            {
+                Message = message,
+                Channel = channel ?? string.Empty
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[VkVideoLiveChat] Ошибка парсинга сообщения: {ex.Message}");
+            OnError($"Ошибка парсинга сообщения: {ex.Message}", ex);
+        }
     }
 
     private void OnError(string message, Exception? exception = null)

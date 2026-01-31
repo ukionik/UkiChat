@@ -28,7 +28,8 @@ public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
 
         chatService.MessageReceived += (sender, e) =>
         {
-            testOutputHelper.WriteLine($"Message received from channel '{e.Channel}': {e.Data}");
+            var author = e.Message?.Data?.Author?.DisplayName ?? "Unknown";
+            testOutputHelper.WriteLine($"Message received from channel '{e.Channel}' by '{author}'");
             messageReceivedEvent.TrySetResult(true);
         };
 

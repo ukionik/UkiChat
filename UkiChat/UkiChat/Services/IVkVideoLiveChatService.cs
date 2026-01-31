@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using UkiChat.Model.VkVideoLive;
 
 namespace UkiChat.Services;
 
@@ -46,7 +47,7 @@ public interface IVkVideoLiveChatService
 /// </summary>
 public class ChatMessageEventArgs : EventArgs
 {
-    public string Data { get; init; } = string.Empty;
+    public VkVideoLiveChatMessage? Message { get; init; }
     public string Channel { get; init; } = string.Empty;
 }
 

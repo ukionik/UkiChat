@@ -97,8 +97,9 @@ public class StreamService : IStreamService
         // VK Video Live events
         _vkVideoLiveChatService.MessageReceived += async (sender, e) =>
         {
-            Console.WriteLine($"[VkVideoLive] Message received: {e.Data}");
-            await signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessage(e.Data));
+            if (e.Message == null) return;
+            Console.WriteLine($"[VkVideoLive] Message received from: {e.Message.Data?.Author?.DisplayName}");
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessage(e.Message));
         };
 
         _vkVideoLiveChatService.Connected += async (sender, e) =>

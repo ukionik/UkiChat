@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using TwitchLib.Client.Models;
 using UkiChat.Model.SevenTv;
+using UkiChat.Model.VkVideoLive;
 using UkiChat.Utils;
 
 namespace UkiChat.Model.Chat;
@@ -26,33 +27,80 @@ public record UkiChatMessage(ChatPlatform Platform
             [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)]);
     }
 
-    public static UkiChatMessage FromVkVideoLiveMessage(string jsonData)
+    public static UkiChatMessage FromVkVideoLiveMessage(VkVideoLiveChatMessage chatMessage)
     {
-        try
+        var author = chatMessage.Data?.Author;
+        var displayName = author?.DisplayName ?? author?.Nick ?? "Unknown";
+        var displayNameColor = ColorUtil.GetDisplayNameColor(displayName, "");
+
+        // Собираем бейджи
+        var badges = new List<string>();
+        if (author?.Badges != null)
         {
-            using var document = JsonDocument.Parse(jsonData);
-            var root = document.RootElement;
-
-            var displayName = root.TryGetProperty("author", out var authorProp) &&
-                              authorProp.TryGetProperty("nick", out var nickProp)
-                ? nickProp.GetString() ?? "Unknown"
-                : "Unknown";
-
-            var message = root.TryGetProperty("data", out var dataProp) &&
-                          dataProp.TryGetProperty("content", out var contentProp)
-                ? contentProp.GetString() ?? ""
-                : "";
-
-            var displayNameColor = ColorUtil.GetDisplayNameColor(displayName, "");
-
-            return new UkiChatMessage(ChatPlatform.VkVideoLive, [], displayName, displayNameColor,
-                [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)]);
+            foreach (var badge in author.Badges)
+            {
+                var badgeUrl = badge.SmallUrl ?? badge.MediumUrl ?? badge.LargeUrl;
+                if (!string.IsNullOrEmpty(badgeUrl))
+                {
+                    badges.Add(badgeUrl);
+                }
+            }
         }
-        catch
+
+        // Парсим контент сообщения
+        var messageParts = ParseVkVideoLiveContent(chatMessage.Data?.Content);
+
+        return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts);
+    }
+
+    private static List<UkiChatMessagePart> ParseVkVideoLiveContent(List<VkVideoLiveChatContent>? content)
+    {
+        var parts = new List<UkiChatMessagePart>();
+
+        if (content == null || content.Count == 0)
         {
-            return new UkiChatMessage(ChatPlatform.VkVideoLive, [], "VkVideoLive", "#FFFFFF",
-                [new UkiChatMessagePart(UkiChatMessagePartType.Text, jsonData)]);
+            return parts;
         }
+
+        foreach (var item in content)
+        {
+            // Пропускаем BLOCK_END маркеры
+            if (item.Modificator == "BLOCK_END")
+                continue;
+
+            if (item.Type == "text" && !string.IsNullOrEmpty(item.Content))
+            {
+                // Контент в формате ["текст","стиль",[]]
+                try
+                {
+                    using var doc = JsonDocument.Parse(item.Content);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array && doc.RootElement.GetArrayLength() > 0)
+                    {
+                        var text = doc.RootElement[0].GetString();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, text));
+                        }
+                    }
+                }
+                catch
+                {
+                    // Если не JSON, добавляем как есть
+                    parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, item.Content));
+                }
+            }
+            else if (item.Type == "smile")
+            {
+                // Эмоут - используем URL картинки (предпочитаем medium размер)
+                var emoteUrl = item.MediumUrl ?? item.SmallUrl ?? item.LargeUrl;
+                if (!string.IsNullOrEmpty(emoteUrl))
+                {
+                    parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Emote, emoteUrl));
+                }
+            }
+        }
+
+        return parts;
     }
 
     private static List<UkiChatMessagePart> ParseMessageParts(string message, EmoteSet emoteSet, Dictionary<string, SevenTvEmote>? sevenTvEmotes = null)
