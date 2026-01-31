@@ -5,4 +5,5 @@ namespace UkiChat.Services;
 public interface IStreamService
 {
     Task ConnectToTwitchAsync();
+    Task ConnectToVkVideoLiveAsync();
 }

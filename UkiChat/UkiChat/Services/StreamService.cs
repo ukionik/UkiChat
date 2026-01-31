@@ -22,9 +22,12 @@ public class StreamService : IStreamService
     private readonly ISevenTvApiService _sevenTvApiService;
     private readonly IChatBadgesRepository _chatBadgesRepository;
     private readonly ISevenTvEmotesRepository _sevenTvEmotesRepository;
+    private readonly IVkVideoLiveChatService _vkVideoLiveChatService;
+    private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
     private readonly TwitchClient _twitchClient = new();
     private string _channelName = "";
     private string _broadcasterId = "";
+    private string _vkVideoLiveChannel = "";
 
     public StreamService(IDatabaseContext databaseContext
         , ISignalRService signalRService
@@ -33,7 +36,9 @@ public class StreamService : IStreamService
         , ISevenTvApiService sevenTvApiService
         , IDatabaseService databaseService
         , IChatBadgesRepository chatBadgesRepository
-        , ISevenTvEmotesRepository sevenTvEmotesRepository)
+        , ISevenTvEmotesRepository sevenTvEmotesRepository
+        , IVkVideoLiveChatService vkVideoLiveChatService
+        , IVkVideoLiveApiService vkVideoLiveApiService)
     {
         _databaseContext = databaseContext;
         _signalRService = signalRService;
@@ -43,6 +48,10 @@ public class StreamService : IStreamService
         _databaseService = databaseService;
         _chatBadgesRepository = chatBadgesRepository;
         _sevenTvEmotesRepository = sevenTvEmotesRepository;
+        _vkVideoLiveChatService = vkVideoLiveChatService;
+        _vkVideoLiveApiService = vkVideoLiveApiService;
+
+        // Twitch events
         _twitchClient.OnMessageReceived += async (sender, e) =>
         {
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
@@ -84,6 +93,32 @@ public class StreamService : IStreamService
             /*await SendChatMessageNotification(
                 string.Format(_localizationService.GetString("twitch.connectingToChannelError"), _channelName));*/
         };
+
+        // VK Video Live events
+        _vkVideoLiveChatService.MessageReceived += async (sender, e) =>
+        {
+            Console.WriteLine($"[VkVideoLive] Message received: {e.Data}");
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessage(e.Data));
+        };
+
+        _vkVideoLiveChatService.Connected += async (sender, e) =>
+        {
+            Console.WriteLine("[VkVideoLive] Connected");
+            await SendChatMessageNotification(string.Format(_localizationService.GetString("vkvideolive.connectedToChannel"),
+                _vkVideoLiveChannel));
+        };
+
+        _vkVideoLiveChatService.Disconnected += async (sender, e) =>
+        {
+            Console.WriteLine($"[VkVideoLive] Disconnected: {e.Reason}");
+            await SendChatMessageNotification(
+                string.Format(_localizationService.GetString("vkvideolive.disconnectedFromChannel"), _vkVideoLiveChannel));
+        };
+
+        _vkVideoLiveChatService.Error += (sender, e) =>
+        {
+            Console.WriteLine($"[VkVideoLive] Error: {e.Message}");
+        };
     }
 
     public async Task ConnectToTwitchAsync()
@@ -121,6 +156,63 @@ public class StreamService : IStreamService
             _channelName));
 
         await _twitchClient.JoinChannelAsync(newChannel, true);
+    }
+
+    public async Task ConnectToVkVideoLiveAsync()
+    {
+        var vkSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+
+        if (string.IsNullOrEmpty(vkSettings.Channel))
+        {
+            Console.WriteLine("[VkVideoLive] Channel not configured");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(vkSettings.ApiClientId) || string.IsNullOrEmpty(vkSettings.ApiClientSecret))
+        {
+            Console.WriteLine("[VkVideoLive] API credentials not configured");
+            return;
+        }
+
+        try
+        {
+            // Получаем access token если его нет
+            var accessToken = vkSettings.ApiAccessToken;
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                var tokenResponse = await _vkVideoLiveApiService.GetAccessTokenAsync(
+                    vkSettings.ApiClientId,
+                    vkSettings.ApiClientSecret);
+                accessToken = tokenResponse.AccessToken;
+
+                // Сохраняем токен в базу
+                vkSettings.ApiAccessToken = accessToken;
+                _databaseContext.VkVideoLiveSettingsRepository.Save(vkSettings);
+            }
+
+            // Получаем информацию о канале для получения chat channel
+            var channelInfo = await _vkVideoLiveApiService.GetChannelInfoAsync(accessToken, vkSettings.Channel);
+            var chatChannel = channelInfo.Data.Channel.WebSocketChannels?.Chat;
+
+            if (string.IsNullOrEmpty(chatChannel))
+            {
+                Console.WriteLine("[VkVideoLive] Chat channel not found");
+                return;
+            }
+
+            _vkVideoLiveChannel = vkSettings.Channel;
+            await SendChatMessageNotification(string.Format(_localizationService.GetString("vkvideolive.connectingToChannel"),
+                _vkVideoLiveChannel));
+
+            // Подключаемся к чату
+            await _vkVideoLiveChatService.ConnectAsync(accessToken, chatChannel);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[VkVideoLive] Connection error: {ex.Message}");
+            await SendChatMessageNotification(string.Format(_localizationService.GetString("vkvideolive.connectingToChannelError"),
+                vkSettings.Channel));
+        }
     }
 
     private async Task InitializeTwitchApiAsync(TwitchSettings twitchSettings)

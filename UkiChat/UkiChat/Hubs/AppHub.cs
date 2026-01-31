@@ -27,6 +27,11 @@ public class AppHub : Hub
         await _streamService.ConnectToTwitchAsync();
     }
 
+    public async Task ConnectToVkVideoLive()
+    {
+        await _streamService.ConnectToVkVideoLiveAsync();
+    }
+
     public async Task<string> GetLanguage(string language)
     {
         var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{language}.json");
