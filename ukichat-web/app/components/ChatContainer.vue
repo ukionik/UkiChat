@@ -26,7 +26,7 @@ function onScroll() {
   if (!el)
     return
 
-  const threshold = 200
+  const threshold = 200 * props.scale
   autoScroll.value = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold
 }
 
@@ -34,6 +34,8 @@ function getPlatformImage(platform: string) {
   switch (platform) {
     case "Twitch":
       return "/images/twitch.svg"
+    case "VkVideoLive":
+      return "/images/vk-video-live.svg"
     default:
       return ""
   }
