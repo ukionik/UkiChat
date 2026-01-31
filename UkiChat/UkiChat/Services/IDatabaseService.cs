@@ -9,4 +9,5 @@ public interface IDatabaseService
     AppSettingsData GetActiveAppSettingsData();
     void UpdateTwitchSettings(TwitchSettingsData data);
     void UpdateTwitchApiTokens(string accessToken, string refreshToken);
+    void UpdateVkVideoLiveSettings(VkVideoLiveSettingsData data);
 }

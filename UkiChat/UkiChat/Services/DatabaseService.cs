@@ -17,9 +17,13 @@ public class DatabaseService : IDatabaseService
     {
         var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
-        return new AppSettingsInfoData(appSettings.Profile.Name, appSettings.Language, 
-            new TwitchSettingsInfo(twitchSettings.Channel)
-            );
+        var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+        return new AppSettingsInfoData(
+            appSettings.Profile.Name,
+            appSettings.Language,
+            new TwitchSettingsInfo(twitchSettings.Channel),
+            new VkVideoLiveSettingsInfo(vkVideoLiveSettings.Channel)
+        );
     }
 
     public AppSettingsData GetActiveAppSettingsData()
@@ -45,5 +49,12 @@ public class DatabaseService : IDatabaseService
         twitchSettings.ApiAccessToken = accessToken;
         twitchSettings.ApiRefreshToken = refreshToken;
         _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
+    }
+
+    public void UpdateVkVideoLiveSettings(VkVideoLiveSettingsData data)
+    {
+        var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+        vkVideoLiveSettings.Channel = data.Channel;
+        _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
 }

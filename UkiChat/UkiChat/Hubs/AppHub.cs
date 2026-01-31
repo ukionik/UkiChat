@@ -53,6 +53,13 @@ public class AppHub : Hub
         _databaseService.UpdateTwitchSettings(settings);
         await _signalRService.SendTwitchReconnect();
     }
+    
+    public async Task UpdateVkVideoLiveSettings(VkVideoLiveSettingsData settings)
+    {
+        _databaseService.UpdateVkVideoLiveSettings(settings);
+        await _signalRService.SendVkVideoLiveReconnect();
+    }
+
 
     public async Task SendChatMessage(UkiChatMessage chatMessage)
     {

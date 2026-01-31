@@ -72,8 +72,8 @@ public class DatabaseContext : IDatabaseContext, IDisposable
 
         var vkVideoLiveSettings = new VkVideoLiveSettings
         {
-            ApiClientId = defaultAppSettings.VkVideoLive?.ApiClientId,
-            ApiClientSecret = defaultAppSettings.VkVideoLive?.ApiClientSecret,
+            ApiClientId = defaultAppSettings.VkVideoLive.ApiClientId,
+            ApiClientSecret = defaultAppSettings.VkVideoLive.ApiClientSecret,
             AppSettings = appSettings
         };
         VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);

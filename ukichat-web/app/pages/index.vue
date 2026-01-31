@@ -12,6 +12,9 @@ const appSettingsInfo = ref({
   language: "en",
   twitch: {
     channel: null
+  },
+  vkVideoLive:{
+    channel: null
   }
 })
 
@@ -38,12 +41,21 @@ async function connectToTwitch() {
   }
 }
 
+async function connectToVkVideoLive() {
+  try{
+    await invokeUpdate("ConnectToVkVideoLive")
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 // Запуск SignalR при монтировании компонента
 onMounted(async () => {
   let connection = await startSignalR()
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
   await connectToTwitch()
+  await connectToVkVideoLive()
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
@@ -53,6 +65,11 @@ onMounted(async () => {
   connection.on("OnTwitchReconnect", async () => {
     console.log("Reconnecting...")
     await connectToTwitch()
+  })
+
+  connection.on("OnVkVideoLiveReconnect", async () => {
+    console.log("Reconnecting...")
+    await connectToVkVideoLive()
   })
 })
 

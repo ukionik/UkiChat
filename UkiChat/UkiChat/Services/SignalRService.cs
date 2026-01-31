@@ -16,4 +16,9 @@ public class SignalRService(IHubContext<AppHub> hubContext) : ISignalRService
     {
         await hubContext.Clients.All.SendAsync("OnTwitchReconnect");
     }
+
+    public async Task SendVkVideoLiveReconnect()
+    {
+        await hubContext.Clients.All.SendAsync("OnVkVideoLiveReconnect");
+    }
 }

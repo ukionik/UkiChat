@@ -7,6 +7,9 @@
     "channel": "Канал",
     "twitch": {
       "name": "Twitch"
+    },
+    "vkVideoLive": {
+      "name": "VK Видео Live"
     }
   },
   "twitch": {
