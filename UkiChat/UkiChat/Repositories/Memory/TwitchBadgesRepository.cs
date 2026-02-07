@@ -9,7 +9,7 @@ namespace UkiChat.Repositories.Memory;
 /// <summary>
 /// Репозиторий для хранения бейджей Twitch чата в памяти
 /// </summary>
-public class ChatBadgesRepository : IChatBadgesRepository
+public class TwitchBadgesRepository : ITwitchBadgesRepository
 {
     // Dictionary<SetId, BadgeVersion[]>
     private Dictionary<string, BadgeVersion[]> _globalBadges = new();

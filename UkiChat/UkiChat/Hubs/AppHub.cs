@@ -15,6 +15,7 @@ public class AppHub : Hub
     private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
     private readonly ISignalRService _signalRService = ContainerLocator.Container.Resolve<ISignalRService>();
     private readonly IStreamService _streamService = ContainerLocator.Container.Resolve<IStreamService>();
+    private readonly ITwitchChatService _twitchChatService = ContainerLocator.Container.Resolve<ITwitchChatService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
 
     public async Task OpenSettingsWindow()
@@ -24,7 +25,7 @@ public class AppHub : Hub
 
     public async Task ConnectToTwitch()
     {
-        await _streamService.ConnectToTwitchAsync();
+        await _twitchChatService.ConnectAsync();
     }
 
     public async Task ConnectToVkVideoLive()

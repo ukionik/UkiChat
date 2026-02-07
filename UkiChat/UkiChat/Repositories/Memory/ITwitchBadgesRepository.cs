@@ -8,7 +8,7 @@ namespace UkiChat.Repositories.Memory;
 /// <summary>
 /// Репозиторий для хранения бейджей Twitch чата в памяти
 /// </summary>
-public interface IChatBadgesRepository
+public interface ITwitchBadgesRepository
 {
     /// <summary>
     /// Получить глобальные бейджи
