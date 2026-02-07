@@ -8,16 +8,16 @@ public class TwitchSettings : IBaseEntity<long>
     public long Id { get; set; }
 
     // Chat credentials
-    public string ChatbotUsername { get; set; }
-    public string ChatbotAccessToken { get; set; }
-    public string Channel { get; set; }
+    public required string ChatbotUsername { get; set; }
+    public required string ChatbotAccessToken { get; set; }
+    public required string Channel { get; set; }
 
     // API credentials
-    public string? ApiClientId { get; set; }
-    public string? ApiClientSecret { get; set; }
-    public string? ApiAccessToken { get; set; }
-    public string? ApiRefreshToken { get; set; }
+    public required string ApiClientId { get; set; }
+    public required string ApiClientSecret { get; set; }
+    public required string ApiAccessToken { get; set; }
+    public required string ApiRefreshToken { get; set; }
 
     [BsonRef]
-    public AppSettings AppSettings { get; set; }
+    public required AppSettings AppSettings { get; set; }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using TwitchLib.Client;
 using UkiChat.Configuration;
 using UkiChat.Model.Chat;
 
@@ -13,7 +12,6 @@ public class StreamService : IStreamService
     private readonly ISignalRService _signalRService;
     private readonly IVkVideoLiveChatService _vkVideoLiveChatService;
     private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
-    private readonly TwitchClient _twitchClient = new();
     private string _vkVideoLiveChannel = "";
 
     public StreamService(IDatabaseContext databaseContext

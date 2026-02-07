@@ -3,7 +3,6 @@ using System.Globalization;
 using LiteDB;
 using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
-using UkiChat.Repositories;
 using UkiChat.Repositories.Database;
 
 namespace UkiChat.Configuration;
@@ -63,8 +62,10 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         {
             ChatbotUsername = defaultAppSettings.Twitch.ChatbotUsername,
             ChatbotAccessToken = defaultAppSettings.Twitch.ChatbotAccessToken,
+            Channel = "",
             ApiClientId = defaultAppSettings.Twitch.ApiClientId,
             ApiClientSecret = defaultAppSettings.Twitch.ApiClientSecret,
+            ApiAccessToken = "",
             ApiRefreshToken = defaultAppSettings.Twitch.ApiRefreshToken,
             AppSettings = appSettings
         };
