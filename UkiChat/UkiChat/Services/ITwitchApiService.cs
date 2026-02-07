@@ -17,8 +17,8 @@ public interface ITwitchApiService
     /// Получает broadcaster ID по имени канала
     /// </summary>
     /// <param name="channelName">Имя канала</param>
-    /// <returns>Broadcaster ID или null если пользователь не найден</returns>
-    Task<string?> GetBroadcasterIdAsync(string channelName);
+    /// <returns>Broadcaster ID или empty если пользователь не найден</returns>
+    Task<string> GetBroadcasterIdAsync(string channelName);
 
     /// <summary>
     /// Проверяет валидность токена и обновляет его при необходимости.

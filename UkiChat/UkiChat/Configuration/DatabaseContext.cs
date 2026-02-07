@@ -62,12 +62,10 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         {
             ChatbotUsername = defaultAppSettings.Twitch.ChatbotUsername,
             ChatbotAccessToken = defaultAppSettings.Twitch.ChatbotAccessToken,
-            Channel = "",
             ApiClientId = defaultAppSettings.Twitch.ApiClientId,
             ApiClientSecret = defaultAppSettings.Twitch.ApiClientSecret,
-            ApiAccessToken = "",
             ApiRefreshToken = defaultAppSettings.Twitch.ApiRefreshToken,
-            AppSettings = appSettings
+            AppSettings = appSettings,
         };
         TwitchSettingsRepository.Save(twitchSettings);
 

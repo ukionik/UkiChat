@@ -14,39 +14,34 @@ public class AppHub : Hub
 {
     private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
     private readonly ISignalRService _signalRService = ContainerLocator.Container.Resolve<ISignalRService>();
-    private readonly IStreamService _streamService = ContainerLocator.Container.Resolve<IStreamService>();
     private readonly ITwitchChatService _twitchChatService = ContainerLocator.Container.Resolve<ITwitchChatService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
 
-    public async Task OpenSettingsWindow()
+    public Task OpenSettingsWindow()
     {
         _windowService.ShowWindow<SettingsWindow>();
+        return Task.CompletedTask;
     }
-
-    public async Task ConnectToTwitch()
-    {
-        await _twitchChatService.ConnectAsync();
-    }
-
-    public async Task ConnectToVkVideoLive()
-    {
-        await _streamService.ConnectToVkVideoLiveAsync();
-    }
-
+    
     public async Task<string> GetLanguage(string language)
     {
         var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", $"{language}.json");
         return await File.ReadAllTextAsync(filePath);
     }
 
-    public async Task<AppSettingsInfoData> GetActiveAppSettingsInfo()
+    public Task<AppSettingsInfoData> GetActiveAppSettingsInfo()
     {
-        return _databaseService.GetActiveAppSettingsInfo();
+        return Task.FromResult(_databaseService.GetActiveAppSettingsInfo());
     }
 
-    public async Task<AppSettingsData> GetActiveAppSettingsData()
+    public Task<AppSettingsData> GetActiveAppSettingsData()
     {
-        return _databaseService.GetActiveAppSettingsData();
+        return Task.FromResult(_databaseService.GetActiveAppSettingsData());
+    }
+
+    public async Task ChangeTwitchChannel(string newChannel)
+    {
+        await _twitchChatService.ChangeChannelAsync(newChannel);
     }
 
     public async Task UpdateTwitchSettings(TwitchSettingsData settings)
@@ -60,8 +55,7 @@ public class AppHub : Hub
         _databaseService.UpdateVkVideoLiveSettings(settings);
         await _signalRService.SendVkVideoLiveReconnect();
     }
-
-
+    
     public async Task SendChatMessage(UkiChatMessage chatMessage)
     {
         await _signalRService.SendChatMessageAsync(chatMessage);

@@ -43,12 +43,12 @@ async function getActiveAppSettingsData(){
   return await invokeGet("GetActiveAppSettingsData")
 }
 
-async function updateTwitchSettings() {
-  await invokeUpdate("UpdateTwitchSettings", state.settings.twitch)
+async function changeTwitchChannel() {
+  await invokeUpdate("ChangeTwitchChannel", state.settings.twitch.channel)
 }
 
-async function updateVkVideoLiveSettings() {
-  await invokeUpdate("UpdateVkVideoLiveSettings", state.settings.vkVideoLive)
+async function changeVkVideoLiveChannel() {
+  await invokeUpdate("ChangeVkVideoLiveChannel", state.settings.vkVideoLive.channel)
 }
 
 
@@ -65,11 +65,11 @@ onMounted(async () => {
   <UForm :schema="schema" :state="state" class="space-y-4 m-4">
     <h2 class="text-xl font-semibold mb-4">{{t('settings.twitch.name')}}</h2>
     <HorizontalFormField :label="t('settings.channel')" name="twitch-channel">
-      <UInput v-model="state.settings.twitch.channel" @blur="updateTwitchSettings" />
+      <UInput v-model="state.settings.twitch.channel" @blur="changeTwitchChannel" />
     </HorizontalFormField>
     <h2 class="text-xl font-semibold mb-4">{{t('settings.vkVideoLive.name')}}</h2>
     <HorizontalFormField :label="t('settings.channel')" name="vk-video-live-channel">
-      <UInput v-model="state.settings.vkVideoLive.channel" @blur="updateVkVideoLiveSettings" />
+      <UInput v-model="state.settings.vkVideoLive.channel" @blur="changeVkVideoLiveChannel" />
     </HorizontalFormField>
   </UForm>
 </template>

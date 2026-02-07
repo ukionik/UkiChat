@@ -2,7 +2,10 @@
 
 namespace UkiChat.Core;
 
-public interface IChatService
+public interface IChatService<in TConnectionParams>
 {
-    Task ConnectAsync();
+    Task ConnectAsync(TConnectionParams connectionParams);
+    Task ChangeChannelAsync(string newChannel);
+    Task LoadGlobalDataAsync();
+    Task LoadChannelDataAsync();
 }

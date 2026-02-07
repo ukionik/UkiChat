@@ -28,40 +28,13 @@ async function getActiveAppSettingsInfo() {
   return await invokeGet("GetActiveAppSettingsInfo")
 }
 
-async function connectToTwitch() {
-  try {
-    await invokeUpdate("ConnectToTwitch")
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-async function connectToVkVideoLive() {
-  try{
-    await invokeUpdate("ConnectToVkVideoLive")
-  } catch (error) {
-    console.error(error)
-  }
-}
-
 onMounted(async () => {
   let connection = await startSignalR()
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
-  await connectToTwitch()
-  await connectToVkVideoLive()
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
-  })
-
-  connection.on("OnTwitchReconnect", async () => {
-    await connectToTwitch()
-  })
-
-  connection.on("OnVkVideoLiveReconnect", async () => {
-    console.log("Reconnecting...")
-    await connectToVkVideoLive()
   })
 })
 </script>
