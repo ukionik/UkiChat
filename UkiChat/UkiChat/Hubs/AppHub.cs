@@ -15,6 +15,7 @@ public class AppHub : Hub
     private readonly IDatabaseService _databaseService = ContainerLocator.Container.Resolve<IDatabaseService>();
     private readonly ISignalRService _signalRService = ContainerLocator.Container.Resolve<ISignalRService>();
     private readonly ITwitchChatService _twitchChatService = ContainerLocator.Container.Resolve<ITwitchChatService>();
+    private readonly IVkVideoLiveChatService _vkVideoLiveChatService = ContainerLocator.Container.Resolve<IVkVideoLiveChatService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
 
     public Task OpenSettingsWindow()
@@ -42,6 +43,11 @@ public class AppHub : Hub
     public async Task ChangeTwitchChannel(string newChannel)
     {
         await _twitchChatService.ChangeChannelAsync(newChannel);
+    }
+    
+    public async Task ChangeVkVideoLiveChannel(string newChannel)
+    {
+        await _vkVideoLiveChatService.ChangeChannelAsync(newChannel);
     }
 
     public async Task UpdateTwitchSettings(TwitchSettingsData settings)

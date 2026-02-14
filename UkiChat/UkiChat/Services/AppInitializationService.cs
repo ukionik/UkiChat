@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using UkiChat.Configuration;
 using UkiChat.Entities;
 using UkiChat.Model.Twitch;
+using UkiChat.Model.VkVideoLive;
 
 namespace UkiChat.Services;
 
@@ -11,23 +12,27 @@ public class AppInitializationService(
     IDatabaseContext databaseContext,
     IDatabaseService databaseService,
     ITwitchChatService twitchChatService,
-    ITwitchApiService twitchApiService) : IAppInitializationService
+    ITwitchApiService twitchApiService,
+    IVkVideoLiveChatService vkVideoLiveChatService
+    ) : IAppInitializationService
 {
     public async Task InitializeAsync()
     {
         localizationService.SetCulture("ru");
         await LoadTwitchDataAsync();
+        await LoadVkVideoLiveDataAsync();
     }
-    
+
     private async Task LoadTwitchDataAsync()
     {
         var twitchSettings = databaseContext.TwitchSettingsRepository.GetActiveSettings();
         await InitializeTwitchApiAsync(twitchSettings);
         await twitchChatService.LoadGlobalDataAsync();
         await twitchChatService.LoadChannelDataAsync();
-        await twitchChatService.ConnectAsync(TwitchConnectionParams.OfTwitchSettings("", twitchSettings.Channel ?? "", twitchSettings));
+        await twitchChatService.ConnectAsync(
+            TwitchConnectionParams.OfTwitchSettings("", twitchSettings.Channel ?? "", twitchSettings));
     }
-    
+
     private async Task InitializeTwitchApiAsync(TwitchSettings twitchSettings)
     {
         if (string.IsNullOrEmpty(twitchSettings.ApiClientId))
@@ -47,7 +52,7 @@ public class AppInitializationService(
         // Проверяем валидность токена и обновляем при необходимости
         await RefreshTwitchApiTokensAsync(twitchSettings);
     }
-    
+
     private async Task RefreshTwitchApiTokensAsync(TwitchSettings twitchSettings)
     {
         if (string.IsNullOrEmpty(twitchSettings.ApiRefreshToken) ||
@@ -65,5 +70,10 @@ public class AppInitializationService(
             databaseService.UpdateTwitchApiTokens(newTokens.AccessToken, newTokens.RefreshToken);
             Console.WriteLine("Twitch API tokens refreshed");
         }
+    }
+
+    private async Task LoadVkVideoLiveDataAsync()
+    {
+        await vkVideoLiveChatService.ConnectAsync(new VkVideoLiveConnectionParams());
     }
 }

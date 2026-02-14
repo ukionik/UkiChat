@@ -48,7 +48,7 @@ public interface IVkVideoLiveChatServiceOld
 public class ChatMessageEventArgs : EventArgs
 {
     public VkVideoLiveChatMessage? Message { get; init; }
-    public string Channel { get; init; } = string.Empty;
+    public long ChannelId { get; init; }
 }
 
 /// <summary>

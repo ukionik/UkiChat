@@ -15,7 +15,7 @@ public class VkVideoLiveChatClient : IDisposable
     private int _commandId;
     private bool _disposed;
     private ClientWebSocket? _webSocket;
-    private string _channel = "";
+    private long _channelId;
 
     public void Dispose()
     {
@@ -34,24 +34,25 @@ public class VkVideoLiveChatClient : IDisposable
     public event EventHandler<DisconnectEventArgs>? Disconnected;
     public event EventHandler<ErrorEventArgs>? Error;
 
-    public async Task ConnectAsync(string wsToken, string channel)
+    public async Task ConnectAsync(string wsToken, long channelId)
     {
         try
         {
-            _channel = channel;
+            _channelId = channelId;
+            var channel = $"channel-chat:{_channelId}";
             _commandId = 0;
             _cancellationTokenSource = new CancellationTokenSource();
             Console.WriteLine("[VkVideoLiveChat] Подключение к WebSocket...");
+            // Подключаемся к WebSocket серверу
             _webSocket = new ClientWebSocket();
+            _webSocket.Options.SetRequestHeader("Origin", "https://vkvideo.ru");
             await _webSocket.ConnectAsync(new Uri(WebSocketUrl), _cancellationTokenSource.Token);
             Console.WriteLine("[VkVideoLiveChat] WebSocket подключен");
-            // Подключаемся к WebSocket серверу
             // Запускаем цикл получения сообщений
             _ = Task.Run(() => ReceiveMessagesAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
 
             // Отправляем команду подключения с WebSocket токеном
             await SendConnectCommandAsync(wsToken);
-
             // Отправляем команду подписки на канал
             await SendSubscribeCommandAsync(channel);
         }
@@ -230,19 +231,19 @@ public class VkVideoLiveChatClient : IDisposable
             if (push.TryGetProperty("pub", out var pubProp))
             {
                 var data = pubProp.TryGetProperty("data", out var dataProp) ? dataProp.GetRawText() : "{}";
-                Console.WriteLine($"[VkVideoLiveChat] Получено сообщение из канала '{_channel}': {data}");
-                OnMessageReceived(data, _channel);
+                Console.WriteLine($"[VkVideoLiveChat] Получено сообщение из канала '{_channelId}': {data}");
+                OnMessageReceived(data, _channelId);
             }
 
             // Обрабатываем join/leave события если нужно
             if (push.TryGetProperty("join", out _))
             {
-                Console.WriteLine($"[VkVideoLiveChat] Join в канале '{_channel}'");
+                Console.WriteLine($"[VkVideoLiveChat] Join в канале '{_channelId}'");
             }
 
             if (push.TryGetProperty("leave", out _))
             {
-                Console.WriteLine($"[VkVideoLiveChat] Leave из канала '{_channel}'");
+                Console.WriteLine($"[VkVideoLiveChat] Leave из канала '{_channelId}'");
             }
 
             // Обрабатываем отписку
@@ -347,7 +348,7 @@ public class VkVideoLiveChatClient : IDisposable
         }
     }
     
-    private void OnMessageReceived(string data, string channel)
+    private void OnMessageReceived(string data, long channelId)
     {
         try
         {
@@ -355,7 +356,7 @@ public class VkVideoLiveChatClient : IDisposable
             MessageReceived?.Invoke(this, new ChatMessageEventArgs
             {
                 Message = message,
-                Channel = channel
+                ChannelId = channelId
             });
         }
         catch (Exception ex)
