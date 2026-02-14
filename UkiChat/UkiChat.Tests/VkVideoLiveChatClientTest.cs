@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using UkiChat.Model.VkVideoLive;
 using UkiChat.Services;
 using UkiChat.Tests.AppSettingsData;
 using Xunit;
@@ -7,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace UkiChat.Tests;
 
-public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
+public class VkVideoLiveChatClientTest(ITestOutputHelper testOutputHelper)
 {
     [Fact]
     public async Task VkVideoLiveChatService_ConnectAsync_CanConnect()
@@ -15,25 +16,25 @@ public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
         // Arrange
         var appSettings = AppSettingsReader.Read();
         var apiService = new VkVideoLiveApiService();
-        var chatService = new VkVideoLiveChatService(apiService);
+        var chatClient = new VkVideoLiveChatClient();
 
         var connectedEvent = new TaskCompletionSource<bool>();
         var messageReceivedEvent = new TaskCompletionSource<bool>();
 
-        chatService.Connected += (sender, e) =>
+        chatClient.Connected += (sender, e) =>
         {
             testOutputHelper.WriteLine("Connected to VK Video Live chat!");
             connectedEvent.TrySetResult(true);
         };
 
-        chatService.MessageReceived += (sender, e) =>
+        chatClient.MessageReceived += (sender, e) =>
         {
             var author = e.Message?.Data?.Author?.DisplayName ?? "Unknown";
             testOutputHelper.WriteLine($"Message received from channel '{e.Channel}' by '{author}'");
             messageReceivedEvent.TrySetResult(true);
         };
 
-        chatService.Error += (sender, e) =>
+        chatClient.Error += (sender, e) =>
         {
             testOutputHelper.WriteLine($"Error: {e.Message}");
             if (e.Exception != null)
@@ -42,7 +43,7 @@ public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
             }
         };
 
-        chatService.Disconnected += (sender, e) =>
+        chatClient.Disconnected += (sender, e) =>
         {
             testOutputHelper.WriteLine($"Disconnected: {e.Reason}");
         };
@@ -61,12 +62,15 @@ public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
 
             Assert.NotNull(channelInfo.Data.Channel.WebSocketChannels);
             Assert.NotEmpty(channelInfo.Data.Channel.WebSocketChannels.Chat);
+            
+            //Получаем WsToken
+            var tokenResponse = await  apiService.GetWebSocketTokenAsync(appSettings.VkVideoLive.Api.AccessToken);
+            var wsTokne = tokenResponse.Data.Token;
+            testOutputHelper.WriteLine($"WS Token: {wsTokne}");
 
             // Act - Подключаемся к чату
-            testOutputHelper.WriteLine("\nConnecting to chat WebSocket...");
-            await chatService.ConnectAsync(
-                appSettings.VkVideoLive.Api.AccessToken,
-                channelInfo.Data.Channel.WebSocketChannels.Chat);
+            testOutputHelper.WriteLine("Connecting to chat WebSocket...");
+            await chatClient.ConnectAsync(tokenResponse.Data.Token, "channel-" + channelInfo.Data.Channel.Id);
 
             // Ждем подключения (максимум 10 секунд)
             var connected = await Task.WhenAny(
@@ -104,8 +108,8 @@ public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
         {
             // Отключаемся
             testOutputHelper.WriteLine("\nDisconnecting...");
-            await chatService.DisconnectAsync();
-            chatService.Dispose();
+            await chatClient.DisconnectAsync();
+            chatClient.Dispose();
         }
     }
 
@@ -115,7 +119,7 @@ public class VkVideoLiveChatTest(ITestOutputHelper testOutputHelper)
         // Arrange
         var appSettings = AppSettingsReader.Read();
         var apiService = new VkVideoLiveApiService();
-        var chatService = new VkVideoLiveChatService(apiService);
+        var chatService = new VkVideoLiveChatServiceOld(apiService);
 
         // Получаем информацию о канале
         var channelInfo = await apiService.GetChannelInfoAsync(

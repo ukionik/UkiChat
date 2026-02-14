@@ -10,44 +10,44 @@ public class StreamService : IStreamService
     private readonly IDatabaseContext _databaseContext;
     private readonly ILocalizationService _localizationService;
     private readonly ISignalRService _signalRService;
-    private readonly IVkVideoLiveChatService _vkVideoLiveChatService;
+    private readonly IVkVideoLiveChatServiceOld _vkVideoLiveChatServiceOld;
     private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
     private string _vkVideoLiveChannel = "";
 
     public StreamService(IDatabaseContext databaseContext
         , ILocalizationService localizationService
         , ISignalRService signalRService
-        , IVkVideoLiveChatService vkVideoLiveChatService
+        , IVkVideoLiveChatServiceOld vkVideoLiveChatServiceOld
         , IVkVideoLiveApiService vkVideoLiveApiService)
     {
         _databaseContext = databaseContext;
         _localizationService = localizationService;
-        _vkVideoLiveChatService = vkVideoLiveChatService;
+        _vkVideoLiveChatServiceOld = vkVideoLiveChatServiceOld;
         _vkVideoLiveApiService = vkVideoLiveApiService;
 
         // VK Video Live events
-        _vkVideoLiveChatService.MessageReceived += async (sender, e) =>
+        _vkVideoLiveChatServiceOld.MessageReceived += async (sender, e) =>
         {
             if (e.Message == null) return;
             Console.WriteLine($"[VkVideoLive] Message received from: {e.Message.Data?.Author?.DisplayName}");
             await signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessage(e.Message));
         };
 
-        _vkVideoLiveChatService.Connected += async (sender, e) =>
+        _vkVideoLiveChatServiceOld.Connected += async (sender, e) =>
         {
             Console.WriteLine("[VkVideoLive] Connected");
             await SendChatMessageNotification(string.Format(_localizationService.GetString("vkvideolive.connectedToChannel"),
                 _vkVideoLiveChannel));
         };
 
-        _vkVideoLiveChatService.Disconnected += async (sender, e) =>
+        _vkVideoLiveChatServiceOld.Disconnected += async (sender, e) =>
         {
             Console.WriteLine($"[VkVideoLive] Disconnected: {e.Reason}");
             await SendChatMessageNotification(
                 string.Format(_localizationService.GetString("vkvideolive.disconnectedFromChannel"), _vkVideoLiveChannel));
         };
 
-        _vkVideoLiveChatService.Error += (sender, e) =>
+        _vkVideoLiveChatServiceOld.Error += (sender, e) =>
         {
             Console.WriteLine($"[VkVideoLive] Error: {e.Message}");
         };
@@ -100,7 +100,7 @@ public class StreamService : IStreamService
                 _vkVideoLiveChannel));
 
             // Подключаемся к чату
-            await _vkVideoLiveChatService.ConnectAsync(accessToken, chatChannel);
+            await _vkVideoLiveChatServiceOld.ConnectAsync(accessToken, chatChannel);
         }
         catch (Exception ex)
         {
