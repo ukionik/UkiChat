@@ -102,6 +102,8 @@ public class TwitchChatService : ITwitchChatService
 
     public async Task ConnectAsync(TwitchConnectionParams connectionParams)
     {
+        _broadcasterId = connectionParams.BroadcasterId;
+        
         if (!_twitchClient.IsConnected)
         {
             var credentials =
@@ -115,7 +117,7 @@ public class TwitchChatService : ITwitchChatService
         
         if (connectionParams.NewChannel == "")
             return;
-
+        
         await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
     }
 
@@ -181,7 +183,7 @@ public class TwitchChatService : ITwitchChatService
             var globalEmotes = await _sevenTvApiService.GetGlobalEmotesAsync();
             _sevenTvEmotesRepository.SetGlobalEmotes(globalEmotes);
             _databaseContext.SevenTvEmoteRepository.SaveGlobalEmotes(
-                globalEmotes.Select(e => new SevenTvEmoteEntity { Id = $"global:{e.Id}", EmoteId = e.Id, Name = e.Name, Url = e.Url }));
+                globalEmotes.Select(e => new SevenTvEmoteEntity {EmoteId = e.Id, Name = e.Name, Url = e.Url }));
             Console.WriteLine($"Loaded {globalEmotes.Count} global 7TV emotes");
         }
         catch (Exception ex)
@@ -228,7 +230,7 @@ public class TwitchChatService : ITwitchChatService
             _sevenTvEmotesRepository.SetChannelEmotes(broadcasterId, channelEmotes);
             _databaseContext.SevenTvEmoteRepository.SaveChannelEmotes(
                 broadcasterId,
-                channelEmotes.Select(e => new SevenTvEmoteEntity { Id = $"{broadcasterId}:{e.Id}", EmoteId = e.Id, Name = e.Name, Url = e.Url }));
+                channelEmotes.Select(e => new SevenTvEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
             Console.WriteLine($"Loaded {channelEmotes.Count} channel 7TV emotes for {twitchSettings.Channel}");
         }
         catch (Exception ex)

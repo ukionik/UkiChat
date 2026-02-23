@@ -5,6 +5,7 @@ namespace UkiChat.Model.Twitch;
 public record TwitchConnectionParams(
     string OldChannel,
     string NewChannel,
+    string BroadcasterId,
     string ChatbotUsername,
     string ChatbotAccessToken
 )
@@ -16,6 +17,7 @@ public record TwitchConnectionParams(
         return new TwitchConnectionParams(
             oldChannel,
             newChannel,
+            twitchSettings.ApiBroadcasterId ?? "",
             twitchSettings.ChatbotUsername ?? "",
             twitchSettings.ChatbotAccessToken ?? ""
         );

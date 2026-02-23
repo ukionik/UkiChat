@@ -29,12 +29,16 @@ public class SevenTvEmotesRepository : ISevenTvEmotesRepository
 
     public void SetGlobalEmotes(List<SevenTvEmote> emotes)
     {
-        _globalEmotes = emotes.ToDictionary(e => e.Name, e => e);
+        var dict = new Dictionary<string, SevenTvEmote>();
+        foreach (var emote in emotes) dict[emote.Name] = emote;
+        _globalEmotes = dict;
     }
 
     public void SetChannelEmotes(string broadcasterId, List<SevenTvEmote> emotes)
     {
-        _channelEmotes[broadcasterId] = emotes.ToDictionary(e => e.Name, e => e);
+        var dict = new Dictionary<string, SevenTvEmote>();
+        foreach (var emote in emotes) dict[emote.Name] = emote;
+        _channelEmotes[broadcasterId] = dict;
     }
 
     public void Clear()

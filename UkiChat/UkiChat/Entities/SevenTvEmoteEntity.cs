@@ -6,14 +6,14 @@ namespace UkiChat.Entities;
 /// Эмоут 7TV, хранящийся в базе данных.
 /// Id = "global:{emoteId}" для глобальных, "{broadcasterId}:{emoteId}" для канальных.
 /// </summary>
-public class SevenTvEmoteEntity
+public class SevenTvEmoteEntity : IBaseEntity<long>
 {
     [BsonId]
-    public string Id { get; set; } = "";
+    public long Id { get; set; }
 
-    public string EmoteId { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string Url { get; set; } = "";
+    public string EmoteId { get; set; }
+    public string Name { get; set; }
+    public string Url { get; set; }
 
     /// <summary>
     /// null — глобальный эмоут, broadcasterId — эмоут канала
