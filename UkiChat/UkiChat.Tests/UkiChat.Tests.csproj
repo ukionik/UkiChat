@@ -12,6 +12,10 @@
     <ItemGroup>
       <PackageReference Include="Centrifugal.Centrifuge" Version="0.0.13" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+      <PackageReference Include="Serilog" Version="4.3.1" />
+      <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+      <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
+      <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
       <PackageReference Include="Tomlyn" Version="0.19.0" />
       <PackageReference Include="TwitchLib.Api" Version="3.10.2" />
       <PackageReference Include="xunit" Version="2.9.3" />

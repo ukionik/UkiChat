@@ -21,12 +21,12 @@ namespace UkiChat;
 public partial class App
 {
     private readonly IWebHost _webHost = HttpServerConfiguration.CreateHost();
-    private IAppInitializationService _appInitializationService;
+    private IAppInitializationService? _appInitializationService;
 
     protected override async void OnInitialized()
     {
         base.OnInitialized();
-        await _appInitializationService.InitializeAsync();
+        await _appInitializationService!.InitializeAsync();
         await _webHost.StartAsync();
     }
 
