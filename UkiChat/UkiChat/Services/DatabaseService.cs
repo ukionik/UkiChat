@@ -57,4 +57,12 @@ public class DatabaseService : IDatabaseService
         vkVideoLiveSettings.Channel = data.Channel;
         _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
+
+    public void UpdateVkVideoLiveTokens(string apiAccessToken, string wsAccessToken)
+    {
+        var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+        vkVideoLiveSettings.ApiAccessToken = apiAccessToken;
+        vkVideoLiveSettings.WsAccessToken = wsAccessToken;
+        _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
+    }
 }

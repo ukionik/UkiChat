@@ -13,6 +13,8 @@ public class VkVideoLiveSettings : IBaseEntity<long>
     public string? ApiClientId { get; set; }
     public string? ApiClientSecret { get; set; }
     public string? ApiAccessToken { get; set; }
+    
+    public string? WsAccessToken { get; set; }
 
     [BsonRef]
     public AppSettings? AppSettings { get; set; }

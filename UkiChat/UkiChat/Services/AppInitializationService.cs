@@ -13,7 +13,8 @@ public class AppInitializationService(
     IDatabaseService databaseService,
     ITwitchChatService twitchChatService,
     ITwitchApiService twitchApiService,
-    IVkVideoLiveChatService vkVideoLiveChatService
+    IVkVideoLiveChatService vkVideoLiveChatService,
+    IVkVideoLiveApiService vkVideoLiveApiService
     ) : IAppInitializationService
 {
     public async Task InitializeAsync()
@@ -74,6 +75,86 @@ public class AppInitializationService(
 
     private async Task LoadVkVideoLiveDataAsync()
     {
-        await vkVideoLiveChatService.ConnectAsync(new VkVideoLiveConnectionParams());
+        var vkSettings = databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+
+        if (string.IsNullOrEmpty(vkSettings.Channel))
+        {
+            Console.WriteLine("[VkVideoLive] Channel not configured");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(vkSettings.ApiClientId) || string.IsNullOrEmpty(vkSettings.ApiClientSecret))
+        {
+            Console.WriteLine("[VkVideoLive] API credentials not configured");
+            return;
+        }
+
+        var connectionParams = await InitializeVkVideoLiveApiAsync(vkSettings);
+        if (connectionParams == null) return;
+
+        await vkVideoLiveChatService.ConnectAsync(connectionParams);
+    }
+
+    private async Task<VkVideoLiveConnectionParams?> InitializeVkVideoLiveApiAsync(VkVideoLiveSettings vkSettings)
+    {
+        // Проверяем валидность токена и обновляем при необходимости
+        await RefreshVkVideoLiveApiTokenAsync(vkSettings);
+        var apiAccessToken = vkSettings.ApiAccessToken!;
+
+        // Получаем информацию о канале
+        var channelInfo = await vkVideoLiveApiService.GetChannelInfoAsync(apiAccessToken, vkSettings.Channel!);
+        var channelId = channelInfo.Data.Channel.Id;
+
+        // Получаем WsAccessToken
+        var wsTokenResponse = await vkVideoLiveApiService.GetWebSocketTokenAsync(apiAccessToken);
+        var wsAccessToken = wsTokenResponse.Data.Token;
+        Console.WriteLine("[VkVideoLive] WebSocket token received");
+
+        // Сохраняем токены в базу
+        databaseService.UpdateVkVideoLiveTokens(apiAccessToken, wsAccessToken);
+
+        return new VkVideoLiveConnectionParams(
+            OldChannelName: "",
+            ChannelName: vkSettings.Channel!,
+            ChannelId: channelId,
+            WsAccessToken: wsAccessToken);
+    }
+
+    private async Task RefreshVkVideoLiveApiTokenAsync(VkVideoLiveSettings vkSettings)
+    {
+        if (string.IsNullOrEmpty(vkSettings.ApiAccessToken))
+        {
+            await FetchVkVideoLiveApiTokenAsync(vkSettings);
+            return;
+        }
+
+        // Проверяем валидность существующего токена
+        try
+        {
+            var tokenInfo = await vkVideoLiveApiService.ValidateAccessTokenAsync(vkSettings.ApiAccessToken);
+            var expiredAt = DateTimeOffset.FromUnixTimeSeconds(tokenInfo.Data.ExpiredAt);
+            if (expiredAt <= DateTimeOffset.UtcNow)
+            {
+                Console.WriteLine("[VkVideoLive] API access token expired, fetching new one");
+                await FetchVkVideoLiveApiTokenAsync(vkSettings);
+            }
+            else
+            {
+                Console.WriteLine("[VkVideoLive] API access token is valid");
+            }
+        }
+        catch
+        {
+            Console.WriteLine("[VkVideoLive] API access token validation failed, fetching new one");
+            await FetchVkVideoLiveApiTokenAsync(vkSettings);
+        }
+    }
+
+    private async Task FetchVkVideoLiveApiTokenAsync(VkVideoLiveSettings vkSettings)
+    {
+        var tokenResponse = await vkVideoLiveApiService.GetAccessTokenAsync(
+            vkSettings.ApiClientId!, vkSettings.ApiClientSecret!);
+        vkSettings.ApiAccessToken = tokenResponse.AccessToken;
+        Console.WriteLine("[VkVideoLive] API access token refreshed");
     }
 }

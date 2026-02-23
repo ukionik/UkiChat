@@ -10,4 +10,5 @@ public interface IDatabaseService
     void UpdateTwitchSettings(TwitchSettingsData data);
     void UpdateTwitchApiTokens(string accessToken, string refreshToken);
     void UpdateVkVideoLiveSettings(VkVideoLiveSettingsData data);
+    void UpdateVkVideoLiveTokens(string apiAccessToken, string wsAccessToken);
 }

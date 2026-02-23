@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using UkiChat.Configuration;
-using UkiChat.Entities;
 using UkiChat.Model.Chat;
 using UkiChat.Model.VkVideoLive;
 
@@ -11,17 +10,20 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 {
     private readonly VkVideoLiveChatClient _chatClient;
     private readonly IDatabaseContext _databaseContext;
+    private readonly IDatabaseService _databaseService;
     private readonly ILocalizationService _localizationService;
     private readonly ISignalRService _signalRService;
     private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
     private string _channelName = "";
 
     public VkVideoLiveChatService(IDatabaseContext databaseContext
+        , IDatabaseService databaseService
         , IVkVideoLiveApiService vkVideoLiveApiService
         , ISignalRService signalRService
         , ILocalizationService localizationService)
     {
         _databaseContext = databaseContext;
+        _databaseService = databaseService;
         _vkVideoLiveApiService = vkVideoLiveApiService;
         _signalRService = signalRService;
         _localizationService = localizationService;
@@ -54,75 +56,62 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
     public async Task ConnectAsync(VkVideoLiveConnectionParams connectionParams)
     {
-        var vkSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
-
-        if (string.IsNullOrEmpty(vkSettings.Channel))
+        if (string.IsNullOrEmpty(connectionParams.ChannelName))
         {
             Console.WriteLine("[VkVideoLive] Channel not configured");
             return;
         }
 
-        if (string.IsNullOrEmpty(vkSettings.ApiClientId) || string.IsNullOrEmpty(vkSettings.ApiClientSecret))
+        if (connectionParams.ChannelId == 0 || string.IsNullOrEmpty(connectionParams.WsAccessToken))
         {
-            Console.WriteLine("[VkVideoLive] API credentials not configured");
+            Console.WriteLine("[VkVideoLive] Connection params not configured");
             return;
         }
 
         try
         {
-            // Получаем access token если его нет
-            //var accessToken = vkSettings.ApiAccessToken;
-            var accessTokenResponse = await _vkVideoLiveApiService.GetAccessTokenAsync(vkSettings.ApiClientId, vkSettings.ApiClientSecret);
-            var accessToken = accessTokenResponse.AccessToken;
-            if (string.IsNullOrEmpty(accessToken))
-            {
-                var tokenResponse = await _vkVideoLiveApiService.GetAccessTokenAsync(
-                    vkSettings.ApiClientId,
-                    vkSettings.ApiClientSecret);
-                accessToken = tokenResponse.AccessToken;
-
-                // Сохраняем токен в базу
-                vkSettings.ApiAccessToken = accessToken;
-                _databaseContext.VkVideoLiveSettingsRepository.Save(vkSettings);
-            }
-
-            // Получаем информацию о канале для получения chat channel
-            var channelInfo = await _vkVideoLiveApiService.GetChannelInfoAsync(accessToken, vkSettings.Channel);
-            var chatChannel = channelInfo.Data.Channel.WebSocketChannels?.Chat;
-
-            if (string.IsNullOrEmpty(chatChannel))
-            {
-                Console.WriteLine("[VkVideoLive] Chat channel not found");
-                return;
-            }
-
-            _channelName = vkSettings.Channel;
+            _channelName = connectionParams.ChannelName;
             await SendChatMessageNotification(string.Format(
-                _localizationService.GetString("vkvideolive.connectingToChannel"), channelInfo.Data.Channel.Id));
+                _localizationService.GetString("vkvideolive.connectingToChannel"), connectionParams.ChannelId));
 
-            var wsTokenResponse = await _vkVideoLiveApiService.GetWebSocketTokenAsync(accessToken);
-            // Подключаемся к чату
-            await _chatClient.ConnectAsync(wsTokenResponse.Data.Token, channelInfo.Data.Channel.Id);
+            await _chatClient.ConnectAsync(connectionParams.WsAccessToken, connectionParams.ChannelId);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[VkVideoLive] Connection error: {ex.Message}");
             await SendChatMessageNotification(string.Format(
                 _localizationService.GetString("vkvideolive.connectingToChannelError"),
-                vkSettings.Channel));
+                connectionParams.ChannelName));
         }
     }
 
     public async Task ChangeChannelAsync(string newChannel)
     {
         var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
-        var oldChannel = vkVideoLiveSettings.Channel;
+        var oldChannel = vkVideoLiveSettings.Channel ?? "";
         if (oldChannel == newChannel)
             return;
-        
-        _channelName = newChannel;
-        UpdateVkVideoLiveDbSettings(vkVideoLiveSettings);
-        await ConnectAsync(new VkVideoLiveConnectionParams());
+
+        vkVideoLiveSettings.Channel = newChannel;
+        _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
+
+        if (string.IsNullOrEmpty(vkVideoLiveSettings.ApiAccessToken))
+            return;
+
+        var channelInfo = await _vkVideoLiveApiService.GetChannelInfoAsync(
+            vkVideoLiveSettings.ApiAccessToken, newChannel);
+        var channelId = channelInfo.Data.Channel.Id;
+
+        var wsTokenResponse = await _vkVideoLiveApiService.GetWebSocketTokenAsync(vkVideoLiveSettings.ApiAccessToken);
+        var wsAccessToken = wsTokenResponse.Data.Token;
+
+        _databaseService.UpdateVkVideoLiveTokens(vkVideoLiveSettings.ApiAccessToken, wsAccessToken);
+
+        await ConnectAsync(new VkVideoLiveConnectionParams(
+            OldChannelName: oldChannel,
+            ChannelName: newChannel,
+            ChannelId: channelId,
+            WsAccessToken: wsAccessToken));
     }
 
     public Task LoadGlobalDataAsync()
@@ -138,11 +127,5 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
     private async Task SendChatMessageNotification(string message)
     {
         await _signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessageNotification(message));
-    }
-    
-    private void UpdateVkVideoLiveDbSettings(VkVideoLiveSettings vkVideoLiveSettings)
-    {
-        vkVideoLiveSettings.Channel = _channelName;
-        _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
 }
