@@ -17,6 +17,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         AppSettingsRepository = new AppSettingsRepository(db);
         TwitchSettingsRepository = new TwitchSettingsRepository(db);
         VkVideoLiveSettingsRepository = new VkVideoLiveSettingsRepository(db);
+        SevenTvEmoteRepository = new SevenTvEmoteRepository(db);
         InitDefaultData(defaultAppSettings);
     }
 
@@ -24,6 +25,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     public IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
     public IProfileRepository ProfileRepository { get; }
     public IAppSettingsRepository AppSettingsRepository { get; }
+    public ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
 
     public void Dispose()
     {

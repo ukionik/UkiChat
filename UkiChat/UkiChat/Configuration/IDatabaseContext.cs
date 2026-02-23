@@ -9,4 +9,5 @@ public interface IDatabaseContext
     ITwitchSettingsRepository TwitchSettingsRepository { get; }
     IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
     IProfileRepository ProfileRepository { get; }
+    ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
 }

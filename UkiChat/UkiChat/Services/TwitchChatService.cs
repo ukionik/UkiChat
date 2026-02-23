@@ -10,6 +10,7 @@ using UkiChat.Model.Chat;
 using UkiChat.Model.SevenTv;
 using UkiChat.Model.Twitch;
 using UkiChat.Repositories.Memory;
+using UkiChat.Repositories.Database;
 
 namespace UkiChat.Services;
 
@@ -167,10 +168,20 @@ public class TwitchChatService : ITwitchChatService
 
     private async Task LoadSevenTvGlobalEmotesAsync()
     {
+        // Сначала загружаем из базы — как fallback если API недоступен
+        var dbEmotes = _databaseContext.SevenTvEmoteRepository.GetGlobalEmotes();
+        if (dbEmotes.Count > 0)
+        {
+            _sevenTvEmotesRepository.SetGlobalEmotes(dbEmotes.Select(e => new SevenTvEmote(e.EmoteId, e.Name, e.Url)).ToList());
+            Console.WriteLine($"Loaded {dbEmotes.Count} global 7TV emotes from DB");
+        }
+
         try
         {
             var globalEmotes = await _sevenTvApiService.GetGlobalEmotesAsync();
             _sevenTvEmotesRepository.SetGlobalEmotes(globalEmotes);
+            _databaseContext.SevenTvEmoteRepository.SaveGlobalEmotes(
+                globalEmotes.Select(e => new SevenTvEmoteEntity { Id = $"global:{e.Id}", EmoteId = e.Id, Name = e.Name, Url = e.Url }));
             Console.WriteLine($"Loaded {globalEmotes.Count} global 7TV emotes");
         }
         catch (Exception ex)
@@ -198,18 +209,31 @@ public class TwitchChatService : ITwitchChatService
 
     private async Task LoadSevenTvChannelEmotesAsync(TwitchSettings twitchSettings)
     {
+        if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
+            return;
+
+        var broadcasterId = twitchSettings.ApiBroadcasterId;
+
+        // Сначала загружаем из базы — как fallback если API недоступен
+        var dbEmotes = _databaseContext.SevenTvEmoteRepository.GetChannelEmotes(broadcasterId);
+        if (dbEmotes.Count > 0)
+        {
+            _sevenTvEmotesRepository.SetChannelEmotes(broadcasterId, dbEmotes.Select(e => new SevenTvEmote(e.EmoteId, e.Name, e.Url)).ToList());
+            Console.WriteLine($"Loaded {dbEmotes.Count} channel 7TV emotes for {twitchSettings.Channel} from DB");
+        }
+
         try
         {
-            if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
-                return;
-
-            var channelEmotes = await _sevenTvApiService.GetChannelEmotesAsync(twitchSettings.ApiBroadcasterId);
-            _sevenTvEmotesRepository.SetChannelEmotes(twitchSettings.ApiBroadcasterId, channelEmotes);
+            var channelEmotes = await _sevenTvApiService.GetChannelEmotesAsync(broadcasterId);
+            _sevenTvEmotesRepository.SetChannelEmotes(broadcasterId, channelEmotes);
+            _databaseContext.SevenTvEmoteRepository.SaveChannelEmotes(
+                broadcasterId,
+                channelEmotes.Select(e => new SevenTvEmoteEntity { Id = $"{broadcasterId}:{e.Id}", EmoteId = e.Id, Name = e.Name, Url = e.Url }));
             Console.WriteLine($"Loaded {channelEmotes.Count} channel 7TV emotes for {twitchSettings.Channel}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading channel=${twitchSettings.Channel} 7TV emotes: {ex.Message}");
+            Console.WriteLine($"Error loading channel={twitchSettings.Channel} 7TV emotes: {ex.Message}");
         }
     }
 
