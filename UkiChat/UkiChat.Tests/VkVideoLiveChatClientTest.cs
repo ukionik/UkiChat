@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 using UkiChat.Model.VkVideoLive;
 using UkiChat.Services;
 using UkiChat.Tests.AppSettingsData;
@@ -16,7 +17,7 @@ public class VkVideoLiveChatClientTest(ITestOutputHelper testOutputHelper)
         // Arrange
         var appSettings = AppSettingsReader.Read();
         var apiService = new VkVideoLiveApiService();
-        var chatClient = new VkVideoLiveChatClient();
+        var chatClient = new VkVideoLiveChatClient(NullLogger<VkVideoLiveChatClient>.Instance);
 
         var connectedEvent = new TaskCompletionSource<bool>();
         var messageReceivedEvent = new TaskCompletionSource<bool>();
@@ -120,7 +121,7 @@ public class VkVideoLiveChatClientTest(ITestOutputHelper testOutputHelper)
         // Arrange
         var appSettings = AppSettingsReader.Read();
         var apiService = new VkVideoLiveApiService();
-        var chatClient = new VkVideoLiveChatClient();
+        var chatClient = new VkVideoLiveChatClient(NullLogger<VkVideoLiveChatClient>.Instance);
 
         // Получаем информацию о канале
         var channelInfo = await apiService.GetChannelInfoAsync(

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using UkiChat.Services;
 
 namespace UkiChat.Model.VkVideoLive;
@@ -16,6 +17,12 @@ public class VkVideoLiveChatClient : IDisposable
     private bool _disposed;
     private ClientWebSocket? _webSocket;
     private long _channelId;
+    private readonly ILogger<VkVideoLiveChatClient> _logger;
+
+    public VkVideoLiveChatClient(ILogger<VkVideoLiveChatClient> logger)
+    {
+        _logger = logger;
+    }
 
     public void Dispose()
     {
@@ -42,12 +49,12 @@ public class VkVideoLiveChatClient : IDisposable
             var channel = $"channel-chat:{_channelId}";
             _commandId = 0;
             _cancellationTokenSource = new CancellationTokenSource();
-            Console.WriteLine("[VkVideoLiveChat] Подключение к WebSocket...");
+            _logger.LogInformation("Подключение к WebSocket...");
             // Подключаемся к WebSocket серверу
             _webSocket = new ClientWebSocket();
             _webSocket.Options.SetRequestHeader("Origin", "https://vkvideo.ru");
             await _webSocket.ConnectAsync(new Uri(WebSocketUrl), _cancellationTokenSource.Token);
-            Console.WriteLine("[VkVideoLiveChat] WebSocket подключен");
+            _logger.LogInformation("WebSocket подключен");
             // Запускаем цикл получения сообщений
             _ = Task.Run(() => ReceiveMessagesAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
 
@@ -58,6 +65,7 @@ public class VkVideoLiveChatClient : IDisposable
         }
         catch (Exception e)
         {
+            _logger.LogError(e, "Ошибка подключения к чату");
             OnError($"Ошибка подключения к чату: {e.Message}", e);
             throw;
         }
@@ -80,7 +88,7 @@ public class VkVideoLiveChatClient : IDisposable
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
 
-            Console.WriteLine("[VkVideoLiveChat] Отключено");
+            _logger.LogInformation("Отключено");
         }
         catch (Exception ex)
         {
@@ -105,15 +113,15 @@ public class VkVideoLiveChatClient : IDisposable
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    Console.WriteLine(
-                        $"[VkVideoLiveChat] Получен Close: {result.CloseStatus} - {result.CloseStatusDescription}");
+                    _logger.LogInformation("Получен Close: {Status} - {Description}",
+                        result.CloseStatus, result.CloseStatusDescription);
                     OnDisconnected(result.CloseStatusDescription ?? "Connection closed");
                     break;
                 }
 
-                if (result.MessageType != WebSocketMessageType.Text) 
+                if (result.MessageType != WebSocketMessageType.Text)
                     continue;
-                
+
                 // Накапливаем фрагменты сообщения
                 var chunk = Encoding.UTF8.GetString(buffer, 0, result.Count);
                 messageBuilder.Append(chunk);
@@ -124,29 +132,29 @@ public class VkVideoLiveChatClient : IDisposable
                     var json = messageBuilder.ToString();
                     messageBuilder.Clear();
 
-                    Console.WriteLine($"[VkVideoLiveChat] Получено полное сообщение ({json.Length} символов)");
+                    _logger.LogDebug("Получено полное сообщение ({Length} символов): {Json}", json.Length, json);
                     await ProcessJsonMessageAsync(json);
                 }
                 else
                 {
-                    Console.WriteLine(
-                        $"[VkVideoLiveChat] Получен фрагмент {result.Count} байт, накоплено {messageBuilder.Length} символов");
+                    _logger.LogDebug("Получен фрагмент {Count} байт, накоплено {Total} символов",
+                        result.Count, messageBuilder.Length);
                 }
             }
         }
         catch (OperationCanceledException)
         {
-            Console.WriteLine("[VkVideoLiveChat] Получение сообщений отменено");
+            _logger.LogInformation("Получение сообщений отменено");
         }
         catch (WebSocketException ex)
         {
-            Console.WriteLine($"[VkVideoLiveChat] WebSocket ошибка: {ex.Message}");
+            _logger.LogError(ex, "WebSocket ошибка");
             OnError($"WebSocket ошибка: {ex.Message}", ex);
             OnDisconnected($"WebSocket error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[VkVideoLiveChat] Ошибка получения сообщений: {ex.Message}");
+            _logger.LogError(ex, "Ошибка получения сообщений");
             OnError($"Ошибка получения сообщений: {ex.Message}", ex);
         }
     }
@@ -161,7 +169,7 @@ public class VkVideoLiveChatClient : IDisposable
             // Проверяем на ping от сервера (пустой JSON объект)
             if (json.Trim() == "{}")
             {
-                Console.WriteLine("[VkVideoLiveChat] Получен ping от сервера, отправляем pong");
+                _logger.LogDebug("Получен ping от сервера, отправляем pong");
                 await SendPongAsync();
                 return;
             }
@@ -172,21 +180,21 @@ public class VkVideoLiveChatClient : IDisposable
             // Проверяем на пустой объект (ping)
             if (root.ValueKind == JsonValueKind.Object && root.EnumerateObject().MoveNext() == false)
             {
-                Console.WriteLine("[VkVideoLiveChat] Получен ping (пустой объект), отправляем pong");
+                _logger.LogDebug("Получен ping (пустой объект), отправляем pong");
                 await SendPongAsync();
                 return;
             }
 
             // Получаем ID сообщения (0 для push от сервера)
             var id = root.TryGetProperty("id", out var idProp) ? idProp.GetUInt32() : 0;
-            Console.WriteLine($"[VkVideoLiveChat] Получен Reply (ID: {id})");
+            _logger.LogDebug("Получен Reply (ID: {Id})", id);
 
             // Обрабатываем ошибку если есть
             if (root.TryGetProperty("error", out var errorProp))
             {
                 var code = errorProp.TryGetProperty("code", out var codeProp) ? codeProp.GetUInt32() : 0;
                 var message = errorProp.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "";
-                Console.WriteLine($"[VkVideoLiveChat] Ошибка: [{code}] {message}");
+                _logger.LogError("Ошибка сервера [{Code}] {Message}", code, message);
                 OnError($"Ошибка сервера [{code}]: {message}");
                 return;
             }
@@ -199,13 +207,13 @@ public class VkVideoLiveChatClient : IDisposable
                     ? pingProp.GetInt32()
                     : 25;
 
-                Console.WriteLine($"[VkVideoLiveChat] Подключено. Ping interval: {pingInterval}s");
+                _logger.LogInformation("Подключено. Ping interval: {PingInterval}s", pingInterval);
                 OnConnected();
             }
 
             // Обрабатываем ответ на команду subscribe
             if (root.TryGetProperty("subscribe", out _))
-                Console.WriteLine("[VkVideoLiveChat] Подписка успешна");
+                _logger.LogInformation("Подписка успешна");
 
             // Обрабатываем push-сообщения
             if (root.TryGetProperty("push", out var pushProp)) ProcessPushMessage(pushProp);
@@ -214,6 +222,7 @@ public class VkVideoLiveChatClient : IDisposable
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Ошибка обработки сообщения");
             OnError($"Ошибка обработки сообщения: {ex.Message}", ex);
         }
     }
@@ -225,33 +234,29 @@ public class VkVideoLiveChatClient : IDisposable
     {
         try
         {
-            Console.WriteLine(push.GetRawText());
+            _logger.LogDebug("Push: {Raw}", push.GetRawText());
 
             // Обрабатываем публикацию (сообщение в чате)
             if (push.TryGetProperty("pub", out var pubProp))
             {
                 var data = pubProp.TryGetProperty("data", out var dataProp) ? dataProp.GetRawText() : "{}";
-                Console.WriteLine($"[VkVideoLiveChat] Получено сообщение из канала '{_channelId}': {data}");
+                _logger.LogDebug("Получено сообщение из канала '{ChannelId}': {Data}", _channelId, data);
                 OnMessageReceived(data, _channelId);
             }
 
             // Обрабатываем join/leave события если нужно
             if (push.TryGetProperty("join", out _))
-            {
-                Console.WriteLine($"[VkVideoLiveChat] Join в канале '{_channelId}'");
-            }
+                _logger.LogDebug("Join в канале '{ChannelId}'", _channelId);
 
             if (push.TryGetProperty("leave", out _))
-            {
-                Console.WriteLine($"[VkVideoLiveChat] Leave из канала '{_channelId}'");
-            }
+                _logger.LogDebug("Leave из канала '{ChannelId}'", _channelId);
 
             // Обрабатываем отписку
             if (push.TryGetProperty("unsubscribe", out var unsubProp))
             {
                 var code = unsubProp.TryGetProperty("code", out var codeProp) ? codeProp.GetUInt32() : 0;
                 var reason = unsubProp.TryGetProperty("reason", out var reasonProp) ? reasonProp.GetString() : "";
-                Console.WriteLine($"[VkVideoLiveChat] Unsubscribe: [{code}] {reason}");
+                _logger.LogWarning("Unsubscribe: [{Code}] {Reason}", code, reason);
             }
 
             // Обрабатываем disconnect
@@ -259,12 +264,13 @@ public class VkVideoLiveChatClient : IDisposable
             {
                 var code = disconnectProp.TryGetProperty("code", out var codeProp) ? codeProp.GetUInt32() : 0;
                 var reason = disconnectProp.TryGetProperty("reason", out var reasonProp) ? reasonProp.GetString() : "";
-                Console.WriteLine($"[VkVideoLiveChat] Disconnect push: [{code}] {reason}");
+                _logger.LogWarning("Disconnect push: [{Code}] {Reason}", code, reason);
                 OnDisconnected(reason ?? "");
             }
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Ошибка обработки push-сообщения");
             OnError($"Ошибка обработки push-сообщения: {ex.Message}", ex);
         }
     }
@@ -285,7 +291,7 @@ public class VkVideoLiveChatClient : IDisposable
         };
 
         var json = JsonSerializer.Serialize(command);
-        Console.WriteLine($"[VkVideoLiveChat] Отправка connect command: {json}");
+        _logger.LogDebug("Отправка connect command: {Json}", json);
         await SendJsonCommandAsync(json);
     }
 
@@ -304,7 +310,7 @@ public class VkVideoLiveChatClient : IDisposable
         };
 
         var json = JsonSerializer.Serialize(command);
-        Console.WriteLine($"[VkVideoLiveChat] Отправка subscribe command: {json}");
+        _logger.LogDebug("Отправка subscribe command: {Json}", json);
         await SendJsonCommandAsync(json);
     }
 
@@ -319,7 +325,7 @@ public class VkVideoLiveChatClient : IDisposable
         var bytes = Encoding.UTF8.GetBytes(json);
         var buffer = new ArraySegment<byte>(bytes);
 
-        Console.WriteLine($"[VkVideoLiveChat] Отправка {bytes.Length} байт (JSON)");
+        _logger.LogDebug("Отправка {Size} байт (JSON)", bytes.Length);
         await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true,
             _cancellationTokenSource?.Token ?? CancellationToken.None);
     }
@@ -340,11 +346,11 @@ public class VkVideoLiveChatClient : IDisposable
 
             await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true,
                 _cancellationTokenSource?.Token ?? CancellationToken.None);
-            Console.WriteLine("[VkVideoLiveChat] Pong отправлен");
+            _logger.LogDebug("Pong отправлен");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[VkVideoLiveChat] Ошибка отправки pong: {ex.Message}");
+            _logger.LogError(ex, "Ошибка отправки pong");
         }
     }
     
@@ -361,7 +367,7 @@ public class VkVideoLiveChatClient : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[VkVideoLiveChat] Ошибка парсинга сообщения: {ex.Message}");
+            _logger.LogError(ex, "Ошибка парсинга сообщения");
             OnError($"Ошибка парсинга сообщения: {ex.Message}", ex);
         }
     }

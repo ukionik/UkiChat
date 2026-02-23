@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
 using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
+using UkiChat.Model.VkVideoLive;
 
 namespace UkiChat.Configuration;
 
@@ -27,6 +29,13 @@ public static class DIConfiguration
             new DatabaseContext($@"Filename={appSettings.Database.Filename};Password={appSettings.Database.Password}", appSettings)
         );
 
+        ConfigureLogging(services);
+
+        return services;
+    }
+
+    private static void ConfigureLogging(IServiceCollection services)
+    {
         var logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Async(a => a.File("logs/log-.txt", rollingInterval: RollingInterval.Day))
@@ -38,6 +47,14 @@ public static class DIConfiguration
             builder.AddSerilog(logger, dispose: true);
         });
 
-        return services;
+        var vkChatSessionTimestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var vkChatLogger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Async(a => a.File($"logs/vk-video-live-chat-{vkChatSessionTimestamp}.txt"))
+            .CreateLogger();
+
+        services.AddSingleton(
+            LoggerFactory.Create(b => b.AddSerilog(vkChatLogger, dispose: true))
+                .CreateLogger<VkVideoLiveChatClient>());
     }
 }

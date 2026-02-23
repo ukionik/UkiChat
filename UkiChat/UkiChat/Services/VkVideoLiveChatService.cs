@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using UkiChat.Configuration;
 using UkiChat.Entities;
 using UkiChat.Model.Chat;
@@ -22,14 +23,15 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         , IDatabaseService databaseService
         , IVkVideoLiveApiService vkVideoLiveApiService
         , ISignalRService signalRService
-        , ILocalizationService localizationService)
+        , ILocalizationService localizationService
+        , ILogger<VkVideoLiveChatClient> chatClientLogger)
     {
         _databaseContext = databaseContext;
         _databaseService = databaseService;
         _vkVideoLiveApiService = vkVideoLiveApiService;
         _signalRService = signalRService;
         _localizationService = localizationService;
-        _chatClient = new VkVideoLiveChatClient();
+        _chatClient = new VkVideoLiveChatClient(chatClientLogger);
         // VK Video Live events
         _chatClient.MessageReceived += async (_, e) =>
         {
