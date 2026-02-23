@@ -26,8 +26,8 @@ public partial class App
     protected override async void OnInitialized()
     {
         base.OnInitialized();
-        await _appInitializationService!.InitializeAsync();
         await _webHost.StartAsync();
+        await _appInitializationService!.InitializeAsync();
     }
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)

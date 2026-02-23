@@ -15,7 +15,7 @@ public class AppInitializationService(
     ITwitchApiService twitchApiService,
     IVkVideoLiveChatService vkVideoLiveChatService,
     IVkVideoLiveApiService vkVideoLiveApiService
-    ) : IAppInitializationService
+) : IAppInitializationService
 {
     public async Task InitializeAsync()
     {
@@ -77,33 +77,22 @@ public class AppInitializationService(
     {
         var vkSettings = databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
 
-        if (string.IsNullOrEmpty(vkSettings.Channel))
-        {
-            Console.WriteLine("[VkVideoLive] Channel not configured");
-            return;
-        }
-
         if (string.IsNullOrEmpty(vkSettings.ApiClientId) || string.IsNullOrEmpty(vkSettings.ApiClientSecret))
         {
             Console.WriteLine("[VkVideoLive] API credentials not configured");
             return;
         }
 
-        var connectionParams = await InitializeVkVideoLiveApiAsync(vkSettings);
-        if (connectionParams == null) return;
-
-        await vkVideoLiveChatService.ConnectAsync(connectionParams);
+        await InitializeVkVideoLiveApiAsync(vkSettings);
+        await vkVideoLiveChatService.ConnectAsync(
+            VkVideoLiveConnectionParams.OfVkVideoLiveSettings("", vkSettings.Channel ?? "", vkSettings));
     }
 
-    private async Task<VkVideoLiveConnectionParams?> InitializeVkVideoLiveApiAsync(VkVideoLiveSettings vkSettings)
+    private async Task InitializeVkVideoLiveApiAsync(VkVideoLiveSettings vkSettings)
     {
         // Проверяем валидность токена и обновляем при необходимости
         await RefreshVkVideoLiveApiTokenAsync(vkSettings);
         var apiAccessToken = vkSettings.ApiAccessToken!;
-
-        // Получаем информацию о канале
-        var channelInfo = await vkVideoLiveApiService.GetChannelInfoAsync(apiAccessToken, vkSettings.Channel!);
-        var channelId = channelInfo.Data.Channel.Id;
 
         // Получаем WsAccessToken
         var wsTokenResponse = await vkVideoLiveApiService.GetWebSocketTokenAsync(apiAccessToken);
@@ -112,12 +101,6 @@ public class AppInitializationService(
 
         // Сохраняем токены в базу
         databaseService.UpdateVkVideoLiveTokens(apiAccessToken, wsAccessToken);
-
-        return new VkVideoLiveConnectionParams(
-            OldChannelName: "",
-            ChannelName: vkSettings.Channel!,
-            ChannelId: channelId,
-            WsAccessToken: wsAccessToken);
     }
 
     private async Task RefreshVkVideoLiveApiTokenAsync(VkVideoLiveSettings vkSettings)
