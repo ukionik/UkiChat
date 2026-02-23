@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -39,7 +40,7 @@ public class VkVideoLiveChatClient : IDisposable
     public event EventHandler<ChatMessageEventArgs>? MessageReceived;
     public event EventHandler? Connected;
     public event EventHandler<DisconnectEventArgs>? Disconnected;
-    public event EventHandler<ErrorEventArgs>? Error;
+    public event EventHandler<Services.ErrorEventArgs>? Error;
 
     public async Task ConnectAsync(string wsToken, long channelId)
     {
@@ -103,7 +104,7 @@ public class VkVideoLiveChatClient : IDisposable
     private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
     {
         var buffer = new byte[8192];
-        var messageBuilder = new StringBuilder();
+        using var messageStream = new MemoryStream();
 
         try
         {
@@ -122,23 +123,22 @@ public class VkVideoLiveChatClient : IDisposable
                 if (result.MessageType != WebSocketMessageType.Text)
                     continue;
 
-                // Накапливаем фрагменты сообщения
-                var chunk = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                messageBuilder.Append(chunk);
+                // Накапливаем байты фрагментов — без декодирования, чтобы не разрезать многобайтные символы
+                messageStream.Write(buffer, 0, result.Count);
 
-                // Обрабатываем только когда получено полное сообщение
                 if (result.EndOfMessage)
                 {
-                    var json = messageBuilder.ToString();
-                    messageBuilder.Clear();
+                    var messageBytes = messageStream.ToArray();
+                    messageStream.SetLength(0);
 
-                    _logger.LogDebug("Получено полное сообщение ({Length} символов): {Json}", json.Length, json);
-                    await ProcessJsonMessageAsync(json);
+                    _logger.LogDebug("Получено полное сообщение ({Length} байт): {Json}",
+                        messageBytes.Length, Encoding.UTF8.GetString(messageBytes));
+                    await ProcessJsonMessageAsync(messageBytes);
                 }
                 else
                 {
-                    _logger.LogDebug("Получен фрагмент {Count} байт, накоплено {Total} символов",
-                        result.Count, messageBuilder.Length);
+                    _logger.LogDebug("Получен фрагмент {Count} байт, накоплено {Total} байт",
+                        result.Count, messageStream.Length);
                 }
             }
         }
@@ -160,25 +160,55 @@ public class VkVideoLiveChatClient : IDisposable
     }
 
     /// <summary>
-    ///     Обрабатывает полученное JSON сообщение
+    ///     Разбирает байты сообщения и обрабатывает каждый JSON-объект.
+    ///     Сервер может прислать несколько объектов в одном фрейме.
     /// </summary>
-    private async Task ProcessJsonMessageAsync(string json)
+    private async Task ProcessJsonMessageAsync(byte[] messageBytes)
+    {
+        var offset = 0;
+        while (offset < messageBytes.Length)
+        {
+            // Пропускаем пробельные символы между JSON-объектами
+            while (offset < messageBytes.Length && messageBytes[offset] <= 32)
+                offset++;
+
+            if (offset >= messageBytes.Length) break;
+
+            try
+            {
+                // Utf8JsonReader — ref struct, нельзя хранить за await.
+                // Клонируем JsonElement до await, чтобы он не зависел от документа.
+                JsonElement rootElement;
+                int bytesConsumed;
+                var reader = new Utf8JsonReader(messageBytes.AsSpan(offset), isFinalBlock: true, state: default);
+                if (!reader.Read()) break;
+                using (var document = JsonDocument.ParseValue(ref reader))
+                {
+                    rootElement = document.RootElement.Clone();
+                    bytesConsumed = (int)reader.BytesConsumed;
+                }
+
+                await ProcessJsonObjectAsync(rootElement);
+                offset += bytesConsumed;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка парсинга JSON-объекта по смещению {Offset}", offset);
+                OnError($"Ошибка обработки сообщения: {ex.Message}", ex);
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Обрабатывает один JSON-объект из сообщения
+    /// </summary>
+    private async Task ProcessJsonObjectAsync(JsonElement root)
     {
         try
         {
-            // Проверяем на ping от сервера (пустой JSON объект)
-            if (json.Trim() == "{}")
-            {
-                _logger.LogDebug("Получен ping от сервера, отправляем pong");
-                await SendPongAsync();
-                return;
-            }
-
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-
             // Проверяем на пустой объект (ping)
-            if (root.ValueKind == JsonValueKind.Object && root.EnumerateObject().MoveNext() == false)
+            if (root.ValueKind == JsonValueKind.Object && !root.EnumerateObject().MoveNext())
             {
                 _logger.LogDebug("Получен ping (пустой объект), отправляем pong");
                 await SendPongAsync();
@@ -202,11 +232,9 @@ public class VkVideoLiveChatClient : IDisposable
             // Обрабатываем ответ на команду connect
             if (root.TryGetProperty("connect", out var connectProp))
             {
-                // Получаем ping интервал из ответа сервера (для информации)
                 var pingInterval = connectProp.TryGetProperty("ping", out var pingProp)
                     ? pingProp.GetInt32()
                     : 25;
-
                 _logger.LogInformation("Подключено. Ping interval: {PingInterval}s", pingInterval);
                 OnConnected();
             }
@@ -222,8 +250,8 @@ public class VkVideoLiveChatClient : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка обработки сообщения");
-            OnError($"Ошибка обработки сообщения: {ex.Message}", ex);
+            _logger.LogError(ex, "Ошибка обработки JSON-объекта");
+            OnError($"Ошибка обработки JSON-объекта: {ex.Message}", ex);
         }
     }
 
@@ -384,7 +412,7 @@ public class VkVideoLiveChatClient : IDisposable
 
     private void OnError(string message, Exception? exception = null)
     {
-        Error?.Invoke(this, new ErrorEventArgs
+        Error?.Invoke(this, new Services.ErrorEventArgs
         {
             Message = message,
             Exception = exception
