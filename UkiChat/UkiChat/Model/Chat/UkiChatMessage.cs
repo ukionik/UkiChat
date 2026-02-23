@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using TwitchLib.Client.Models;
 using UkiChat.Model.SevenTv;
+using UkiChat.Model.Twitch;
 using UkiChat.Model.VkVideoLive;
 using UkiChat.Utils;
 
@@ -26,6 +27,13 @@ public record UkiChatMessage(ChatPlatform Platform
     {
         return new UkiChatMessage(ChatPlatform.Twitch, [], ChatPlatform.Twitch.ToString(), "#FFFFFF",
             [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)]);
+    }
+
+    public static UkiChatMessage FromTwitchWatchStreak(TwitchWatchStreak watchStreak)
+    {
+        var displayNameColor = ColorUtil.GetDisplayNameColor(watchStreak.DisplayName, watchStreak.HexColor);
+        return new UkiChatMessage(ChatPlatform.Twitch, [], watchStreak.DisplayName, displayNameColor,
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, watchStreak.SystemMessage)]);
     }
 
     public static UkiChatMessage FromVkVideoLiveMessage(VkVideoLiveChatMessage chatMessage)

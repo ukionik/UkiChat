@@ -88,6 +88,15 @@ public class TwitchChatService : ITwitchChatService
             /*await SendChatMessageNotification(
                 string.Format(_localizationService.GetString("twitch.connectingToChannelError"), _channelName));*/
         };
+
+        // Watch streak — Twitch шлёт как USERNOTICE viewermilestone, TwitchLib не обрабатывает нативно
+        _twitchClient.OnUnaccountedFor += async (_, e) =>
+        {
+            var watchStreak = TwitchWatchStreak.ParseFromRawIrc(e.RawIRC);
+            if (watchStreak == null) return;
+            Console.WriteLine($"[Twitch] Watch streak: {watchStreak.DisplayName} x{watchStreak.StreakCount}");
+            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchWatchStreak(watchStreak));
+        };
     }
 
     public async Task ConnectAsync(TwitchConnectionParams connectionParams)
