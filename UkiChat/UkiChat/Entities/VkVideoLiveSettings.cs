@@ -8,6 +8,7 @@ public class VkVideoLiveSettings : IBaseEntity<long>
     public long Id { get; set; }
 
     public string? Channel { get; set; }
+    public long? ChannelId { get; set; }
 
     // API credentials
     public string? ApiClientId { get; set; }

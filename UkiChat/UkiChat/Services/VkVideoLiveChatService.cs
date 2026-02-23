@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using UkiChat.Configuration;
+using UkiChat.Entities;
 using UkiChat.Model.Chat;
 using UkiChat.Model.VkVideoLive;
 
@@ -15,6 +16,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
     private readonly ISignalRService _signalRService;
     private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
     private string _channelName = "";
+    private long _channelId;
 
     public VkVideoLiveChatService(IDatabaseContext databaseContext
         , IDatabaseService databaseService
@@ -71,6 +73,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         try
         {
             _channelName = connectionParams.ChannelName;
+            _channelId = connectionParams.ChannelId;
             await SendChatMessageNotification(string.Format(
                 _localizationService.GetString("vkvideolive.connectingToChannel"), connectionParams.ChannelId));
 
@@ -92,25 +95,24 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         if (oldChannel == newChannel)
             return;
 
-        vkVideoLiveSettings.Channel = newChannel;
-        _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
-
         if (string.IsNullOrEmpty(vkVideoLiveSettings.ApiAccessToken))
             return;
 
         var channelInfo = await _vkVideoLiveApiService.GetChannelInfoAsync(
             vkVideoLiveSettings.ApiAccessToken, newChannel);
-        var channelId = channelInfo.Data.Channel.Id;
+
+        _channelName = newChannel;
+        _channelId = channelInfo.Data.Channel.Id;
+        UpdateVkVideoLiveDbSettings(vkVideoLiveSettings);
 
         var wsTokenResponse = await _vkVideoLiveApiService.GetWebSocketTokenAsync(vkVideoLiveSettings.ApiAccessToken);
         var wsAccessToken = wsTokenResponse.Data.Token;
-
         _databaseService.UpdateVkVideoLiveTokens(vkVideoLiveSettings.ApiAccessToken, wsAccessToken);
 
         await ConnectAsync(new VkVideoLiveConnectionParams(
             OldChannelName: oldChannel,
             ChannelName: newChannel,
-            ChannelId: channelId,
+            ChannelId: _channelId,
             WsAccessToken: wsAccessToken));
     }
 
@@ -122,6 +124,13 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
     public Task LoadChannelDataAsync()
     {
         throw new NotImplementedException();
+    }
+
+    private void UpdateVkVideoLiveDbSettings(VkVideoLiveSettings vkVideoLiveSettings)
+    {
+        vkVideoLiveSettings.Channel = _channelName;
+        vkVideoLiveSettings.ChannelId = _channelId;
+        _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
 
     private async Task SendChatMessageNotification(string message)
