@@ -6,7 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using UkiChat.Services;
+using UkiChat.Model.Chat.EventArgs;
+using ErrorEventArgs = UkiChat.Model.Chat.EventArgs.ErrorEventArgs;
 
 namespace UkiChat.Model.VkVideoLive;
 
@@ -37,10 +38,10 @@ public class VkVideoLiveChatClient : IDisposable
         _disposed = true;
     }
 
-    public event EventHandler<ChatMessageEventArgs>? MessageReceived;
+    public event EventHandler<VkVideoLiveChatMessageEventArgs>? MessageReceived;
     public event EventHandler? Connected;
     public event EventHandler<DisconnectEventArgs>? Disconnected;
-    public event EventHandler<Services.ErrorEventArgs>? Error;
+    public event EventHandler<ErrorEventArgs>? Error;
 
     public async Task ConnectAsync(string wsToken, long channelId)
     {
@@ -387,7 +388,7 @@ public class VkVideoLiveChatClient : IDisposable
         try
         {
             var message = JsonSerializer.Deserialize<VkVideoLiveChatMessage>(data);
-            MessageReceived?.Invoke(this, new ChatMessageEventArgs
+            MessageReceived?.Invoke(this, new VkVideoLiveChatMessageEventArgs
             {
                 Message = message,
                 ChannelId = channelId
@@ -412,7 +413,7 @@ public class VkVideoLiveChatClient : IDisposable
 
     private void OnError(string message, Exception? exception = null)
     {
-        Error?.Invoke(this, new Services.ErrorEventArgs
+        Error?.Invoke(this, new ErrorEventArgs
         {
             Message = message,
             Exception = exception

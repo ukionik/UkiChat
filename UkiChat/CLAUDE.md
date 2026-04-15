@@ -71,9 +71,11 @@ Services are auto-scanned from `UkiChat.Services` namespace and registered as si
 
 ### Main Services
 
-- **IStreamService**: Twitch chat connection via TwitchLib
+- **ITwitchChatService**: Twitch chat connection via TwitchLib (loads emotes/badges from DB on startup, refreshes from API)
+- **IVkVideoLiveChatService**: VK Video Live chat via WebSocket + Centrifuge/gRPC
 - **IDatabaseService**: Database queries and settings management
 - **ISignalRService**: Sends events to connected web clients
+- **ITwitchApiService** / **IVkVideoLiveApiService** / **ISevenTvApiService**: External API clients
 - **ILocalizationService**: Language switching (ru/en), JSON files in `Localization/`
 - **IWindowService**: Window management for WPF
 
