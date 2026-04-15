@@ -47,6 +47,12 @@ public class VkVideoLiveChatClient : IDisposable
     {
         try
         {
+            // Очищаем предыдущее соединение (актуально при переподключении)
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _webSocket?.Dispose();
+            _webSocket = null;
+
             _channelId = channelId;
             var channel = $"channel-chat:{_channelId}";
             _commandId = 0;
@@ -146,6 +152,11 @@ public class VkVideoLiveChatClient : IDisposable
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Получение сообщений отменено");
+        }
+        catch (ObjectDisposedException)
+        {
+            // WebSocket был освобождён при переподключении — не считается ошибкой
+            _logger.LogInformation("WebSocket освобождён, цикл получения сообщений завершён");
         }
         catch (WebSocketException ex)
         {
