@@ -24,6 +24,7 @@
     "connectingToChannel": "Connecting to channel {0}...",
     "connectedToChannel": "Connected to channel {0}",
     "disconnectedFromChannel": "Disconnected from channel {0}",
-    "connectingToChannelError": "Failed connecting to channel {0}"
+    "connectingToChannelError": "Failed connecting to channel {0}",
+    "reconnectingInSeconds": "Reconnecting in {0} sec. (attempt {1})..."
   }
 }

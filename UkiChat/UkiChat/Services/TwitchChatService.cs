@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
@@ -16,7 +17,20 @@ namespace UkiChat.Services;
 
 public class TwitchChatService : ITwitchChatService
 {
+    // Задержки переподключения: 5с, 10с, 20с, 40с, 80с, 160с, 300с (5 мин макс)
+    private static readonly TimeSpan[] ReconnectDelays =
+    [
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(10),
+        TimeSpan.FromSeconds(20),
+        TimeSpan.FromSeconds(40),
+        TimeSpan.FromSeconds(80),
+        TimeSpan.FromSeconds(160),
+        TimeSpan.FromSeconds(300),
+    ];
+
     private readonly IDatabaseContext _databaseContext;
+    private readonly ILocalizationService _localizationService;
     private readonly ISevenTvApiService _sevenTvApiService;
     private readonly ISevenTvEmotesRepository _sevenTvEmotesRepository;
     private readonly ISignalRService _signalRService;
@@ -25,6 +39,10 @@ public class TwitchChatService : ITwitchChatService
     private readonly TwitchClient _twitchClient = new();
     private string _broadcasterId = "";
     private string _channelName = "";
+
+    // true — разрыв инициирован намеренно (смена канала / обновление настроек), переподключаться не нужно
+    private bool _intentionalDisconnect;
+    private CancellationTokenSource? _reconnectCts;
 
     public TwitchChatService(IDatabaseContext databaseContext
         , ISignalRService signalRService
@@ -37,6 +55,7 @@ public class TwitchChatService : ITwitchChatService
     {
         _databaseContext = databaseContext;
         _signalRService = signalRService;
+        _localizationService = localizationService;
         _sevenTvApiService = sevenTvApiService;
         _twitchBadgesRepository = twitchBadgesRepository;
         _sevenTvEmotesRepository = sevenTvEmotesRepository;
@@ -56,8 +75,6 @@ public class TwitchChatService : ITwitchChatService
         {
             Console.WriteLine(e.Exception.ToString());
             return Task.CompletedTask;
-            /*await SendChatMessageNotification(
-                string.Format(_localizationService.GetString("twitch.error"), _channelName));*/
         };
 
         _twitchClient.OnJoinedChannel += async (_, e) =>
@@ -69,25 +86,25 @@ public class TwitchChatService : ITwitchChatService
 
         _twitchClient.OnLeftChannel += async (_, e) =>
         {
-            Console.WriteLine("Disconnected");
+            Console.WriteLine($"[Twitch] Left channel: {e.Channel}");
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), e.Channel));
         };
 
         _twitchClient.OnDisconnected += (_, _) =>
         {
-            Console.WriteLine("Disconnected");
+            Console.WriteLine("[Twitch] Disconnected");
+            if (!_intentionalDisconnect)
+                StartReconnectLoop();
             return Task.CompletedTask;
-            /*await SendChatMessageNotification(
-                string.Format(_localizationService.GetString("twitch.disconnectedFromChannel")));*/
         };
 
-        _twitchClient.OnConnectionError += (_, _) =>
+        _twitchClient.OnConnectionError += (_, e) =>
         {
-            Console.WriteLine("ConnectionError");
+            Console.WriteLine($"[Twitch] ConnectionError: {e.Error.Message}");
+            if (!_intentionalDisconnect)
+                StartReconnectLoop();
             return Task.CompletedTask;
-            /*await SendChatMessageNotification(
-                string.Format(_localizationService.GetString("twitch.connectingToChannelError"), _channelName));*/
         };
 
         // Watch streak — Twitch шлёт как USERNOTICE viewermilestone, TwitchLib не обрабатывает нативно
@@ -102,8 +119,12 @@ public class TwitchChatService : ITwitchChatService
 
     public async Task ConnectAsync(TwitchConnectionParams connectionParams)
     {
+        // Отменяем текущий цикл переподключения перед новым подключением
+        CancelReconnectLoop();
+        _intentionalDisconnect = false;
+
         _broadcasterId = connectionParams.BroadcasterId;
-        
+
         if (!_twitchClient.IsConnected)
         {
             var credentials =
@@ -114,10 +135,10 @@ public class TwitchChatService : ITwitchChatService
 
         if (_twitchClient.JoinedChannels.Any(x => x.Channel == connectionParams.OldChannel))
             await _twitchClient.LeaveChannelAsync(connectionParams.OldChannel);
-        
+
         if (connectionParams.NewChannel == "")
             return;
-        
+
         await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
     }
 
@@ -130,6 +151,10 @@ public class TwitchChatService : ITwitchChatService
 
         if (newChannel.Length == 0)
             return;
+
+        // Останавливаем переподключение к старому каналу
+        _intentionalDisconnect = true;
+        CancelReconnectLoop();
 
         _channelName = newChannel;
         _broadcasterId = await LoadBroadcasterIdAsync(newChannel);
@@ -236,6 +261,71 @@ public class TwitchChatService : ITwitchChatService
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading channel={twitchSettings.Channel} 7TV emotes: {ex.Message}");
+        }
+    }
+
+    private void StartReconnectLoop()
+    {
+        CancelReconnectLoop();
+        _reconnectCts = new CancellationTokenSource();
+        _ = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+    }
+
+    private void CancelReconnectLoop()
+    {
+        _reconnectCts?.Cancel();
+        _reconnectCts?.Dispose();
+        _reconnectCts = null;
+    }
+
+    /// <summary>
+    ///     Бесконечный цикл переподключения с экспоненциальным увеличением интервала.
+    /// </summary>
+    private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; !cancellationToken.IsCancellationRequested; attempt++)
+        {
+            var delay = ReconnectDelays[Math.Min(attempt, ReconnectDelays.Length - 1)];
+            Console.WriteLine($"[Twitch] Переподключение через {delay.TotalSeconds}с (попытка {attempt + 1})");
+
+            await SendChatMessageNotification(string.Format(
+                _localizationService.GetString("twitch.reconnectingInSeconds"),
+                (int)delay.TotalSeconds,
+                attempt + 1));
+
+            try
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (cancellationToken.IsCancellationRequested) return;
+
+            try
+            {
+                var settings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+                if (string.IsNullOrEmpty(settings.Channel))
+                {
+                    Console.WriteLine("[Twitch] Канал не задан — переподключение невозможно");
+                    return;
+                }
+
+                // ReconnectAsync переподключает IRC и автоматически заходит в ранее joined каналы
+                await _twitchClient.ReconnectAsync();
+                Console.WriteLine("[Twitch] Переподключение успешно");
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Twitch] Ошибка переподключения (попытка {attempt + 1}): {ex.Message}");
+            }
         }
     }
 
