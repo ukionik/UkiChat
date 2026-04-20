@@ -11,29 +11,18 @@ namespace UkiChat.Services;
 
 public class VkVideoLiveChatService : IVkVideoLiveChatService
 {
-    // Задержки переподключения: 5с, 10с, 20с, 40с, 80с, 160с, 300с (5 мин макс)
-    private static readonly TimeSpan[] ReconnectDelays =
-    [
-        TimeSpan.FromSeconds(5),
-        TimeSpan.FromSeconds(10),
-        TimeSpan.FromSeconds(20),
-        TimeSpan.FromSeconds(40),
-        TimeSpan.FromSeconds(80),
-        TimeSpan.FromSeconds(160),
-        TimeSpan.FromSeconds(300),
-    ];
-
     private readonly VkVideoLiveChatClient _chatClient;
     private readonly IDatabaseContext _databaseContext;
     private readonly IDatabaseService _databaseService;
     private readonly ILocalizationService _localizationService;
+    private readonly object _reconnectLock = new();
     private readonly ISignalRService _signalRService;
     private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
     private string _channelName = "";
     private long _channelId;
 
     // true — разрыв инициирован намеренно (смена канала / явное отключение), переподключаться не нужно
-    private bool _intentionalDisconnect;
+    private volatile bool _intentionalDisconnect;
     private CancellationTokenSource? _reconnectCts;
 
     public VkVideoLiveChatService(IDatabaseContext databaseContext
@@ -158,37 +147,39 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
     private void StartReconnectLoop()
     {
-        CancelReconnectLoop();
-        _reconnectCts = new CancellationTokenSource();
-        _ = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+        lock (_reconnectLock)
+        {
+            if (_reconnectCts != null && !_reconnectCts.IsCancellationRequested)
+                return;
+
+            _reconnectCts?.Cancel();
+            _reconnectCts?.Dispose();
+            _reconnectCts = new CancellationTokenSource();
+            _ = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+        }
     }
 
     private void CancelReconnectLoop()
     {
-        _reconnectCts?.Cancel();
-        _reconnectCts?.Dispose();
-        _reconnectCts = null;
+        lock (_reconnectLock)
+        {
+            _reconnectCts?.Cancel();
+            _reconnectCts?.Dispose();
+            _reconnectCts = null;
+        }
     }
 
     /// <summary>
-    ///     Бесконечный цикл переподключения с экспоненциальным увеличением интервала.
+    ///     Цикл переподключения с фиксированным интервалом 5с.
     ///     Перед каждой попыткой запрашивает свежий WS-токен через API.
     /// </summary>
     private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
     {
-        for (var attempt = 0; !cancellationToken.IsCancellationRequested; attempt++)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var delay = ReconnectDelays[Math.Min(attempt, ReconnectDelays.Length - 1)];
-            Console.WriteLine($"[VkVideoLive] Переподключение через {delay.TotalSeconds}с (попытка {attempt + 1})");
-
-            await SendChatMessageNotification(string.Format(
-                _localizationService.GetString("vkvideolive.reconnectingInSeconds"),
-                (int)delay.TotalSeconds,
-                attempt + 1));
-
             try
             {
-                await Task.Delay(delay, cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -221,7 +212,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[VkVideoLive] Ошибка переподключения (попытка {attempt + 1}): {ex.Message}");
+                Console.WriteLine($"[VkVideoLive] Ошибка переподключения: {ex.Message}");
             }
         }
     }
