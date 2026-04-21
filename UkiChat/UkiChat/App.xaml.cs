@@ -2,6 +2,7 @@
 using System.Windows;
 using DryIoc;
 using DryIoc.Microsoft.DependencyInjection;
+using ControlzEx.Theming;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,8 @@ public partial class App
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
+        ThemeManager.Current.ChangeTheme(this, "Dark.Steel");
+
         ViewModelLocationProvider.SetDefaultViewTypeToViewModelTypeResolver(viewType =>
         {
             var viewName = viewType.FullName;

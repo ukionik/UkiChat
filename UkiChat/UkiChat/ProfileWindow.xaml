@@ -1,4 +1,4 @@
-﻿<Window x:Class="UkiChat.ProfileWindow"
+<mah:MetroWindow x:Class="UkiChat.ProfileWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,8 +9,23 @@
         xmlns:mvvm="http://prismlibrary.com/"
         mc:Ignorable="d"
         mvvm:ViewModelLocator.AutoWireViewModel="True"
-        Title="{extensions:Loc Key=profile.title}" Height="450" Width="800">
+        Title="{extensions:Loc Key=profile.title}"
+        Height="500" Width="700"
+        MinHeight="350" MinWidth="450"
+        Background="#FF1E1E1E"
+        WindowTitleBrush="{DynamicResource MahApps.Brushes.WindowTitle}"
+        NonActiveWindowTitleBrush="{DynamicResource MahApps.Brushes.WindowTitle.NonActive}"
+        GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+        BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+        BorderThickness="1"
+        TitleBarHeight="32"
+        TitleForeground="White"
+        SaveWindowPosition="True"
+        WindowTransitionsEnabled="False"
+        ShowMaxRestoreButton="False"
+        TitleCharacterCasing="Normal"
+        >
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
-</Window>
+</mah:MetroWindow>
