@@ -7,6 +7,14 @@ async function sendTestMessage() {
   await invokeUpdate("SendChatMessage", generateMessage2())
 }
 
+async function sendNotification() {
+  await invokeUpdate("SendChatMessage", generateNotification())
+}
+
+async function sendMention() {
+  await invokeUpdate("SendChatMessage", generateMention())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -44,6 +52,40 @@ function generateMessage2() {
   }
 }
 
+function generateNotification() {
+  return {
+    platform: "Twitch",
+    badges: [],
+    displayName: "StreamElements",
+    displayNameColor: "#FF6B35",
+    messageType: "Notification",
+    messageParts: [
+      {
+        type: "Text",
+        content: "Moberator1 только что подписался на канал!"
+      }
+    ]
+  }
+}
+
+function generateMention() {
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3158e758-3cb4-43c5-94b3-7639810451c5/3"
+    ],
+    displayName: "Nightbot",
+    displayNameColor: "#00FF7F",
+    messageType: "Mention",
+    messageParts: [
+      {
+        type: "Text",
+        content: "@UkiChat привет из чата!"
+      }
+    ]
+  }
+}
+
 onMounted(async () => {
   await startSignalR()
 })
@@ -51,7 +93,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <UButton @click="sendTestMessage">Test Message</UButton>
+  <div class="flex gap-2 p-4">
+    <UButton @click="sendTestMessage">Test Message</UButton>
+    <UButton @click="sendNotification">Notification</UButton>
+    <UButton @click="sendMention">Mention</UButton>
+  </div>
 </template>
 
 <style scoped>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {ChatMessage} from "~/types/ChatMessage";
+import type {MessageType} from "~/types/ChatMessage";
 
 const props = withDefaults(defineProps<{
   messages: ChatMessage[]
@@ -41,9 +42,19 @@ function getPlatformImage(platform: string) {
   }
 }
 
-const messageStyle = computed(() => ({
-  fontSize: `${props.scale}rem`
-}))
+function getMessageStyle(message: ChatMessage) {
+  const base: Record<string, string> = { fontSize: `${props.scale}rem` }
+  if (message.messageType === 'Notification' || message.messageType === 'Mention') {
+    base.paddingLeft = `${0.375 * props.scale}rem`
+  }
+  return base
+}
+
+function getMessageClass(messageType: MessageType | undefined) {
+  if (messageType === 'Notification') return 'bg-gray-50/10 border-l-[3px] border-gray-50 text-gray-400 rounded-r-sm'
+  if (messageType === 'Mention') return 'bg-red-500/10 border-l-[3px] border-red-500 text-red-400 rounded-r-sm'
+  return ''
+}
 
 const chatStyle = computed(() => ({
   padding: `${0.25 * props.scale}rem ${0.5 * props.scale}rem`,
@@ -76,7 +87,7 @@ watch(() => props.messages, async () => {
 <template>
   <div class="chat-container h-dvh overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
        @scroll="onScroll">
-    <div class="chat-message" v-for="message in messages" :style="messageStyle">
+    <div class="chat-message" v-for="message in messages" :style="getMessageStyle(message)" :class="getMessageClass(message.messageType)">
       <img :style="iconStyle" :alt="message.platform" :src="getPlatformImage(message.platform)">
       <img :style="iconStyle" v-for="badge in message.badges" :key="badge" :src="badge" alt="badge">
       <span class="font-bold align-middle" :style="{marginRight: marginRight, color: message.displayNameColor}">{{ message.displayName }}</span>
@@ -92,11 +103,13 @@ watch(() => props.messages, async () => {
 
 <style scoped>
 .hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
+
+
 </style>

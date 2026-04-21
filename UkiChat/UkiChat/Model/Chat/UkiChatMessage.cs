@@ -14,7 +14,8 @@ public record UkiChatMessage(ChatPlatform Platform
     , string DisplayName
     , string DisplayNameColor
     , List<UkiChatMessagePart> MessageParts
-    , UkiChatReplyInfo? ReplyTo = null)
+    , UkiChatReplyInfo? ReplyTo = null
+    , UkiChatMessageType MessageType = UkiChatMessageType.Normal)
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, SevenTvEmote>? sevenTvEmotes = null)
     {
@@ -26,14 +27,14 @@ public record UkiChatMessage(ChatPlatform Platform
     public static UkiChatMessage FromTwitchMessageNotification(string message)
     {
         return new UkiChatMessage(ChatPlatform.Twitch, [], ChatPlatform.Twitch.ToString(), "#FFFFFF",
-            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)]);
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification);
     }
 
     public static UkiChatMessage FromTwitchWatchStreak(TwitchWatchStreak watchStreak)
     {
         var displayNameColor = ColorUtil.GetDisplayNameColor(watchStreak.DisplayName, watchStreak.HexColor);
         return new UkiChatMessage(ChatPlatform.Twitch, [], watchStreak.DisplayName, displayNameColor,
-            [new UkiChatMessagePart(UkiChatMessagePartType.Text, watchStreak.SystemMessage)]);
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, watchStreak.SystemMessage)], MessageType: UkiChatMessageType.Notification);
     }
 
     public static UkiChatMessage FromVkVideoLiveMessage(VkVideoLiveChatMessage chatMessage)
