@@ -9,10 +9,6 @@
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
-            <!-- Кастомные цвета окна -->
-            <SolidColorBrush x:Key="MahApps.Brushes.WindowTitle"          Color="#FF2B2B2B" />
-            <SolidColorBrush x:Key="MahApps.Brushes.WindowTitle.NonActive" Color="#FF3C3C3C" />
         </ResourceDictionary>
     </Application.Resources>
 </dryIoc:PrismApplication>
