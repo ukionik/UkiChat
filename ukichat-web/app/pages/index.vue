@@ -3,9 +3,8 @@ import {onMounted} from 'vue'
 import {useSignalR} from "~/composables/useSignalR";
 import type {ChatMessage} from "~/types/ChatMessage";
 
-const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
+const {startSignalR, invokeGet} = useSignalR()
 const {getLanguage} = useLocalization()
-const {t} = useI18n()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -29,10 +28,6 @@ async function getActiveAppSettingsInfo() {
   return await invokeGet("GetActiveAppSettingsInfo")
 }
 
-async function openSettingsWindow() {
-  await invokeUpdate("OpenSettingsWindow")
-}
-
 // Запуск SignalR при монтировании компонента
 onMounted(async () => {
   let connection = await startSignalR()
@@ -48,15 +43,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="fixed top-2 right-2 z-50">
-    <UButton :title="t('settings.title')" variant="ghost" color="gray" square
-             class="hover:bg-gray-800 transition cursor-pointer opacity-25 hover:opacity-100"
-             @click="openSettingsWindow"
-    >
-      <UIcon name="i-mdi-cog" class="w-6 h-6 dark:text-gray-400 transition">
-
-      </UIcon>
-    </UButton>
-  </div>
   <ChatContainer :messages="chatMessages" :scale="2.0" />
 </template>

@@ -7,6 +7,7 @@
                  xmlns:mvvm="http://prismlibrary.com/"
                  xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
                  xmlns:extensions="clr-namespace:UkiChat.Extensions"
+                 xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                  mc:Ignorable="d"
                  mvvm:ViewModelLocator.AutoWireViewModel="True"
                  Title="UkiChat"
@@ -25,6 +26,14 @@
                  ShowIconOnTitleBar="True"
                  TitleCharacterCasing="Normal"
                  >
+
+    <mah:MetroWindow.RightWindowCommands>
+        <mah:WindowCommands>
+            <Button Command="{Binding OpenSettingsWindowCommand}" ToolTip="Settings">
+                <iconPacks:PackIconMaterial Kind="Cog" Width="14" Height="14" />
+            </Button>
+        </mah:WindowCommands>
+    </mah:MetroWindow.RightWindowCommands>
 
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
