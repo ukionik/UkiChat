@@ -21,7 +21,23 @@ public record UkiChatMessage(ChatPlatform Platform
     {
         var messageParts = ParseMessageParts(twitchMessage.Message, twitchMessage.EmoteSet, sevenTvEmotes);
         var displayNameColor = ColorUtil.GetDisplayNameColor(twitchMessage.DisplayName, twitchMessage.HexColor);
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts);
+
+        UkiChatReplyInfo? replyTo = null;
+        var messageType = UkiChatMessageType.Normal;
+
+        if (twitchMessage.ChatReply != null)
+        {
+            var parentColor = ColorUtil.GetDisplayNameColor(twitchMessage.ChatReply.ParentDisplayName, "");
+            var parentMsgBody = UnescapeIrcTagValue(twitchMessage.ChatReply.ParentMsgBody);
+            replyTo = new UkiChatReplyInfo(
+                twitchMessage.ChatReply.ParentDisplayName,
+                parentColor,
+                [new UkiChatMessagePart(UkiChatMessagePartType.Text, parentMsgBody)]
+            );
+            messageType = UkiChatMessageType.Reply;
+        }
+
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType);
     }
 
     public static UkiChatMessage FromTwitchMessageNotification(string message)
@@ -244,6 +260,10 @@ public record UkiChatMessage(ChatPlatform Platform
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
         }
     }
+
+    // IRCv3 message tags кодируют спецсимволы: \s=пробел, \\=\, \:=;, \n=LF, \r=CR
+    private static string UnescapeIrcTagValue(string value) =>
+        value.Replace(@"\s", " ").Replace(@"\:", ";").Replace(@"\n", "\n").Replace(@"\r", "\r").Replace(@"\\", "\\");
 }
 
 /// <summary>

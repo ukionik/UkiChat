@@ -15,6 +15,10 @@ async function sendMention() {
   await invokeUpdate("SendChatMessage", generateMention())
 }
 
+async function sendReply() {
+  await invokeUpdate("SendChatMessage", generateReply())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -86,6 +90,26 @@ function generateMention() {
   }
 }
 
+function generateReply() {
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3158e758-3cb4-43c5-94b3-7639810451c5/3"
+    ],
+    displayName: "massiveredlight",
+    displayNameColor: "#ff0000",
+    messageType: "Reply",
+    replyTo: {
+      displayName: "Nightbot",
+      displayNameColor: "#FF6B35",
+      messageParts: [{ type: "Text", content: "Короче мой вам совет. Не лезьте вообще в ретро и ни в коем случае никогда не покупайте консоли. Иначе закончите лудоманством как я, когда чтобы вывести более чётко один грёбаный пиксель вы тратите на это дополнительные 10к 😁Ставишь просто эмуляторы на комп и радуешься жизни, а не вот это всё" }]
+    },
+    messageParts: [
+      { type: "Text", content: "Это твоя вина. Сделал рефанд за кармен сраньдиего" }
+    ]
+  }
+}
+
 onMounted(async () => {
   await startSignalR()
 })
@@ -97,6 +121,7 @@ onMounted(async () => {
     <UButton @click="sendTestMessage">Test Message</UButton>
     <UButton @click="sendNotification">Notification</UButton>
     <UButton @click="sendMention">Mention</UButton>
+    <UButton @click="sendReply">Reply</UButton>
   </div>
 </template>
 

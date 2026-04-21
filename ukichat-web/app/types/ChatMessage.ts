@@ -3,7 +3,13 @@ export interface MessagePart {
     content: string
 }
 
-export type MessageType = 'Normal' | 'Notification' | 'Mention'
+export interface ReplyInfo {
+    displayName: string,
+    displayNameColor: string,
+    messageParts: MessagePart[]
+}
+
+export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply'
 
 export interface ChatMessage {
     platform: string,
@@ -11,5 +17,6 @@ export interface ChatMessage {
     displayName: string,
     displayNameColor: string,
     messageParts: MessagePart[],
-    messageType?: MessageType
+    messageType?: MessageType,
+    replyTo?: ReplyInfo
 }

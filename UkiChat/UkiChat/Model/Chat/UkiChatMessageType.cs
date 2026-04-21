@@ -4,5 +4,6 @@ public enum UkiChatMessageType
 {
     Normal,
     Notification,
-    Mention
+    Mention,
+    Reply
 }
