@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Media;
 using DryIoc;
 using DryIoc.Microsoft.DependencyInjection;
 using ControlzEx.Theming;
@@ -33,7 +34,10 @@ public partial class App
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
-        ThemeManager.Current.ChangeTheme(this, "Dark.Steel");
+        var accentColor = Color.FromRgb(55, 45, 120);
+        var customTheme = RuntimeThemeGenerator.Current.GenerateRuntimeTheme("Dark", accentColor);
+        ThemeManager.Current.AddTheme(customTheme);
+        ThemeManager.Current.ChangeTheme(this, customTheme);
 
         ViewModelLocationProvider.SetDefaultViewTypeToViewModelTypeResolver(viewType =>
         {

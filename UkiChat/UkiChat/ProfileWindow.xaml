@@ -14,9 +14,10 @@
         Height="500" Width="700"
         MinHeight="350" MinWidth="450"
         Background="#FF1E1E1E"
-        WindowTitleBrush="#2B2B2B"
-        NonActiveWindowTitleBrush="#3C3C3C"
+        WindowTitleBrush="{DynamicResource MahApps.Brushes.Accent3}"
+        NonActiveWindowTitleBrush="#2d2c34"
         GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+        NonActiveGlowBrush="#2d2c34"
         BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
         BorderThickness="1"
         TitleBarHeight="32"
@@ -24,8 +25,15 @@
         SaveWindowPosition="True"
         WindowTransitionsEnabled="False"
         ShowMaxRestoreButton="False"
+        ShowIconOnTitleBar="True"
         TitleCharacterCasing="Normal"
         >
+    <mah:MetroWindow.IconTemplate>
+        <DataTemplate>
+            <Image Source="{Binding}" Width="24" Height="24" />
+        </DataTemplate>
+    </mah:MetroWindow.IconTemplate>
+
     <Grid>
         <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
     </Grid>
