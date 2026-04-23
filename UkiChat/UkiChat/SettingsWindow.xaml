@@ -10,7 +10,7 @@
         mc:Ignorable="d"
         mvvm:ViewModelLocator.AutoWireViewModel="True"
         Title="{extensions:Loc Key=settings.title}"
-        Icon="Assets/icon_transparent.png"
+        Icon="Assets/icon.ico"
         Height="600" Width="900"
         MinHeight="400" MinWidth="500"
         Background="#FF1E1E1E"

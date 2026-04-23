@@ -50,18 +50,18 @@
        </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <Resource Include="Assets\icon.png" />
-      <Resource Include="Assets\icon_transparent.png" />
-      <Resource Include="Assets\icon.ico" />
-    </ItemGroup>
-
-    <ItemGroup>
+    <ItemGroup>      
       <None Remove="app-settings.local.toml" />
       <EmbeddedResource Include="app-settings.local.toml" />
     </ItemGroup>
 
     <ItemGroup>
       <Protobuf Include="Protos\centrifuge_client.proto" GrpcServices="None" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Assets\icon.ico" />
+      <Resource Include="Assets\icon.ico" />
+      <None Remove="Assets\icon.png" />
     </ItemGroup>
 </Project>
