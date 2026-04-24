@@ -10,10 +10,10 @@
                  xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                  mc:Ignorable="d"
                  mvvm:ViewModelLocator.AutoWireViewModel="True"
-                 Title="UkiChat v0.3.0"
+                 Title="UkiChat v0.3.1"
                  Icon="Assets/icon.ico"
                  Height="600" Width="900"
-                 MinHeight="400" MinWidth="500"
+                 MinHeight="400" MinWidth="350"
                  Background="#FF1E1E1E"
                  WindowTitleBrush="{DynamicResource MahApps.Brushes.Accent3}"
                  NonActiveWindowTitleBrush="#2d2c34"
@@ -28,7 +28,6 @@
                  ShowIconOnTitleBar="True"
                  TitleCharacterCasing="Normal"
                  >
-
     <mah:MetroWindow.IconTemplate>
         <DataTemplate>
             <Image Source="{Binding}" Width="24" Height="24" />
@@ -44,7 +43,30 @@
     </mah:MetroWindow.RightWindowCommands>
 
     <Grid>
-        <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <wpf:WebView2 Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
+
+        <StatusBar Grid.Row="1" Background="#2d2c34" Foreground="#CCCCCC" Height="24">
+            <StatusBarItem Padding="6,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <iconPacks:PackIconMaterial Kind="Twitch" Width="16" Height="16"
+                                               Margin="0,0,5,0" VerticalAlignment="Center"
+                                               Foreground="#9146FF" />
+                    <TextBlock Text="{Binding TwitchViewerCount}" FontSize="14" VerticalAlignment="Center" />
+                </StackPanel>
+            </StatusBarItem>
+            <StatusBarItem Padding="6,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="{StaticResource VkVideoLiveIcon}" Width="16" Height="16"
+                           Margin="0,0,5,0" VerticalAlignment="Center" Stretch="Uniform" />
+                    <TextBlock Text="{Binding VkVideoLiveViewerCount}" FontSize="14" VerticalAlignment="Center" />
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 
 </mah:MetroWindow>

@@ -1,0 +1,26 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <DrawingImage x:Key="VkVideoLiveIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#0077FF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry FillRule="Nonzero" Figures="M0.4725275,366.0230713c0-301.0593567,64.5257339-365.585083,365.585083-365.585083h268.7890015c301.0592041,0,365.585144,64.5257339,365.585144,365.585083v268.7890015c0,301.0592041-64.5259399,365.585144-365.585144,365.585144H366.0576172c-301.0593567,0-365.585083-64.5259399-365.585083-365.585144V366.0230713z" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FF2B42">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry FillRule="Nonzero" Figures="M537.8240967,1000.3972168h95.3328247c295.3960571,0,364.1463623-61.5363159,367.2074585-344.8043213c0.0734863-6.7977295,0.1081543-13.723938,0.1081543-20.7808228V366.0230713c0-7.6098938-0.0407715-15.0687561-0.1265259-22.3786621C997.0441284,61.7430305,927.9959106,0.4379785,633.1569214,0.4379785h-95.3328247c-302.4856567,0-367.3170776,64.5257339-367.3170776,365.585083v268.7890015C170.507019,935.8712769,235.3384552,1000.3972168,537.8240967,1000.3972168z" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry FillRule="Nonzero" Figures="M458.4109802,643.3485107h-139.794281V349.1543579h43.8165588v252.46521h95.9777222V643.3485107z M527.9346924,643.3485107H484.118103V349.1543579h43.8165894V643.3485107z M681.8223267,643.3485107h-67.1850586l-63.0117188-294.1941528h45.0675659l48.824585,240.7799683h6.2588501l51.3265381-240.7799683h44.6512451L681.8223267,643.3485107z M913.3067627,643.3485107H768.9228516V349.1543579h141.463562v41.7289429h-97.6470337v83.4598389h86.380127v40.8963013h-86.380127v86.380127h100.5673828V643.3485107z" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+</ResourceDictionary>

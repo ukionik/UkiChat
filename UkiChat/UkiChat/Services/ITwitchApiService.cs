@@ -28,4 +28,9 @@ public interface ITwitchApiService
     /// <param name="clientSecret">ClientSecret</param>
     /// <returns>RefreshResponse с новыми токенами если было обновление, null если токен валиден</returns>
     Task<RefreshResponse?> EnsureValidTokenAsync(string refreshToken, string clientId, string clientSecret);
+
+    /// <summary>
+    /// Возвращает количество зрителей канала, или null если стрим оффлайн.
+    /// </summary>
+    Task<int?> GetViewerCountAsync(string channel);
 }

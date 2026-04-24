@@ -246,4 +246,22 @@ public record VkVideoLiveStream
     /// </summary>
     [JsonPropertyName("preview_url")]
     public string? PreviewUrl { get; init; }
+
+    /// <summary>
+    /// Счётчики стрима
+    /// </summary>
+    [JsonPropertyName("counters")]
+    public VkVideoLiveStreamCounters? Counters { get; init; }
+}
+
+/// <summary>
+/// Счётчики стрима
+/// </summary>
+public record VkVideoLiveStreamCounters
+{
+    /// <summary>
+    /// Количество зрителей
+    /// </summary>
+    [JsonPropertyName("viewers")]
+    public int Viewers { get; init; }
 }

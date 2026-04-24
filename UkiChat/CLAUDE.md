@@ -88,3 +88,11 @@ Services are auto-scanned from `UkiChat.Services` namespace and registered as si
 ## Language
 
 Code comments are in Russian.
+
+## Localization
+
+All user-facing strings in WPF ViewModels and views **must** use `ILocalizationService.GetString("key")` — never hardcode text in English or Russian.
+
+- Keys follow dot-notation: `"section.key"` (e.g. `"twitch.offline"`)
+- Add every new key to both `Localization/ru.json` and `Localization/en.json`
+- When language can change at runtime, subscribe to `ILocalizationService.LanguageChanged` and re-render affected properties (dispatch to UI thread via `Application.Current.Dispatcher.Invoke`)

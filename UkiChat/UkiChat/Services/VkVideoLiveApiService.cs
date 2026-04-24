@@ -107,6 +107,14 @@ public class VkVideoLiveApiService : IVkVideoLiveApiService
         return channelInfoResponse;
     }
 
+    public async Task<int?> GetViewerCountAsync(string accessToken, string channelUrl)
+    {
+        var info = await GetChannelInfoAsync(accessToken, channelUrl);
+        if (info.Data.Channel.Status != "online")
+            return null;
+        return info.Data.Stream?.Counters?.Viewers;
+    }
+
     public async Task<VkVideoLiveWebSocketTokenResponse> GetWebSocketTokenAsync(string accessToken)
     {
         // Создаем HTTP запрос

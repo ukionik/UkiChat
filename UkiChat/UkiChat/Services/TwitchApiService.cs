@@ -78,6 +78,13 @@ public class TwitchApiService : ITwitchApiService
         return await RefreshAccessTokenAsync(refreshToken, clientId, clientSecret);
     }
 
+    public async Task<int?> GetViewerCountAsync(string channel)
+    {
+        EnsureInitialized();
+        var response = await _api!.Helix.Streams.GetStreamsAsync(userLogins: [channel]);
+        return response.Streams.Length > 0 ? response.Streams[0].ViewerCount : null;
+    }
+
     private void EnsureInitialized()
     {
         if (!_isInitialized)

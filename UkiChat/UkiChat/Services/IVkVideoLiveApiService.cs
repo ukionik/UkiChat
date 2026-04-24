@@ -37,4 +37,9 @@ public interface IVkVideoLiveApiService
     /// <param name="accessToken">Токен доступа</param>
     /// <returns>Токен для WebSocket подключения</returns>
     Task<VkVideoLiveWebSocketTokenResponse> GetWebSocketTokenAsync(string accessToken);
+
+    /// <summary>
+    /// Возвращает количество зрителей канала, или null если стрим оффлайн.
+    /// </summary>
+    Task<int?> GetViewerCountAsync(string accessToken, string channelUrl);
 }

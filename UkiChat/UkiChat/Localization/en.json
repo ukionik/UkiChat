@@ -13,6 +13,7 @@
     }
   },
   "vkvideolive": {
+    "offline": "Offline",
     "connectingToChannel": "Connecting to channel {0}...",
     "connectedToChannel": "Connected to channel {0}",
     "disconnectedFromChannel": "Disconnected from channel {0}",
@@ -21,6 +22,7 @@
   },
   "twitch": {
     "error": "Error",
+    "offline": "Offline",
     "connectingToChannel": "Connecting to channel {0}...",
     "connectedToChannel": "Connected to channel {0}",
     "disconnectedFromChannel": "Disconnected from channel {0}",
