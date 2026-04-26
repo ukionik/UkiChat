@@ -10,7 +10,7 @@
                  xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
                  mc:Ignorable="d"
                  mvvm:ViewModelLocator.AutoWireViewModel="True"
-                 Title="UkiChat v0.3.1"
+                 Title="UkiChat v0.3.2"
                  Icon="Assets/icon.ico"
                  Height="600" Width="900"
                  MinHeight="400" MinWidth="350"

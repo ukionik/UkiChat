@@ -104,6 +104,12 @@ public record UkiChatMessage(ChatPlatform Platform
 
         return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts, replyTo);
     }
+    
+    public static UkiChatMessage FromVkVideoLiveMessageNotification(string message)
+    {
+        return new UkiChatMessage(ChatPlatform.VkVideoLive, [], ChatPlatform.VkVideoLive.ToString(), "#FFFFFF",
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification);
+    }
 
     private static List<UkiChatMessagePart> ParseVkVideoLiveContent(List<VkVideoLiveChatContent>? content)
     {

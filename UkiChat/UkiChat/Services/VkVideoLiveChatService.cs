@@ -15,7 +15,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
     private readonly IDatabaseContext _databaseContext;
     private readonly IDatabaseService _databaseService;
     private readonly ILocalizationService _localizationService;
-    private readonly object _reconnectLock = new();
+    private readonly Lock _reconnectLock = new();
     private readonly ISignalRService _signalRService;
     private readonly IVkVideoLiveApiService _vkVideoLiveApiService;
     private string _channelName = "";
@@ -90,7 +90,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
             _channelName = connectionParams.ChannelName;
             _channelId = connectionParams.ChannelId;
             await SendChatMessageNotification(string.Format(
-                _localizationService.GetString("vkvideolive.connectingToChannel"), connectionParams.ChannelId));
+                _localizationService.GetString("vkvideolive.connectingToChannel"), connectionParams.ChannelName));
 
             await _chatClient.ConnectAsync(connectionParams.WsAccessToken, connectionParams.ChannelId);
         }
@@ -226,6 +226,6 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
     private async Task SendChatMessageNotification(string message)
     {
-        await _signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchMessageNotification(message));
+        await _signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessageNotification(message));
     }
 }
