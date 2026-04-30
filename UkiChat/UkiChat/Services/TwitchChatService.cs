@@ -140,8 +140,12 @@ public class TwitchChatService : ITwitchChatService
             return;
 
         if (newChannel.Length == 0)
+        {
+            UpdateTwitchDbSettings(twitchSettings);
+            await _twitchClient.DisconnectAsync();
             return;
-
+        }
+        
         _channelName = newChannel;
         _broadcasterId = await LoadBroadcasterIdAsync(newChannel);
         UpdateTwitchDbSettings(twitchSettings);

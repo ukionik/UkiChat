@@ -112,10 +112,17 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
         if (string.IsNullOrEmpty(vkVideoLiveSettings.ApiAccessToken))
             return;
-
+        
         // Останавливаем переподключение к старому каналу
         _intentionalDisconnect = true;
         CancelReconnectLoop();
+
+        if (newChannel.Length == 0)
+        {
+            UpdateVkVideoLiveDbSettings(vkVideoLiveSettings);
+            await _chatClient.DisconnectAsync();
+            return;
+        }
 
         var channelInfo = await _vkVideoLiveApiService.GetChannelInfoAsync(
             vkVideoLiveSettings.ApiAccessToken, newChannel);
