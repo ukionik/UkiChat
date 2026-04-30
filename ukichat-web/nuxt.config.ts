@@ -15,5 +15,7 @@ export default defineNuxtConfig({
     modules: ['@nuxt/ui', '@nuxt/eslint', '@nuxtjs/i18n'],
     i18n: {
         defaultLocale: 'ru',
+        strategy: 'no_prefix',
+        detectBrowserLanguage: false,
     }
 })
