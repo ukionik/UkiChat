@@ -24,7 +24,7 @@
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
       <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3650.58" />
-      <PackageReference Include="MahApps.Metro" Version="2.4.10" />
+      <PackageReference Include="MahApps.Metro" Version="2.4.11" />
       <PackageReference Include="MahApps.Metro.IconPacks.Material" Version="5.0.0" />
       <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
       <PackageReference Include="Prism.Wpf" Version="9.0.537" />
