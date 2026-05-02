@@ -19,6 +19,7 @@ public class VkVideoLiveChatClient : IDisposable
     private bool _disposed;
     private ClientWebSocket? _webSocket;
     private long _channelId;
+    private string _channelName = "";
     private readonly ILogger<VkVideoLiveChatClient> _logger;
 
     public VkVideoLiveChatClient(ILogger<VkVideoLiveChatClient> logger)
@@ -43,17 +44,21 @@ public class VkVideoLiveChatClient : IDisposable
     public event EventHandler<DisconnectEventArgs>? Disconnected;
     public event EventHandler<ErrorEventArgs>? Error;
 
-    public async Task ConnectAsync(string wsToken, long channelId)
+    public async Task ConnectAsync(string wsToken, long channelId, string channelName)
     {
         try
         {
             // Очищаем предыдущее соединение (актуально при переподключении)
+            if (_webSocket != null)
+                OnDisconnected("Channel changed");
+
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource?.Dispose();
             _webSocket?.Dispose();
             _webSocket = null;
 
             _channelId = channelId;
+            _channelName = channelName;
             var channel = $"channel-chat:{_channelId}";
             _commandId = 0;
             _cancellationTokenSource = new CancellationTokenSource();
@@ -96,6 +101,7 @@ public class VkVideoLiveChatClient : IDisposable
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
 
+            OnDisconnected("Disconnect requested");
             _logger.LogInformation("Отключено");
         }
         catch (Exception ex)
@@ -419,7 +425,7 @@ public class VkVideoLiveChatClient : IDisposable
 
     private void OnDisconnected(string reason)
     {
-        Disconnected?.Invoke(this, new DisconnectEventArgs { Reason = reason });
+        Disconnected?.Invoke(this, new DisconnectEventArgs { Reason = reason, ChannelName = _channelName });
     }
 
     private void OnError(string message, Exception? exception = null)

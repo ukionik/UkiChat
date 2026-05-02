@@ -58,7 +58,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         {
             Console.WriteLine($"[VkVideoLive] Disconnected: {e.Reason}");
             await SendChatMessageNotification(
-                string.Format(localizationService.GetString("vkvideolive.disconnectedFromChannel"), _channelName));
+                string.Format(localizationService.GetString("vkvideolive.disconnectedFromChannel"), e.ChannelName));
 
             if (!_intentionalDisconnect)
                 StartReconnectLoop();
@@ -83,7 +83,6 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
         // Отменяем текущий цикл переподключения перед новым подключением
         CancelReconnectLoop();
-        _intentionalDisconnect = false;
 
         try
         {
@@ -92,7 +91,9 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
             await SendChatMessageNotification(string.Format(
                 _localizationService.GetString("vkvideolive.connectingToChannel"), connectionParams.ChannelName));
 
-            await _chatClient.ConnectAsync(connectionParams.WsAccessToken, connectionParams.ChannelId);
+            await _chatClient.ConnectAsync(connectionParams.WsAccessToken, connectionParams.ChannelId, connectionParams.ChannelName);
+            // Сбрасываем флаг только после успешного подключения, чтобы Disconnected от старого соединения не запустил цикл переподключения
+            _intentionalDisconnect = false;
         }
         catch (Exception ex)
         {
@@ -210,7 +211,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
                 var wsToken = wsTokenResponse.Data.Token;
                 _databaseService.UpdateVkVideoLiveTokens(settings.ApiAccessToken, wsToken);
 
-                await _chatClient.ConnectAsync(wsToken, _channelId);
+                await _chatClient.ConnectAsync(wsToken, _channelId, _channelName);
                 Console.WriteLine("[VkVideoLive] Переподключение успешно");
                 return;
             }
