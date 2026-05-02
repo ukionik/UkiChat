@@ -119,6 +119,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
         if (newChannel.Length == 0)
         {
+            _channelId = 0;
             UpdateVkVideoLiveDbSettings(vkVideoLiveSettings);
             await _chatClient.DisconnectAsync();
             return;
