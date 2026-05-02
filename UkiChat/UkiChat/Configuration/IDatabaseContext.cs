@@ -11,4 +11,5 @@ public interface IDatabaseContext
     IProfileRepository ProfileRepository { get; }
     ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
     IFfzEmoteRepository FfzEmoteRepository { get; }
+    IBttvEmoteRepository BttvEmoteRepository { get; }
 }

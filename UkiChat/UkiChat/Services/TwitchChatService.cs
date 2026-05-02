@@ -8,6 +8,7 @@ using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
 using UkiChat.Configuration;
 using UkiChat.Entities;
+using UkiChat.Model.Bttv;
 using UkiChat.Model.Chat;
 using UkiChat.Model.Ffz;
 using UkiChat.Model.SevenTv;
@@ -24,6 +25,8 @@ public class TwitchChatService : ITwitchChatService
     private readonly ISevenTvEmotesRepository _sevenTvEmotesRepository;
     private readonly IFfzApiService _ffzApiService;
     private readonly IFfzEmotesRepository _ffzEmotesRepository;
+    private readonly IBttvApiService _bttvApiService;
+    private readonly IBttvEmotesRepository _bttvEmotesRepository;
     private readonly ISignalRService _signalRService;
     private readonly ITwitchApiService _twitchApiService;
     private readonly ITwitchBadgesRepository _twitchBadgesRepository;
@@ -44,6 +47,8 @@ public class TwitchChatService : ITwitchChatService
         , ISevenTvEmotesRepository sevenTvEmotesRepository
         , IFfzApiService ffzApiService
         , IFfzEmotesRepository ffzEmotesRepository
+        , IBttvApiService bttvApiService
+        , IBttvEmotesRepository bttvEmotesRepository
         , ITwitchApiService twitchApiService
     )
     {
@@ -54,6 +59,8 @@ public class TwitchChatService : ITwitchChatService
         _sevenTvEmotesRepository = sevenTvEmotesRepository;
         _ffzApiService = ffzApiService;
         _ffzEmotesRepository = ffzEmotesRepository;
+        _bttvApiService = bttvApiService;
+        _bttvEmotesRepository = bttvEmotesRepository;
         _twitchApiService = twitchApiService;
 
         _twitchClient.OnMessageReceived += async (_, e) =>
@@ -168,7 +175,8 @@ public class TwitchChatService : ITwitchChatService
         await LoadTwitchGlobalBadgesAsync();
         await Task.WhenAll(
             LoadSevenTvGlobalEmotesAsync(),
-            LoadFfzGlobalEmotesAsync());
+            LoadFfzGlobalEmotesAsync(),
+            LoadBttvGlobalEmotesAsync());
     }
 
     public async Task LoadChannelDataAsync()
@@ -180,7 +188,8 @@ public class TwitchChatService : ITwitchChatService
         await LoadTwitchChannelBadgesAsync(twitchSettings);
         await Task.WhenAll(
             LoadSevenTvChannelEmotesAsync(twitchSettings),
-            LoadFfzChannelEmotesAsync(twitchSettings));
+            LoadFfzChannelEmotesAsync(twitchSettings),
+            LoadBttvChannelEmotesAsync(twitchSettings));
     }
 
     private async Task LoadTwitchGlobalBadgesAsync()
@@ -353,14 +362,68 @@ public class TwitchChatService : ITwitchChatService
 
         foreach (var (name, emote) in _sevenTvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
         foreach (var (name, emote) in _ffzEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
+        foreach (var (name, emote) in _bttvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
 
         if (string.IsNullOrEmpty(_broadcasterId))
             return emotes;
 
         foreach (var (name, emote) in _sevenTvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
         foreach (var (name, emote) in _ffzEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
+        foreach (var (name, emote) in _bttvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
 
         return emotes;
+    }
+
+    private async Task LoadBttvGlobalEmotesAsync()
+    {
+        var dbEmotes = _databaseContext.BttvEmoteRepository.GetGlobalEmotes();
+        if (dbEmotes.Count > 0)
+        {
+            _bttvEmotesRepository.SetGlobalEmotes(dbEmotes.Select(e => new BttvEmote(e.EmoteId, e.Name, e.Url)).ToList());
+            Console.WriteLine($"Loaded {dbEmotes.Count} global BTTV emotes from DB");
+        }
+
+        try
+        {
+            var globalEmotes = await _bttvApiService.GetGlobalEmotesAsync();
+            _bttvEmotesRepository.SetGlobalEmotes(globalEmotes);
+            _databaseContext.BttvEmoteRepository.SaveGlobalEmotes(
+                globalEmotes.Select(e => new BttvEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
+            Console.WriteLine($"Loaded {globalEmotes.Count} global BTTV emotes");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading global BTTV emotes: {ex.Message}");
+        }
+    }
+
+    private async Task LoadBttvChannelEmotesAsync(TwitchSettings twitchSettings)
+    {
+        if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
+            return;
+
+        var broadcasterId = twitchSettings.ApiBroadcasterId;
+
+        var dbEmotes = _databaseContext.BttvEmoteRepository.GetChannelEmotes(broadcasterId);
+        if (dbEmotes.Count > 0)
+        {
+            _bttvEmotesRepository.SetChannelEmotes(broadcasterId, dbEmotes.Select(e => new BttvEmote(e.EmoteId, e.Name, e.Url)).ToList());
+            Console.WriteLine($"Loaded {dbEmotes.Count} channel BTTV emotes for {twitchSettings.Channel} from DB");
+        }
+
+        try
+        {
+            var channelEmotes = await _bttvApiService.GetChannelEmotesAsync(broadcasterId);
+            _bttvEmotesRepository.SetChannelEmotes(broadcasterId, channelEmotes);
+            _databaseContext.BttvEmoteRepository.SaveChannelEmotes(
+                broadcasterId,
+                channelEmotes.Select(e => new BttvEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
+            Console.WriteLine($"Loaded {channelEmotes.Count} channel BTTV emotes for {twitchSettings.Channel}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading channel={twitchSettings.Channel} BTTV emotes: {ex.Message}");
+        }
     }
 
     private async Task SendChatMessageNotification(string message)

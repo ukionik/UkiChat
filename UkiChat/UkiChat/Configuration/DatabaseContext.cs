@@ -19,6 +19,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         VkVideoLiveSettingsRepository = new VkVideoLiveSettingsRepository(db);
         SevenTvEmoteRepository = new SevenTvEmoteRepository(db);
         FfzEmoteRepository = new FfzEmoteRepository(db);
+        BttvEmoteRepository = new BttvEmoteRepository(db);
         InitDefaultData(defaultAppSettings);
     }
 
@@ -28,6 +29,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     public IAppSettingsRepository AppSettingsRepository { get; }
     public ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
     public IFfzEmoteRepository FfzEmoteRepository { get; }
+    public IBttvEmoteRepository BttvEmoteRepository { get; }
 
     public void Dispose()
     {
