@@ -360,16 +360,17 @@ public class TwitchChatService : ITwitchChatService
     {
         var emotes = new Dictionary<string, string>();
 
-        foreach (var (name, emote) in _sevenTvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
+        // Приоритет (возрастающий): FFZ → BTTV → 7TV
         foreach (var (name, emote) in _ffzEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
         foreach (var (name, emote) in _bttvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
+        foreach (var (name, emote) in _sevenTvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
 
         if (string.IsNullOrEmpty(_broadcasterId))
             return emotes;
 
-        foreach (var (name, emote) in _sevenTvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
         foreach (var (name, emote) in _ffzEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
         foreach (var (name, emote) in _bttvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
+        foreach (var (name, emote) in _sevenTvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
 
         return emotes;
     }
