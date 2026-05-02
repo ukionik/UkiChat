@@ -225,4 +225,8 @@ public record VkVideoLiveChatContent
 
     [JsonPropertyName("nickColor")]
     public JsonElement? NickColor { get; init; }
+
+    // Для типа "link"
+    [JsonPropertyName("url")]
+    public string? Url { get; init; }
 }

@@ -165,6 +165,10 @@ public record UkiChatMessage(ChatPlatform Platform
                     parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, $"@{mentionName}"));
                 }
             }
+            else if (item.Type == "link" && !string.IsNullOrEmpty(item.Url))
+            {
+                parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Link, item.Url));
+            }
         }
 
         return parts;
