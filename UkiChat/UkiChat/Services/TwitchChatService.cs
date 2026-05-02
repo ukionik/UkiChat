@@ -142,15 +142,18 @@ public class TwitchChatService : ITwitchChatService
         if (newChannel.Length == 0)
         {
             UpdateTwitchDbSettings(twitchSettings);
-            await _twitchClient.DisconnectAsync();
+            if (oldChannel != null) 
+                await _twitchClient.LeaveChannelAsync(oldChannel);
             return;
         }
         
         _channelName = newChannel;
         _broadcasterId = await LoadBroadcasterIdAsync(newChannel);
         UpdateTwitchDbSettings(twitchSettings);
-        await LoadChannelDataAsync();
-        await ConnectAsync(TwitchConnectionParams.OfTwitchSettings(oldChannel ?? "", newChannel, twitchSettings));
+        await Task.WhenAll(
+            LoadChannelDataAsync(),
+            ConnectAsync(TwitchConnectionParams.OfTwitchSettings(oldChannel ?? "", newChannel, twitchSettings))            
+        );
     }
 
     public async Task LoadGlobalDataAsync()

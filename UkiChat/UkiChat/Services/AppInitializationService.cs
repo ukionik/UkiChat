@@ -20,18 +20,20 @@ public class AppInitializationService(
     public async Task InitializeAsync()
     {
         localizationService.SetCulture("ru");
-        await LoadTwitchDataAsync();
-        await LoadVkVideoLiveDataAsync();
+        await Task.WhenAll(LoadTwitchDataAsync(),
+            LoadVkVideoLiveDataAsync());
     }
 
     private async Task LoadTwitchDataAsync()
     {
         var twitchSettings = databaseContext.TwitchSettingsRepository.GetActiveSettings();
         await InitializeTwitchApiAsync(twitchSettings);
-        await twitchChatService.LoadGlobalDataAsync();
-        await twitchChatService.LoadChannelDataAsync();
-        await twitchChatService.ConnectAsync(
-            TwitchConnectionParams.OfTwitchSettings("", twitchSettings.Channel ?? "", twitchSettings));
+        await Task.WhenAll(
+            twitchChatService.LoadGlobalDataAsync(),
+            twitchChatService.LoadChannelDataAsync(),
+            twitchChatService.ConnectAsync(
+                TwitchConnectionParams.OfTwitchSettings("", twitchSettings.Channel ?? "", twitchSettings))
+        );
     }
 
     private async Task InitializeTwitchApiAsync(TwitchSettings twitchSettings)
