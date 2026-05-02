@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using TwitchLib.Client.Models;
-using UkiChat.Model.SevenTv;
 using UkiChat.Model.Twitch;
 using UkiChat.Model.VkVideoLive;
 using UkiChat.Utils;
@@ -17,9 +16,9 @@ public record UkiChatMessage(ChatPlatform Platform
     , UkiChatReplyInfo? ReplyTo = null
     , UkiChatMessageType MessageType = UkiChatMessageType.Normal)
 {
-    public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, SevenTvEmote>? sevenTvEmotes = null)
+    public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null)
     {
-        var messageParts = ParseMessageParts(twitchMessage.Message, twitchMessage.EmoteSet, sevenTvEmotes);
+        var messageParts = ParseMessageParts(twitchMessage.Message, twitchMessage.EmoteSet, thirdPartyEmotes);
         var displayNameColor = ColorUtil.GetDisplayNameColor(twitchMessage.DisplayName, twitchMessage.HexColor);
 
         UkiChatReplyInfo? replyTo = null;
@@ -170,12 +169,12 @@ public record UkiChatMessage(ChatPlatform Platform
         return parts;
     }
 
-    private static List<UkiChatMessagePart> ParseMessageParts(string message, EmoteSet emoteSet, Dictionary<string, SevenTvEmote>? sevenTvEmotes = null)
+    private static List<UkiChatMessagePart> ParseMessageParts(string message, EmoteSet emoteSet, Dictionary<string, string>? thirdPartyEmotes = null)
     {
         var parts = new List<UkiChatMessagePart>();
 
-        // Если нет ни Twitch, ни 7TV эмоутов, возвращаем текст как есть
-        if (emoteSet.Emotes.Count == 0 && (sevenTvEmotes == null || sevenTvEmotes.Count == 0))
+        // Если нет ни Twitch, ни сторонних эмоутов, возвращаем текст как есть
+        if (emoteSet.Emotes.Count == 0 && (thirdPartyEmotes == null || thirdPartyEmotes.Count == 0))
         {
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, message));
             return parts;
@@ -187,11 +186,11 @@ public record UkiChatMessage(ChatPlatform Platform
 
         foreach (var emote in sortedEmotes)
         {
-            // Обрабатываем текст перед Twitch эмоутом (может содержать 7TV эмоуты)
+            // Обрабатываем текст перед Twitch эмоутом (может содержать сторонние эмоуты)
             if (emote.StartIndex > currentIndex)
             {
                 var textBefore = message.Substring(currentIndex, emote.StartIndex - currentIndex);
-                ParseTextWith7TvEmotes(textBefore, sevenTvEmotes, parts);
+                ParseTextWithThirdPartyEmotes(textBefore, thirdPartyEmotes, parts);
             }
 
             // Добавляем Twitch эмоут
@@ -205,28 +204,23 @@ public record UkiChatMessage(ChatPlatform Platform
         if (currentIndex < message.Length)
         {
             var textAfter = message[currentIndex..];
-            ParseTextWith7TvEmotes(textAfter, sevenTvEmotes, parts);
+            ParseTextWithThirdPartyEmotes(textAfter, thirdPartyEmotes, parts);
         }
 
         return parts;
     }
 
-    /// <summary>
-    /// Парсит текст, заменяя слова на 7TV эмоуты там, где это возможно
-    /// </summary>
-    private static void ParseTextWith7TvEmotes(string text, Dictionary<string, SevenTvEmote>? sevenTvEmotes, List<UkiChatMessagePart> parts)
+    private static void ParseTextWithThirdPartyEmotes(string text, Dictionary<string, string>? thirdPartyEmotes, List<UkiChatMessagePart> parts)
     {
         if (string.IsNullOrEmpty(text))
             return;
 
-        // Если нет 7TV эмоутов, добавляем текст как есть
-        if (sevenTvEmotes == null || sevenTvEmotes.Count == 0)
+        if (thirdPartyEmotes == null || thirdPartyEmotes.Count == 0)
         {
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, text));
             return;
         }
 
-        // Разбиваем текст на слова (по пробелам)
         var words = text.Split(' ');
         var currentText = "";
 
@@ -234,37 +228,27 @@ public record UkiChatMessage(ChatPlatform Platform
         {
             var word = words[i];
 
-            // Проверяем, является ли слово 7TV эмоутом
-            if (sevenTvEmotes.TryGetValue(word, out var emote))
+            if (thirdPartyEmotes.TryGetValue(word, out var emoteUrl))
             {
-                // Сохраняем накопленный текст перед эмоутом
                 if (!string.IsNullOrEmpty(currentText))
                 {
                     parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
                     currentText = "";
                 }
 
-                // Добавляем 7TV эмоут
-                parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Emote, emote.Url));
+                parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Emote, emoteUrl));
             }
             else
             {
-                // Накапливаем текст
                 currentText += word;
             }
 
-            // Добавляем пробел между словами (кроме последнего)
             if (i < words.Length - 1)
-            {
                 currentText += " ";
-            }
         }
 
-        // Добавляем оставшийся текст
         if (!string.IsNullOrEmpty(currentText))
-        {
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
-        }
     }
 
     // IRCv3 message tags кодируют спецсимволы: \s=пробел, \\=\, \:=;, \n=LF, \r=CR

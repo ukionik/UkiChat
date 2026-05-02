@@ -10,4 +10,5 @@ public interface IDatabaseContext
     IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
     IProfileRepository ProfileRepository { get; }
     ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
+    IFfzEmoteRepository FfzEmoteRepository { get; }
 }

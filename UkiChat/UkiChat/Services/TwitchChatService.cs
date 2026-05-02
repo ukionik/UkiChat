@@ -9,6 +9,7 @@ using TwitchLib.Communication.Models;
 using UkiChat.Configuration;
 using UkiChat.Entities;
 using UkiChat.Model.Chat;
+using UkiChat.Model.Ffz;
 using UkiChat.Model.SevenTv;
 using UkiChat.Model.Twitch;
 using UkiChat.Repositories.Database;
@@ -21,6 +22,8 @@ public class TwitchChatService : ITwitchChatService
     private readonly IDatabaseContext _databaseContext;
     private readonly ISevenTvApiService _sevenTvApiService;
     private readonly ISevenTvEmotesRepository _sevenTvEmotesRepository;
+    private readonly IFfzApiService _ffzApiService;
+    private readonly IFfzEmotesRepository _ffzEmotesRepository;
     private readonly ISignalRService _signalRService;
     private readonly ITwitchApiService _twitchApiService;
     private readonly ITwitchBadgesRepository _twitchBadgesRepository;
@@ -39,6 +42,8 @@ public class TwitchChatService : ITwitchChatService
         , ISevenTvApiService sevenTvApiService
         , ITwitchBadgesRepository twitchBadgesRepository
         , ISevenTvEmotesRepository sevenTvEmotesRepository
+        , IFfzApiService ffzApiService
+        , IFfzEmotesRepository ffzEmotesRepository
         , ITwitchApiService twitchApiService
     )
     {
@@ -47,16 +52,18 @@ public class TwitchChatService : ITwitchChatService
         _sevenTvApiService = sevenTvApiService;
         _twitchBadgesRepository = twitchBadgesRepository;
         _sevenTvEmotesRepository = sevenTvEmotesRepository;
+        _ffzApiService = ffzApiService;
+        _ffzEmotesRepository = ffzEmotesRepository;
         _twitchApiService = twitchApiService;
 
         _twitchClient.OnMessageReceived += async (_, e) =>
         {
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
-            var sevenTvEmotes = GetSevenTvEmotes();
+            var thirdPartyEmotes = GetThirdPartyEmotes();
             Console.WriteLine(
                 $"[Twitch] Message received from: {e.ChatMessage.DisplayName}. Message: {e.ChatMessage.Message}");
             await signalRService.SendChatMessageAsync(
-                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, sevenTvEmotes));
+                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes));
         }; 
 
         _twitchClient.OnError += (_, e) =>
@@ -159,7 +166,9 @@ public class TwitchChatService : ITwitchChatService
     public async Task LoadGlobalDataAsync()
     {
         await LoadTwitchGlobalBadgesAsync();
-        await LoadSevenTvGlobalEmotesAsync();
+        await Task.WhenAll(
+            LoadSevenTvGlobalEmotesAsync(),
+            LoadFfzGlobalEmotesAsync());
     }
 
     public async Task LoadChannelDataAsync()
@@ -169,7 +178,9 @@ public class TwitchChatService : ITwitchChatService
             return;
 
         await LoadTwitchChannelBadgesAsync(twitchSettings);
-        await LoadSevenTvChannelEmotesAsync(twitchSettings);
+        await Task.WhenAll(
+            LoadSevenTvChannelEmotesAsync(twitchSettings),
+            LoadFfzChannelEmotesAsync(twitchSettings));
     }
 
     private async Task LoadTwitchGlobalBadgesAsync()
@@ -257,6 +268,60 @@ public class TwitchChatService : ITwitchChatService
         }
     }
 
+    private async Task LoadFfzGlobalEmotesAsync()
+    {
+        // Сначала загружаем из базы — как fallback если API недоступен
+        var dbEmotes = _databaseContext.FfzEmoteRepository.GetGlobalEmotes();
+        if (dbEmotes.Count > 0)
+        {
+            _ffzEmotesRepository.SetGlobalEmotes(dbEmotes.Select(e => new FfzEmote(e.EmoteId, e.Name, e.Url)).ToList());
+            Console.WriteLine($"Loaded {dbEmotes.Count} global FFZ emotes from DB");
+        }
+
+        try
+        {
+            var globalEmotes = await _ffzApiService.GetGlobalEmotesAsync();
+            _ffzEmotesRepository.SetGlobalEmotes(globalEmotes);
+            _databaseContext.FfzEmoteRepository.SaveGlobalEmotes(
+                globalEmotes.Select(e => new FfzEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
+            Console.WriteLine($"Loaded {globalEmotes.Count} global FFZ emotes");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading global FFZ emotes: {ex.Message}");
+        }
+    }
+
+    private async Task LoadFfzChannelEmotesAsync(TwitchSettings twitchSettings)
+    {
+        if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
+            return;
+
+        var broadcasterId = twitchSettings.ApiBroadcasterId;
+
+        // Сначала загружаем из базы — как fallback если API недоступен
+        var dbEmotes = _databaseContext.FfzEmoteRepository.GetChannelEmotes(broadcasterId);
+        if (dbEmotes.Count > 0)
+        {
+            _ffzEmotesRepository.SetChannelEmotes(broadcasterId, dbEmotes.Select(e => new FfzEmote(e.EmoteId, e.Name, e.Url)).ToList());
+            Console.WriteLine($"Loaded {dbEmotes.Count} channel FFZ emotes for {twitchSettings.Channel} from DB");
+        }
+
+        try
+        {
+            var channelEmotes = await _ffzApiService.GetChannelEmotesAsync(broadcasterId);
+            _ffzEmotesRepository.SetChannelEmotes(broadcasterId, channelEmotes);
+            _databaseContext.FfzEmoteRepository.SaveChannelEmotes(
+                broadcasterId,
+                channelEmotes.Select(e => new FfzEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
+            Console.WriteLine($"Loaded {channelEmotes.Count} channel FFZ emotes for {twitchSettings.Channel}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading channel={twitchSettings.Channel} FFZ emotes: {ex.Message}");
+        }
+    }
+
     private void UpdateTwitchDbSettings(TwitchSettings twitchSettings)
     {
         twitchSettings.Channel = _channelName;
@@ -282,16 +347,18 @@ public class TwitchChatService : ITwitchChatService
         return _twitchBadgesRepository.GetBadgeUrls(chatMessage.Badges, _broadcasterId);
     }
 
-    private Dictionary<string, SevenTvEmote> GetSevenTvEmotes()
+    private Dictionary<string, string> GetThirdPartyEmotes()
     {
-        var emotes = new Dictionary<string, SevenTvEmote>();
+        var emotes = new Dictionary<string, string>();
 
-        foreach (var (name, emote) in _sevenTvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote;
+        foreach (var (name, emote) in _sevenTvEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
+        foreach (var (name, emote) in _ffzEmotesRepository.GetGlobalEmotes()) emotes[name] = emote.Url;
 
         if (string.IsNullOrEmpty(_broadcasterId))
             return emotes;
 
-        foreach (var (name, emote) in _sevenTvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote;
+        foreach (var (name, emote) in _sevenTvEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
+        foreach (var (name, emote) in _ffzEmotesRepository.GetChannelEmotes(_broadcasterId)) emotes[name] = emote.Url;
 
         return emotes;
     }
