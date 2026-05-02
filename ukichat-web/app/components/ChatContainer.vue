@@ -10,6 +10,14 @@ const props = withDefaults(defineProps<{
   hideVerticalScrollbar: false
 })
 
+const emit = defineEmits<{
+  linkClick: [url: string]
+}>()
+
+function handleLinkClick(url: string) {
+  emit('linkClick', url)
+}
+
 const chatContainer = ref<HTMLElement | null>(null)
 const autoScroll = ref(true)
 
@@ -111,6 +119,7 @@ watch(() => props.messages, async () => {
           <template v-for="(part, index) in message.messageParts" :key="index">
             <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
             <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline" :style="emoteStyle">
+            <span v-else-if="part.type === 'Link'" class="inline align-middle text-blue-400 cursor-pointer hover:underline" @click="handleLinkClick(part.content)">{{ part.content }}</span>
           </template>
         </span>
       </div>

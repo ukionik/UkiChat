@@ -19,6 +19,10 @@ async function sendReply() {
   await invokeUpdate("SendChatMessage", generateReply())
 }
 
+async function sendLink() {
+  await invokeUpdate("SendChatMessage", generateLink())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -110,6 +114,22 @@ function generateReply() {
   }
 }
 
+function generateLink() {
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3158e758-3cb4-43c5-94b3-7639810451c5/3"
+    ],
+    displayName: "Nightbot",
+    displayNameColor: "#00FF7F",
+    messageParts: [
+      { type: "Text", content: "Смотри что нашёл " },
+      { type: "Link", content: "https://twitch.tv" },
+      { type: "Text", content: " круто же" }
+    ]
+  }
+}
+
 onMounted(async () => {
   await startSignalR()
 })
@@ -122,6 +142,7 @@ onMounted(async () => {
     <UButton @click="sendNotification">Notification</UButton>
     <UButton @click="sendMention">Mention</UButton>
     <UButton @click="sendReply">Reply</UButton>
+    <UButton @click="sendLink">Link</UButton>
   </div>
 </template>
 

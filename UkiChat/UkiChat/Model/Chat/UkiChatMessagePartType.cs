@@ -2,5 +2,5 @@
 
 public enum UkiChatMessagePartType
 {
-    Text, Emote
+    Text, Emote, Link
 }

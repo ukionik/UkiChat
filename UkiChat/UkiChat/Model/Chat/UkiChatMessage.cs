@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using TwitchLib.Client.Models;
@@ -173,10 +174,10 @@ public record UkiChatMessage(ChatPlatform Platform
     {
         var parts = new List<UkiChatMessagePart>();
 
-        // Если нет ни Twitch, ни сторонних эмоутов, возвращаем текст как есть
+        // Если нет ни Twitch, ни сторонних эмоутов, парсим только ссылки
         if (emoteSet.Emotes.Count == 0 && (thirdPartyEmotes == null || thirdPartyEmotes.Count == 0))
         {
-            parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, message));
+            ParseTextWithLinks(message, parts);
             return parts;
         }
 
@@ -217,7 +218,7 @@ public record UkiChatMessage(ChatPlatform Platform
 
         if (thirdPartyEmotes == null || thirdPartyEmotes.Count == 0)
         {
-            parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, text));
+            ParseTextWithLinks(text, parts);
             return;
         }
 
@@ -228,7 +229,17 @@ public record UkiChatMessage(ChatPlatform Platform
         {
             var word = words[i];
 
-            if (thirdPartyEmotes.TryGetValue(word, out var emoteUrl))
+            if (IsUrl(word))
+            {
+                if (!string.IsNullOrEmpty(currentText))
+                {
+                    parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
+                    currentText = "";
+                }
+
+                parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Link, word));
+            }
+            else if (thirdPartyEmotes.TryGetValue(word, out var emoteUrl))
             {
                 if (!string.IsNullOrEmpty(currentText))
                 {
@@ -250,6 +261,45 @@ public record UkiChatMessage(ChatPlatform Platform
         if (!string.IsNullOrEmpty(currentText))
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
     }
+
+    private static void ParseTextWithLinks(string text, List<UkiChatMessagePart> parts)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        var words = text.Split(' ');
+        var currentText = "";
+
+        for (var i = 0; i < words.Length; i++)
+        {
+            var word = words[i];
+
+            if (IsUrl(word))
+            {
+                if (!string.IsNullOrEmpty(currentText))
+                {
+                    parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
+                    currentText = "";
+                }
+
+                parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Link, word));
+            }
+            else
+            {
+                currentText += word;
+            }
+
+            if (i < words.Length - 1)
+                currentText += " ";
+        }
+
+        if (!string.IsNullOrEmpty(currentText))
+            parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
+    }
+
+    private static bool IsUrl(string word) =>
+        word.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+        word.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
     // IRCv3 message tags кодируют спецсимволы: \s=пробел, \\=\, \:=;, \n=LF, \r=CR
     private static string UnescapeIrcTagValue(string value) =>

@@ -3,7 +3,7 @@ import {onMounted} from 'vue'
 import {useSignalR} from "~/composables/useSignalR";
 import type {ChatMessage} from "~/types/ChatMessage";
 
-const {startSignalR, invokeGet} = useSignalR()
+const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
 
 const appSettingsInfo = ref({
@@ -36,12 +36,15 @@ onMounted(async () => {
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
-    console.log(message)
   })
 })
+
+function openLink(url: string) {
+  invokeUpdate('OpenUrl', url)
+}
 
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="2.0" />
+  <ChatContainer :messages="chatMessages" :scale="2.0" @link-click="openLink" />
 </template>

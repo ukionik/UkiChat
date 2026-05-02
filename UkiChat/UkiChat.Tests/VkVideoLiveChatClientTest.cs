@@ -72,7 +72,7 @@ public class VkVideoLiveChatClientTest(ITestOutputHelper testOutputHelper)
 
             // Act - Подключаемся к чату
             testOutputHelper.WriteLine("Connecting to chat WebSocket...");
-            await chatClient.ConnectAsync(tokenResponse.Data.Token, channelInfo.Data.Channel.Id);
+            await chatClient.ConnectAsync(tokenResponse.Data.Token, channelInfo.Data.Channel.Id, appSettings.VkVideoLive.Chat.Channel);
 
             // Ждем подключения (максимум 10 секунд)
             var connected = await Task.WhenAny(
@@ -137,7 +137,8 @@ public class VkVideoLiveChatClientTest(ITestOutputHelper testOutputHelper)
             {
                 await chatClient.ConnectAsync(
                     "invalid_token",
-                    channelInfo.Data.Channel.Id);
+                    channelInfo.Data.Channel.Id,
+                    appSettings.VkVideoLive.Chat.Channel);
             });
 
             testOutputHelper.WriteLine("Correctly threw exception for invalid token");

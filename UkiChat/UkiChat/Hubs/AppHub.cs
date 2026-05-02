@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -21,6 +22,16 @@ public class AppHub : Hub
     public Task OpenSettingsWindow()
     {
         _windowService.ShowWindow<SettingsWindow>();
+        return Task.CompletedTask;
+    }
+
+    public Task OpenUrl(string url)
+    {
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
         return Task.CompletedTask;
     }
     
