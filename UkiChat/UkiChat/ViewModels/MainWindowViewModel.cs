@@ -55,6 +55,7 @@ public class MainWindowViewModel : BindableBase
         {
             UpdateTwitchViewerCountDisplay();
             UpdateVkViewerCountDisplay();
+            UpdateTotalViewerCountDisplay();
         });
 
         twitchViewerCountService.Start();
@@ -84,6 +85,13 @@ public class MainWindowViewModel : BindableBase
         set => SetProperty(ref _vkVideoLiveViewerCount, value);
     }
 
+    private string _totalViewerCount = "—";
+    public string TotalViewerCount
+    {
+        get => _totalViewerCount;
+        set => SetProperty(ref _totalViewerCount, value);
+    }
+
     private void UpdateTwitchViewerCountDisplay()
     {
         if (!_hasReceivedTwitchCount)
@@ -92,6 +100,8 @@ public class MainWindowViewModel : BindableBase
         TwitchViewerCount = _lastTwitchViewerCount.HasValue
             ? _lastTwitchViewerCount.Value.ToString()
             : _localizationService.GetString("twitch.offline");
+
+        UpdateTotalViewerCountDisplay();
     }
 
     private void UpdateVkViewerCountDisplay()
@@ -102,6 +112,17 @@ public class MainWindowViewModel : BindableBase
         VkVideoLiveViewerCount = _lastVkViewerCount.HasValue
             ? _lastVkViewerCount.Value.ToString()
             : _localizationService.GetString("vkvideolive.offline");
+
+        UpdateTotalViewerCountDisplay();
+    }
+
+    private void UpdateTotalViewerCountDisplay()
+    {
+        if (!_hasReceivedTwitchCount && !_hasReceivedVkCount)
+            return;
+
+        var total = (_lastTwitchViewerCount ?? 0) + (_lastVkViewerCount ?? 0);
+        TotalViewerCount = total.ToString();
     }
 
     private void OpenProfileWindow()

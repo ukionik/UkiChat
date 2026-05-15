@@ -53,6 +53,13 @@
         <StatusBar Grid.Row="1" Background="#2d2c34" Foreground="#CCCCCC" Height="24">
             <StatusBarItem Padding="6,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <iconPacks:PackIconMaterial Kind="AccountMultiple" Width="16" Height="16"
+                                                Margin="0,0,5,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding TotalViewerCount}" FontSize="14" VerticalAlignment="Center" />
+                </StackPanel>
+            </StatusBarItem>
+            <StatusBarItem Padding="6,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <iconPacks:PackIconMaterial Kind="Twitch" Width="16" Height="16"
                                                Margin="0,0,5,0" VerticalAlignment="Center"
                                                Foreground="#9146FF" />
