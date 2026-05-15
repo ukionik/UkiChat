@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Windows;
 using Prism.Commands;
 using Prism.Events;
@@ -65,6 +66,8 @@ public class MainWindowViewModel : BindableBase
     public DelegateCommand OpenProfileWindowCommand { get; }
     public DelegateCommand OpenSettingsWindowCommand { get; }
 
+    public string AppVersion { get; } = BuildAppVersion();
+
     public string WebSource
     {
         get => _webSource;
@@ -123,6 +126,12 @@ public class MainWindowViewModel : BindableBase
 
         var total = (_lastTwitchViewerCount ?? 0) + (_lastVkViewerCount ?? 0);
         TotalViewerCount = total.ToString();
+    }
+
+    private static string BuildAppVersion()
+    {
+        var v = Assembly.GetExecutingAssembly().GetName().Version!;
+        return $"{v.Major}.{v.Minor}.{v.Build}";
     }
 
     private void OpenProfileWindow()
