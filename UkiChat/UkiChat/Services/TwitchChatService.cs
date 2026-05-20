@@ -114,11 +114,23 @@ public class TwitchChatService : ITwitchChatService
             Console.WriteLine("[Twitch] Переподключён (TwitchLib auto-reconnect)");
             return Task.CompletedTask;
         };
-
+        
         _twitchClient.OnMessageCleared += async (_, e) =>
         {
             Console.WriteLine($"[Twitch] Message cleared: {e.TargetMessageId}");
             await signalRService.SendMessageDeletedAsync(e.TargetMessageId);
+        };
+
+        _twitchClient.OnUserBanned += async (_, e) =>
+        {
+            Console.WriteLine($"[Twitch] User banned: {e.UserBan.Username}");
+            await signalRService.SendUserMessagesDeletedAsync(e.UserBan.Username);
+        };
+
+        _twitchClient.OnUserTimedout += async (_, e) =>
+        {
+            Console.WriteLine($"[Twitch] User timed out: {e.UserTimeout.Username} ({e.UserTimeout.TimeoutDuration}s)");
+            await signalRService.SendUserMessagesDeletedAsync(e.UserTimeout.Username);
         };
 
         // Watch streak — Twitch шлёт как USERNOTICE viewermilestone, TwitchLib не обрабатывает нативно

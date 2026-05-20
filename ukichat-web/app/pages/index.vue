@@ -42,6 +42,12 @@ onMounted(async () => {
     const msg = chatMessages.value.find(m => m.id === messageId)
     if (msg) msg.messageType = 'Deleted'
   })
+
+  connection.on("OnUserMessagesDeleted", (username: string) => {
+    chatMessages.value
+        .filter(m => m.displayName.toLowerCase() === username.toLowerCase() && m.messageType !== 'Deleted')
+        .forEach(m => m.messageType = 'Deleted')
+  })
 })
 
 function openLink(url: string) {

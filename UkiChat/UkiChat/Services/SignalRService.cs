@@ -17,6 +17,11 @@ public class SignalRService(IHubContext<AppHub> hubContext) : ISignalRService
         await hubContext.Clients.All.SendAsync("OnMessageDeleted", messageId);
     }
 
+    public async Task SendUserMessagesDeletedAsync(string username)
+    {
+        await hubContext.Clients.All.SendAsync("OnUserMessagesDeleted", username);
+    }
+
     public async Task SendTwitchReconnect()
     {
         await hubContext.Clients.All.SendAsync("OnTwitchReconnect");
