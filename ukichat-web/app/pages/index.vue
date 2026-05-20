@@ -51,5 +51,5 @@ function openLink(url: string) {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="2.0" @link-click="openLink" />
+  <ChatContainer :messages="chatMessages" :scale="2.0" :allow-reveal-deleted="true" @link-click="openLink" />
 </template>

@@ -8,10 +8,25 @@ const props = withDefaults(defineProps<{
   messages: ChatMessage[]
   scale?: number
   hideVerticalScrollbar?: boolean
+  allowRevealDeleted?: boolean
 }>(), {
   scale: 1,
-  hideVerticalScrollbar: false
+  hideVerticalScrollbar: false,
+  allowRevealDeleted: false
 })
+
+const revealedMessages = ref(new Set<string>())
+
+function toggleRevealDeleted(message: ChatMessage) {
+  if (!props.allowRevealDeleted || message.messageType !== 'Deleted' || !message.id) return
+  const next = new Set(revealedMessages.value)
+  if (next.has(message.id)) {
+    next.delete(message.id)
+  } else {
+    next.add(message.id)
+  }
+  revealedMessages.value = next
+}
 
 const emit = defineEmits<{
   linkClick: [url: string]
@@ -64,7 +79,7 @@ function getMessageClass(messageType: MessageType | undefined) {
   if (messageType === 'Notification') return 'bg-gray-50/10 border-l-[3px] border-gray-50 text-gray-400 rounded-r-sm'
   if (messageType === 'Mention') return 'bg-red-500/10 border-l-[3px] border-red-500 text-red-400 rounded-r-sm'
   if (messageType === 'Reply') return 'border-l-[3px] border-gray-500 rounded-r-sm'
-  if (messageType === 'Deleted') return 'opacity-50'
+  if (messageType === 'Deleted') return ''
   return ''
 }
 
@@ -108,7 +123,9 @@ watch(() => props.messages, async () => {
 <template>
   <div class="chat-container h-dvh overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
        @scroll="onScroll">
-    <div class="chat-message" v-for="message in messages" :style="getMessageStyle(message)" :class="getMessageClass(message.messageType)">
+    <div class="chat-message" v-for="message in messages" :style="getMessageStyle(message)"
+         :class="[getMessageClass(message.messageType), message.messageType === 'Deleted' ? (allowRevealDeleted ? '' : 'opacity-50') : '']"
+         @click="toggleRevealDeleted(message)">
       <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate" :style="replyHeaderStyle">
         <span>↩</span>
         <span class="font-semibold shrink-0">@{{ message.replyTo.displayName }}:</span>
@@ -118,9 +135,19 @@ watch(() => props.messages, async () => {
         <img :style="iconStyle" :alt="message.platform" :src="getPlatformImage(message.platform)">
         <img :style="iconStyle" v-for="badge in message.badges" :key="badge" :src="badge" alt="badge">
         <span v-if="message.messageType !== 'Notification'" class="font-bold align-middle"
-              :style="{marginRight: marginRight, color: message.displayNameColor}">{{ message.displayName }}</span>
+              :style="{marginRight: marginRight, color: message.displayNameColor}">{{ message.displayName }}:</span>
         <span class="inline">
-          <span v-if="message.messageType === 'Deleted'" class="inline align-middle text-gray-500 italic">{{ t('chat.messageDeleted') }}</span>
+          <template v-if="message.messageType === 'Deleted'">
+            <template v-if="allowRevealDeleted && message.id && revealedMessages.has(message.id)">
+              <template v-for="(part, index) in message.messageParts" :key="index">
+                <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
+                <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline" :style="emoteStyle">
+                <span v-else-if="part.type === 'Link'" class="inline align-middle text-blue-400 cursor-pointer hover:underline" @click.stop="handleLinkClick(part.content)">{{ part.content }}</span>
+              </template>
+            </template>
+            <span v-else class="inline align-middle italic"
+                  :class="allowRevealDeleted ? 'text-purple-400 cursor-pointer hover:underline' : 'text-gray-300 opacity-70'">{{ t('chat.messageDeleted') }}</span>
+          </template>
           <template v-else v-for="(part, index) in message.messageParts" :key="index">
             <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
             <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline" :style="emoteStyle">
