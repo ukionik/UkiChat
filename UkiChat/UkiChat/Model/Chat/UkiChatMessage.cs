@@ -15,7 +15,8 @@ public record UkiChatMessage(ChatPlatform Platform
     , string DisplayNameColor
     , List<UkiChatMessagePart> MessageParts
     , UkiChatReplyInfo? ReplyTo = null
-    , UkiChatMessageType MessageType = UkiChatMessageType.Normal)
+    , UkiChatMessageType MessageType = UkiChatMessageType.Normal
+    , string Id = "")
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null)
     {
@@ -37,7 +38,7 @@ public record UkiChatMessage(ChatPlatform Platform
             messageType = UkiChatMessageType.Reply;
         }
 
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType);
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id);
     }
 
     public static UkiChatMessage FromTwitchMessageNotification(string message)

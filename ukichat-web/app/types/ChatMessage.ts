@@ -9,9 +9,10 @@ export interface ReplyInfo {
     messageParts: MessagePart[]
 }
 
-export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply'
+export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply' | 'Deleted'
 
 export interface ChatMessage {
+    id?: string,
     platform: string,
     badges: string[],
     displayName: string,

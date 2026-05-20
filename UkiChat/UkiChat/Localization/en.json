@@ -12,6 +12,9 @@
       "name": "VK Video Live"
     }
   },
+  "chat": {
+    "messageDeleted": "<message deleted>"
+  },
   "vkvideolive": {
     "offline": "Offline",
     "connectingToChannel": "Connecting to channel {0}...",

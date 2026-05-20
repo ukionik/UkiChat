@@ -115,6 +115,12 @@ public class TwitchChatService : ITwitchChatService
             return Task.CompletedTask;
         };
 
+        _twitchClient.OnMessageCleared += async (_, e) =>
+        {
+            Console.WriteLine($"[Twitch] Message cleared: {e.TargetMessageId}");
+            await signalRService.SendMessageDeletedAsync(e.TargetMessageId);
+        };
+
         // Watch streak — Twitch шлёт как USERNOTICE viewermilestone, TwitchLib не обрабатывает нативно
         _twitchClient.OnUnaccountedFor += async (_, e) =>
         {

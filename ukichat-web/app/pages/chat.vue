@@ -36,6 +36,11 @@ onMounted(async () => {
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
   })
+
+  connection.on("OnMessageDeleted", (messageId: string) => {
+    const msg = chatMessages.value.find(m => m.id === messageId)
+    if (msg) msg.messageType = 'Deleted'
+  })
 })
 </script>
 

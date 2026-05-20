@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type {ChatMessage, MessageType, ReplyInfo} from "~/types/ChatMessage";
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   messages: ChatMessage[]
@@ -61,6 +64,7 @@ function getMessageClass(messageType: MessageType | undefined) {
   if (messageType === 'Notification') return 'bg-gray-50/10 border-l-[3px] border-gray-50 text-gray-400 rounded-r-sm'
   if (messageType === 'Mention') return 'bg-red-500/10 border-l-[3px] border-red-500 text-red-400 rounded-r-sm'
   if (messageType === 'Reply') return 'border-l-[3px] border-gray-500 rounded-r-sm'
+  if (messageType === 'Deleted') return 'opacity-50'
   return ''
 }
 
@@ -116,7 +120,8 @@ watch(() => props.messages, async () => {
         <span v-if="message.messageType !== 'Notification'" class="font-bold align-middle"
               :style="{marginRight: marginRight, color: message.displayNameColor}">{{ message.displayName }}</span>
         <span class="inline">
-          <template v-for="(part, index) in message.messageParts" :key="index">
+          <span v-if="message.messageType === 'Deleted'" class="inline align-middle text-gray-500 italic">{{ t('chat.messageDeleted') }}</span>
+          <template v-else v-for="(part, index) in message.messageParts" :key="index">
             <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
             <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline" :style="emoteStyle">
             <span v-else-if="part.type === 'Link'" class="inline align-middle text-blue-400 cursor-pointer hover:underline" @click="handleLinkClick(part.content)">{{ part.content }}</span>
