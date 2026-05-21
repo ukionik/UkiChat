@@ -28,6 +28,7 @@ public class TwitchChatService : ITwitchChatService
     private readonly IBttvApiService _bttvApiService;
     private readonly IBttvEmotesRepository _bttvEmotesRepository;
     private readonly ISignalRService _signalRService;
+    private readonly ILocalizationService _localizationService;
     private readonly ITwitchApiService _twitchApiService;
     private readonly ITwitchBadgesRepository _twitchBadgesRepository;
 
@@ -54,6 +55,7 @@ public class TwitchChatService : ITwitchChatService
     {
         _databaseContext = databaseContext;
         _signalRService = signalRService;
+        _localizationService = localizationService;
         _sevenTvApiService = sevenTvApiService;
         _twitchBadgesRepository = twitchBadgesRepository;
         _sevenTvEmotesRepository = sevenTvEmotesRepository;
@@ -161,6 +163,7 @@ public class TwitchChatService : ITwitchChatService
         if (connectionParams.NewChannel == "")
             return;
 
+        await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"), connectionParams.NewChannel));
         await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
     }
 
