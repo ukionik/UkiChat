@@ -6,10 +6,16 @@ const props = withDefaults(defineProps<{
   scale?: number
   hideVerticalScrollbar?: boolean
   allowRevealDeleted?: boolean
+  theme?: 'default' | 'box'
 }>(), {
   scale: 1,
   hideVerticalScrollbar: false,
-  allowRevealDeleted: false
+  allowRevealDeleted: false,
+  theme: 'default'
+})
+
+const themeComponent = computed(() => {
+  return props.theme === 'box' ? resolveComponent('ThemesBoxChatMessage') : resolveComponent('ThemesDefaultChatMessage')
 })
 
 const emit = defineEmits<{
@@ -50,7 +56,8 @@ watch(() => props.messages, async () => {
 <template>
   <div class="chat-container h-dvh overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
        @scroll="onScroll">
-    <ThemesBoxChatMessage
+    <component
+      :is="themeComponent"
       v-for="message in messages"
       :key="message.id"
       :message="message"
