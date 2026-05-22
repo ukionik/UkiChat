@@ -18,13 +18,9 @@ export function useSignalR() {
         }
     }
 
-    const invokeUpdate = async (method: string, data?: any) => {
+    const invokeUpdate = async (method: string, ...args: any[]) => {
         if (connection) {
-            if(data !== null){
-                await connection.invoke(method, data)
-            } else{
-                await connection.invoke(method)
-            }
+            await connection.invoke(method, ...args)
         }
     }
 

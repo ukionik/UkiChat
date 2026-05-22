@@ -9,6 +9,7 @@ import PlatformSettings from '~/components/settings/PlatformSettings.vue'
 const { startSignalR, invokeGet, invokeUpdate } = useSignalR()
 const { getLanguage } = useLocalization()
 const { t } = useI18n()
+const { mainWindowScale, overlayScale } = useScaleSettings()
 
 const appSettingsInfo = ref({ profileName: '', language: 'en' })
 const activeRoot = ref('general')
@@ -44,6 +45,14 @@ async function changeTwitchChannel(channel: string) {
 async function changeVkVideoLiveChannel(channel: string) {
   await invokeUpdate('ChangeVkVideoLiveChannel', channel)
 }
+
+watch(mainWindowScale, (val) => {
+  invokeUpdate('BroadcastScaleSettings', val, overlayScale.value)
+})
+
+watch(overlayScale, (val) => {
+  invokeUpdate('BroadcastScaleSettings', mainWindowScale.value, val)
+})
 
 onMounted(async () => {
   connection.value = await startSignalR()

@@ -5,7 +5,7 @@ import type {ChatMessage} from "~/types/ChatMessage";
 
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
-const { overlayScaleFactor } = useScaleSettings()
+const { overlayScale, overlayScaleFactor } = useScaleSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -36,6 +36,10 @@ onMounted(async () => {
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
+  })
+
+  connection.on("OnScaleSettingsChanged", (_main: number, overlay: number) => {
+    overlayScale.value = overlay
   })
 
   connection.on("OnMessageDeleted", (messageId: string) => {

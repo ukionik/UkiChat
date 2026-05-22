@@ -73,6 +73,11 @@ public class AppHub : Hub
         await _signalRService.SendVkVideoLiveReconnect();
     }
     
+    public async Task BroadcastScaleSettings(int mainWindowScale, int overlayScale)
+    {
+        await Clients.All.SendAsync("OnScaleSettingsChanged", mainWindowScale, overlayScale);
+    }
+
     public async Task SendChatMessage(UkiChatMessage chatMessage)
     {
         await _signalRService.SendChatMessageAsync(chatMessage);

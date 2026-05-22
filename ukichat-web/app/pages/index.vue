@@ -5,7 +5,7 @@ import type {ChatMessage} from "~/types/ChatMessage";
 
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
-const { mainWindowScaleFactor } = useScaleSettings()
+const { mainWindowScale, mainWindowScaleFactor } = useScaleSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -34,6 +34,10 @@ onMounted(async () => {
   let connection = await startSignalR()
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
+
+  connection.on("OnScaleSettingsChanged", (main: number, _overlay: number) => {
+    mainWindowScale.value = main
+  })
 
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)

@@ -2,6 +2,7 @@
 import {resolve} from 'path'
 
 export default defineNuxtConfig({
+    ssr: false,
     css: ['~/assets/css/main.css'],
     nitro: {
         // Меняем папку, куда будут складываться публичные файлы
