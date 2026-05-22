@@ -11,6 +11,7 @@ const { getLanguage } = useLocalization()
 const { t } = useI18n()
 const { mainWindowScale, overlayScale } = useScaleSettings()
 const { mainWindowTheme, overlayTheme } = useThemeSettings()
+const { mainWindowMessageHideDelay, overlayMessageHideDelay } = useMessageHideSettings()
 
 const appSettingsInfo = ref({ profileName: '', language: 'en' })
 const activeRoot = ref('general')
@@ -70,6 +71,18 @@ watch(overlayTheme, (val) => {
   invokeUpdate('BroadcastThemeSettings', mainWindowTheme.value, val)
 })
 
+let messageHideSettingsLoaded = false
+
+watch(mainWindowMessageHideDelay, (val) => {
+  if (!messageHideSettingsLoaded) return
+  invokeUpdate('BroadcastMessageHideSettings', val, overlayMessageHideDelay.value)
+})
+
+watch(overlayMessageHideDelay, (val) => {
+  if (!messageHideSettingsLoaded) return
+  invokeUpdate('BroadcastMessageHideSettings', mainWindowMessageHideDelay.value, val)
+})
+
 onMounted(async () => {
   connection.value = await startSignalR()
   appSettingsInfo.value = await invokeGet('GetActiveAppSettingsInfo')
@@ -85,9 +98,14 @@ onMounted(async () => {
   mainWindowTheme.value = themeSettings.mainWindowTheme
   overlayTheme.value = themeSettings.overlayTheme
 
+  const messageHideSettings = await invokeGet('GetMessageHideSettings')
+  mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
+  overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
+
   await nextTick()
   scaleSettingsLoaded = true
   themeSettingsLoaded = true
+  messageHideSettingsLoaded = true
 })
 </script>
 

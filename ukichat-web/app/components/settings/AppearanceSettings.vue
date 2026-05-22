@@ -4,6 +4,13 @@ import MenuTabSettingsItem from '~/components/MenuTabSettingsItem.vue'
 const { t } = useI18n()
 const { mainWindowScale, overlayScale } = useScaleSettings()
 const { mainWindowTheme, overlayTheme } = useThemeSettings()
+const { mainWindowMessageHideDelay, overlayMessageHideDelay } = useMessageHideSettings()
+
+function hideDelayLabel(val: number) {
+  return val === 0
+    ? t('settings.appearance.messageHideDelayNever')
+    : `${val} ${t('settings.appearance.messageHideDelaySec')}`
+}
 
 const themeOptions = computed(() => [
   { label: t('settings.appearance.themeDefault'), value: 'default' as const },
@@ -42,6 +49,13 @@ const activeSub = ref('mainWindow')
           </label>
           <USelect v-model="mainWindowTheme" :items="themeOptions" class="flex-1" />
         </div>
+        <div class="flex items-center gap-3">
+          <label class="w-44 text-sm text-gray-400 shrink-0">
+            {{ t('settings.appearance.messageHideDelay') }}
+          </label>
+          <USlider v-model="mainWindowMessageHideDelay" :min="0" :max="180" :step="1" class="flex-1" />
+          <span class="text-sm text-gray-400 w-16 text-right">{{ hideDelayLabel(mainWindowMessageHideDelay) }}</span>
+        </div>
       </template>
       <template v-if="activeSub === 'overlay'">
         <div class="flex items-center gap-3">
@@ -56,6 +70,13 @@ const activeSub = ref('mainWindow')
             {{ t('settings.appearance.theme') }}
           </label>
           <USelect v-model="overlayTheme" :items="themeOptions" class="flex-1" />
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="w-44 text-sm text-gray-400 shrink-0">
+            {{ t('settings.appearance.messageHideDelay') }}
+          </label>
+          <USlider v-model="overlayMessageHideDelay" :min="0" :max="180" :step="1" class="flex-1" />
+          <span class="text-sm text-gray-400 w-16 text-right">{{ hideDelayLabel(overlayMessageHideDelay) }}</span>
         </div>
       </template>
     </div>

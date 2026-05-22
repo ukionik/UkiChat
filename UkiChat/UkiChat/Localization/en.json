@@ -17,6 +17,9 @@
       "theme": "Theme",
       "themeDefault": "Default",
       "themeBox": "Box",
+      "messageHideDelay": "Hide message after",
+      "messageHideDelayNever": "Never",
+      "messageHideDelaySec": "sec.",
       "mainWindow": {
         "title": "Main Window"
       },

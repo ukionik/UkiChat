@@ -7,6 +7,7 @@ const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
 const { overlayScale, overlayScaleFactor } = useScaleSettings()
 const { overlayTheme } = useThemeSettings()
+const { overlayMessageHideDelay } = useMessageHideSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -41,12 +42,24 @@ onMounted(async () => {
   const themeSettings = await invokeGet('GetThemeSettings')
   overlayTheme.value = themeSettings.overlayTheme
 
+  const messageHideSettings = await invokeGet('GetMessageHideSettings')
+  overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
+
   connection.on("OnThemeSettingsChanged", (_main: string, overlay: string) => {
     overlayTheme.value = overlay as 'default' | 'box'
   })
 
+  connection.on("OnMessageHideSettingsChanged", (_main: number, overlay: number) => {
+    overlayMessageHideDelay.value = overlay
+  })
+
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
+    if (overlayMessageHideDelay.value > 0 && message.id) {
+      setTimeout(() => {
+        chatMessages.value = chatMessages.value.filter(m => m.id !== message.id)
+      }, overlayMessageHideDelay.value * 1000)
+    }
   })
 
   connection.on("OnScaleSettingsChanged", (_main: number, overlay: number) => {

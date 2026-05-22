@@ -7,6 +7,7 @@ const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
 const { mainWindowScale, mainWindowScaleFactor } = useScaleSettings()
 const { mainWindowTheme } = useThemeSettings()
+const { mainWindowMessageHideDelay } = useMessageHideSettings()
 
 
 const appSettingsInfo = ref({
@@ -43,6 +44,9 @@ onMounted(async () => {
   const themeSettings = await invokeGet('GetThemeSettings')
   mainWindowTheme.value = themeSettings.mainWindowTheme
 
+  const messageHideSettings = await invokeGet('GetMessageHideSettings')
+  mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
+
   connection.on("OnScaleSettingsChanged", (main: number, _overlay: number) => {
     mainWindowScale.value = main
   })
@@ -51,8 +55,17 @@ onMounted(async () => {
     mainWindowTheme.value = main as 'default' | 'box'
   })
 
+  connection.on("OnMessageHideSettingsChanged", (main: number, _overlay: number) => {
+    mainWindowMessageHideDelay.value = main
+  })
+
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
+    if (mainWindowMessageHideDelay.value > 0 && message.id) {
+      setTimeout(() => {
+        chatMessages.value = chatMessages.value.filter(m => m.id !== message.id)
+      }, mainWindowMessageHideDelay.value * 1000)
+    }
   })
 
   connection.on("OnMessageDeleted", (messageId: string) => {

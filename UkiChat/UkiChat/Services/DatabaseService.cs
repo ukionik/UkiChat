@@ -99,4 +99,21 @@ public class DatabaseService : IDatabaseService
         appSettings.Appearance.Overlay.Theme = data.OverlayTheme;
         _databaseContext.AppSettingsRepository.Save(appSettings);
     }
+
+    public MessageHideSettingsData GetMessageHideSettings()
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        return new MessageHideSettingsData(
+            appSettings.Appearance.Main.MessageHideDelay,
+            appSettings.Appearance.Overlay.MessageHideDelay
+        );
+    }
+
+    public void UpdateMessageHideSettings(MessageHideSettingsData data)
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        appSettings.Appearance.Main.MessageHideDelay = data.MainWindowMessageHideDelay;
+        appSettings.Appearance.Overlay.MessageHideDelay = data.OverlayMessageHideDelay;
+        _databaseContext.AppSettingsRepository.Save(appSettings);
+    }
 }

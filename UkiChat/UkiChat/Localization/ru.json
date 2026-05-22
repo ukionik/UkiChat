@@ -17,6 +17,9 @@
       "theme": "Тема",
       "themeDefault": "Default",
       "themeBox": "Box",
+      "messageHideDelay": "Скрывать сообщение через",
+      "messageHideDelayNever": "Никогда",
+      "messageHideDelaySec": "сек.",
       "mainWindow": {
         "title": "Основное окно"
       },

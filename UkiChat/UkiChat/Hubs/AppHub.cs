@@ -95,6 +95,17 @@ public class AppHub : Hub
         await Clients.All.SendAsync("OnThemeSettingsChanged", mainWindowTheme, overlayTheme);
     }
 
+    public Task<MessageHideSettingsData> GetMessageHideSettings()
+    {
+        return Task.FromResult(_databaseService.GetMessageHideSettings());
+    }
+
+    public async Task BroadcastMessageHideSettings(int mainWindowMessageHideDelay, int overlayMessageHideDelay)
+    {
+        _databaseService.UpdateMessageHideSettings(new MessageHideSettingsData(mainWindowMessageHideDelay, overlayMessageHideDelay));
+        await Clients.All.SendAsync("OnMessageHideSettingsChanged", mainWindowMessageHideDelay, overlayMessageHideDelay);
+    }
+
     public async Task SendChatMessage(UkiChatMessage chatMessage)
     {
         await _signalRService.SendChatMessageAsync(chatMessage);
