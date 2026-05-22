@@ -7,7 +7,7 @@
     "channel": "Канал",
     "general": {
       "title": "Основные",
-      "chatOverlayUrl": "Ссылка на оверлей чата",
+      "chatOverlayUrl": "Ссылка на оверлей чата (для OBS)",
       "copyToClipboard": "Скопировать"
     },
     "appearance": {
