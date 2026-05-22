@@ -34,6 +34,9 @@ onMounted(async () => {
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
 
+  const scaleSettings = await invokeGet('GetScaleSettings')
+  overlayScale.value = scaleSettings.overlayScale
+
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
   })

@@ -35,6 +35,9 @@ onMounted(async () => {
   appSettingsInfo.value = await getActiveAppSettingsInfo()
   await getLanguage(appSettingsInfo.value.language, connection)
 
+  const scaleSettings = await invokeGet('GetScaleSettings')
+  mainWindowScale.value = scaleSettings.mainWindowScale
+
   connection.on("OnScaleSettingsChanged", (main: number, _overlay: number) => {
     mainWindowScale.value = main
   })

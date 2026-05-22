@@ -46,11 +46,15 @@ async function changeVkVideoLiveChannel(channel: string) {
   await invokeUpdate('ChangeVkVideoLiveChannel', channel)
 }
 
+let scaleSettingsLoaded = false
+
 watch(mainWindowScale, (val) => {
+  if (!scaleSettingsLoaded) return
   invokeUpdate('BroadcastScaleSettings', val, overlayScale.value)
 })
 
 watch(overlayScale, (val) => {
+  if (!scaleSettingsLoaded) return
   invokeUpdate('BroadcastScaleSettings', mainWindowScale.value, val)
 })
 
@@ -60,6 +64,12 @@ onMounted(async () => {
   currentLanguage.value = appSettingsInfo.value.language
   await getLanguage(appSettingsInfo.value.language, connection.value)
   state.settings = await invokeGet('GetActiveAppSettingsData')
+
+  const scaleSettings = await invokeGet('GetScaleSettings')
+  mainWindowScale.value = scaleSettings.mainWindowScale
+  overlayScale.value = scaleSettings.overlayScale
+  await nextTick()
+  scaleSettingsLoaded = true
 })
 </script>
 

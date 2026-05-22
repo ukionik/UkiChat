@@ -73,8 +73,14 @@ public class AppHub : Hub
         await _signalRService.SendVkVideoLiveReconnect();
     }
     
+    public Task<ScaleSettingsData> GetScaleSettings()
+    {
+        return Task.FromResult(_databaseService.GetScaleSettings());
+    }
+
     public async Task BroadcastScaleSettings(int mainWindowScale, int overlayScale)
     {
+        _databaseService.UpdateScaleSettings(new ScaleSettingsData(mainWindowScale, overlayScale));
         await Clients.All.SendAsync("OnScaleSettingsChanged", mainWindowScale, overlayScale);
     }
 

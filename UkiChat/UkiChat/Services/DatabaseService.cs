@@ -65,4 +65,21 @@ public class DatabaseService : IDatabaseService
         vkVideoLiveSettings.WsAccessToken = wsAccessToken;
         _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
+
+    public ScaleSettingsData GetScaleSettings()
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        return new ScaleSettingsData(
+            appSettings.Appearance.Main.Scale,
+            appSettings.Appearance.Overlay.Scale
+        );
+    }
+
+    public void UpdateScaleSettings(ScaleSettingsData data)
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        appSettings.Appearance.Main.Scale = data.MainWindowScale;
+        appSettings.Appearance.Overlay.Scale = data.OverlayScale;
+        _databaseContext.AppSettingsRepository.Save(appSettings);
+    }
 }

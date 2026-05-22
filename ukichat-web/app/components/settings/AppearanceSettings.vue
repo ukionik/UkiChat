@@ -26,14 +26,14 @@ const activeSub = ref('mainWindow')
         <label class="w-44 text-sm text-gray-400 shrink-0">
           {{ t('settings.appearance.scale') }}
         </label>
-        <USlider v-model="mainWindowScale" :min="50" :max="300" :step="10" class="flex-1" />
+        <USlider v-model="mainWindowScale" :min="10" :max="500" :step="10" class="flex-1" />
         <span class="text-sm text-gray-400 w-10 text-right">{{ mainWindowScale }}%</span>
       </div>
       <div v-if="activeSub === 'overlay'" class="flex items-center gap-3">
         <label class="w-44 text-sm text-gray-400 shrink-0">
           {{ t('settings.appearance.scale') }}
         </label>
-        <USlider v-model="overlayScale" :min="50" :max="300" :step="10" class="flex-1" />
+        <USlider v-model="overlayScale" :min="10" :max="500" :step="10" class="flex-1" />
         <span class="text-sm text-gray-400 w-10 text-right">{{ overlayScale }}%</span>
       </div>
     </div>
