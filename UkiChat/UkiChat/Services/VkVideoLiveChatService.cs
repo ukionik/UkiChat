@@ -43,6 +43,13 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         {
             if (e.Message == null) return;
 
+            if (e.Message.Type == "delete_message")
+            {
+                Console.WriteLine($"[VkVideoLive] Message deleted: {e.Message.Id}");
+                await signalRService.SendMessageDeletedAsync(e.Message.Id.ToString());
+                return;
+            }
+
             if (e.Message.Type == "chat_ban" && e.Message.BannedUser != null)
             {
                 var banned = e.Message.BannedUser;

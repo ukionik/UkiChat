@@ -17,6 +17,10 @@ public record VkVideoLiveChatMessage
 
     [JsonPropertyName("bannedUser")]
     public VkVideoLiveChatAuthor? BannedUser { get; init; }
+
+    // Для событий delete_message — id сообщения на верхнем уровне
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
 }
 
 /// <summary>

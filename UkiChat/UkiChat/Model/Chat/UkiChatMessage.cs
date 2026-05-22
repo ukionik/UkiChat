@@ -103,7 +103,8 @@ public record UkiChatMessage(ChatPlatform Platform
             replyTo = new UkiChatReplyInfo(parentDisplayName, parentDisplayNameColor, parentMessageParts);
         }
 
-        return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts, replyTo);
+        var messageId = chatMessage.Data?.Id > 0 ? chatMessage.Data.Id.ToString() : "";
+        return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts, replyTo, Id: messageId);
     }
     
     public static UkiChatMessage FromVkVideoLiveMessageNotification(string message)

@@ -146,7 +146,7 @@ watch(() => props.messages, async () => {
               </template>
             </template>
             <span v-else class="inline align-middle italic"
-                  :class="allowRevealDeleted ? 'text-purple-400 cursor-pointer hover:underline' : 'text-gray-300 opacity-70'">{{ t('chat.messageDeleted') }}</span>
+                  :class="allowRevealDeleted ? 'text-purple-400 cursor-pointer hover:underline' : 'text-gray-300 opacity-90'">{{ t('chat.messageDeleted') }}</span>
           </template>
           <template v-else v-for="(part, index) in message.messageParts" :key="index">
             <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
