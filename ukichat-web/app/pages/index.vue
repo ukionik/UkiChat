@@ -5,6 +5,7 @@ import type {ChatMessage} from "~/types/ChatMessage";
 
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
+const { mainWindowScaleFactor } = useScaleSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -57,5 +58,5 @@ function openLink(url: string) {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="2.0" :allow-reveal-deleted="true" @link-click="openLink" />
+  <ChatContainer :messages="chatMessages" :scale="mainWindowScaleFactor" :allow-reveal-deleted="true" @link-click="openLink" />
 </template>
