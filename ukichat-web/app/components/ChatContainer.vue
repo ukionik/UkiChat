@@ -50,7 +50,7 @@ watch(() => props.messages, async () => {
 <template>
   <div class="chat-container h-dvh overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
        @scroll="onScroll">
-    <ThemesDefaultChatMessage
+    <ThemesBoxChatMessage
       v-for="message in messages"
       :key="message.id"
       :message="message"
