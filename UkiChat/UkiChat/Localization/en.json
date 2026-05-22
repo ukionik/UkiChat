@@ -8,7 +8,8 @@
     "general": {
       "title": "General",
       "chatOverlayUrl": "Chat Overlay URL (OBS)",
-      "copyToClipboard": "Copy"
+      "copyToClipboard": "Copy",
+      "copiedToClipboard": "Copied to clipboard"
     },
     "appearance": {
       "title": "Appearance",

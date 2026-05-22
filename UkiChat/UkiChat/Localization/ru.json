@@ -8,7 +8,8 @@
     "general": {
       "title": "Основные",
       "chatOverlayUrl": "Ссылка на оверлей чата (для OBS)",
-      "copyToClipboard": "Скопировать"
+      "copyToClipboard": "Скопировать",
+      "copiedToClipboard": "Скопировано в буфер обмена"
     },
     "appearance": {
       "title": "Оформление",
