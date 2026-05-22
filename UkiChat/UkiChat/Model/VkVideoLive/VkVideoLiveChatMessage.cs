@@ -14,6 +14,9 @@ public record VkVideoLiveChatMessage
 
     [JsonPropertyName("data")]
     public VkVideoLiveChatMessageData? Data { get; init; }
+
+    [JsonPropertyName("bannedUser")]
+    public VkVideoLiveChatAuthor? BannedUser { get; init; }
 }
 
 /// <summary>

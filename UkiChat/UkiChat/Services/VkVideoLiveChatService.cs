@@ -42,6 +42,16 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         _chatClient.MessageReceived += async (_, e) =>
         {
             if (e.Message == null) return;
+
+            if (e.Message.Type == "chat_ban" && e.Message.BannedUser != null)
+            {
+                var banned = e.Message.BannedUser;
+                var username = !string.IsNullOrEmpty(banned.DisplayName) ? banned.DisplayName : banned.Nick;
+                Console.WriteLine($"[VkVideoLive] User banned: {username}");
+                await signalRService.SendUserMessagesDeletedAsync(username);
+                return;
+            }
+
             Console.WriteLine($"[VkVideoLive] Message received from: {e.Message.Data?.Author?.DisplayName}");
             await signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessage(e.Message));
         };
