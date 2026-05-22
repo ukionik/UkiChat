@@ -5,6 +5,24 @@
   "settings": {
     "title": "Настройки",
     "channel": "Канал",
+    "general": {
+      "title": "Основные",
+      "chatOverlayUrl": "Ссылка на оверлей чата",
+      "copyToClipboard": "Скопировать"
+    },
+    "appearance": {
+      "title": "Оформление",
+      "scale": "Масштаб",
+      "mainWindow": {
+        "title": "Основное окно"
+      },
+      "overlay": {
+        "title": "Оверлей (OBS)"
+      }
+    },
+    "platforms": {
+      "title": "Платформы"
+    },
     "twitch": {
       "name": "Twitch"
     },
