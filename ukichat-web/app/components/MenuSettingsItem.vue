@@ -20,8 +20,10 @@ defineProps<Props>()
     >
       {{ title }}
     </button>
-    <Teleport v-if="active" to="#settings-content">
-      <slot />
-    </Teleport>
+    <ClientOnly>
+      <Teleport v-if="active" to="#settings-content">
+        <slot />
+      </Teleport>
+    </ClientOnly>
   </div>
 </template>
