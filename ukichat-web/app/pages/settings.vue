@@ -10,6 +10,7 @@ const { startSignalR, invokeGet, invokeUpdate } = useSignalR()
 const { getLanguage } = useLocalization()
 const { t } = useI18n()
 const { mainWindowScale, overlayScale } = useScaleSettings()
+const { mainWindowTheme, overlayTheme } = useThemeSettings()
 
 const appSettingsInfo = ref({ profileName: '', language: 'en' })
 const activeRoot = ref('general')
@@ -47,6 +48,7 @@ async function changeVkVideoLiveChannel(channel: string) {
 }
 
 let scaleSettingsLoaded = false
+let themeSettingsLoaded = false
 
 watch(mainWindowScale, (val) => {
   if (!scaleSettingsLoaded) return
@@ -56,6 +58,16 @@ watch(mainWindowScale, (val) => {
 watch(overlayScale, (val) => {
   if (!scaleSettingsLoaded) return
   invokeUpdate('BroadcastScaleSettings', mainWindowScale.value, val)
+})
+
+watch(mainWindowTheme, (val) => {
+  if (!themeSettingsLoaded) return
+  invokeUpdate('BroadcastThemeSettings', val, overlayTheme.value)
+})
+
+watch(overlayTheme, (val) => {
+  if (!themeSettingsLoaded) return
+  invokeUpdate('BroadcastThemeSettings', mainWindowTheme.value, val)
 })
 
 onMounted(async () => {
@@ -68,8 +80,14 @@ onMounted(async () => {
   const scaleSettings = await invokeGet('GetScaleSettings')
   mainWindowScale.value = scaleSettings.mainWindowScale
   overlayScale.value = scaleSettings.overlayScale
+
+  const themeSettings = await invokeGet('GetThemeSettings')
+  mainWindowTheme.value = themeSettings.mainWindowTheme
+  overlayTheme.value = themeSettings.overlayTheme
+
   await nextTick()
   scaleSettingsLoaded = true
+  themeSettingsLoaded = true
 })
 </script>
 

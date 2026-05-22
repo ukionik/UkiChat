@@ -8,6 +8,7 @@ const {getLanguage} = useLocalization()
 const { mainWindowScale, mainWindowScaleFactor } = useScaleSettings()
 const { mainWindowTheme } = useThemeSettings()
 
+
 const appSettingsInfo = ref({
   profileName: "",
   language: "en",
@@ -39,8 +40,15 @@ onMounted(async () => {
   const scaleSettings = await invokeGet('GetScaleSettings')
   mainWindowScale.value = scaleSettings.mainWindowScale
 
+  const themeSettings = await invokeGet('GetThemeSettings')
+  mainWindowTheme.value = themeSettings.mainWindowTheme
+
   connection.on("OnScaleSettingsChanged", (main: number, _overlay: number) => {
     mainWindowScale.value = main
+  })
+
+  connection.on("OnThemeSettingsChanged", (main: string, _overlay: string) => {
+    mainWindowTheme.value = main as 'default' | 'box'
   })
 
   connection.on("OnChatMessage", (message: ChatMessage) => {

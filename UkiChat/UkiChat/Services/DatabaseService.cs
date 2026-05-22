@@ -82,4 +82,21 @@ public class DatabaseService : IDatabaseService
         appSettings.Appearance.Overlay.Scale = data.OverlayScale;
         _databaseContext.AppSettingsRepository.Save(appSettings);
     }
+
+    public ThemeSettingsData GetThemeSettings()
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        return new ThemeSettingsData(
+            appSettings.Appearance.Main.Theme,
+            appSettings.Appearance.Overlay.Theme
+        );
+    }
+
+    public void UpdateThemeSettings(ThemeSettingsData data)
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        appSettings.Appearance.Main.Theme = data.MainWindowTheme;
+        appSettings.Appearance.Overlay.Theme = data.OverlayTheme;
+        _databaseContext.AppSettingsRepository.Save(appSettings);
+    }
 }

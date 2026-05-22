@@ -84,6 +84,17 @@ public class AppHub : Hub
         await Clients.All.SendAsync("OnScaleSettingsChanged", mainWindowScale, overlayScale);
     }
 
+    public Task<ThemeSettingsData> GetThemeSettings()
+    {
+        return Task.FromResult(_databaseService.GetThemeSettings());
+    }
+
+    public async Task BroadcastThemeSettings(string mainWindowTheme, string overlayTheme)
+    {
+        _databaseService.UpdateThemeSettings(new ThemeSettingsData(mainWindowTheme, overlayTheme));
+        await Clients.All.SendAsync("OnThemeSettingsChanged", mainWindowTheme, overlayTheme);
+    }
+
     public async Task SendChatMessage(UkiChatMessage chatMessage)
     {
         await _signalRService.SendChatMessageAsync(chatMessage);

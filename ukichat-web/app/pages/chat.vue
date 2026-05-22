@@ -38,6 +38,13 @@ onMounted(async () => {
   const scaleSettings = await invokeGet('GetScaleSettings')
   overlayScale.value = scaleSettings.overlayScale
 
+  const themeSettings = await invokeGet('GetThemeSettings')
+  overlayTheme.value = themeSettings.overlayTheme
+
+  connection.on("OnThemeSettingsChanged", (_main: string, overlay: string) => {
+    overlayTheme.value = overlay as 'default' | 'box'
+  })
+
   connection.on("OnChatMessage", (message: ChatMessage) => {
     chatMessages.value = addItem(message)
   })
