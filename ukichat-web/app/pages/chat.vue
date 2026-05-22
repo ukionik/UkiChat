@@ -6,6 +6,7 @@ import type {ChatMessage} from "~/types/ChatMessage";
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
 const { overlayScale, overlayScaleFactor } = useScaleSettings()
+const { overlayTheme } = useThemeSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -59,5 +60,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="overlayScaleFactor" :hide-vertical-scrollbar="true" />
+  <ChatContainer :messages="chatMessages" :scale="overlayScaleFactor" :theme="overlayTheme" :hide-vertical-scrollbar="true" />
 </template>

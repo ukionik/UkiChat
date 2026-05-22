@@ -6,6 +6,7 @@ import type {ChatMessage} from "~/types/ChatMessage";
 const {startSignalR, invokeGet, invokeUpdate} = useSignalR()
 const {getLanguage} = useLocalization()
 const { mainWindowScale, mainWindowScaleFactor } = useScaleSettings()
+const { mainWindowTheme } = useThemeSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -65,5 +66,5 @@ function openLink(url: string) {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="mainWindowScaleFactor" :allow-reveal-deleted="true" @link-click="openLink" />
+  <ChatContainer :messages="chatMessages" :scale="mainWindowScaleFactor" :theme="mainWindowTheme" :allow-reveal-deleted="true" @link-click="openLink" />
 </template>
