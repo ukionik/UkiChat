@@ -46,14 +46,14 @@ public record UkiChatMessage(ChatPlatform Platform
     public static UkiChatMessage FromTwitchMessageNotification(string message)
     {
         return new UkiChatMessage(ChatPlatform.Twitch, [], ChatPlatform.Twitch.ToString(), "#FFFFFF",
-            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification);
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
     }
 
     public static UkiChatMessage FromTwitchWatchStreak(TwitchWatchStreak watchStreak)
     {
         var displayNameColor = ColorUtil.GetDisplayNameColor(watchStreak.DisplayName, watchStreak.HexColor);
         return new UkiChatMessage(ChatPlatform.Twitch, [], watchStreak.DisplayName, displayNameColor,
-            [new UkiChatMessagePart(UkiChatMessagePartType.Text, watchStreak.SystemMessage)], MessageType: UkiChatMessageType.Notification);
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, watchStreak.SystemMessage)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
     }
 
     public static UkiChatMessage FromVkVideoLiveMessage(VkVideoLiveChatMessage chatMessage)
@@ -112,7 +112,7 @@ public record UkiChatMessage(ChatPlatform Platform
     public static UkiChatMessage FromVkVideoLiveMessageNotification(string message)
     {
         return new UkiChatMessage(ChatPlatform.VkVideoLive, [], ChatPlatform.VkVideoLive.ToString(), "#FFFFFF",
-            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification);
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
     }
 
     private static List<UkiChatMessagePart> ParseVkVideoLiveContent(List<VkVideoLiveChatContent>? content)
