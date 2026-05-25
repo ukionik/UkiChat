@@ -21,7 +21,7 @@ public class SevenTvApiService : ISevenTvApiService
         _httpClient = new HttpClient(new DiagnosticHttpHandler("7tv"))
         {
             BaseAddress = new Uri(BaseUrl),
-            Timeout = TimeSpan.FromSeconds(10)
+            Timeout = TimeSpan.FromSeconds(5)
         };
 
         // Добавляем заголовки, похожие на браузерные

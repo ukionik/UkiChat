@@ -250,10 +250,17 @@ public class TwitchChatService : ITwitchChatService
     {
         using var _ = StartupDiagnostics.Measure("twitch-chat", "LoadGlobalDataAsync");
         await LoadTwitchGlobalBadgesAsync();
-        await Task.WhenAll(
-            LoadSevenTvGlobalEmotesAsync(),
-            LoadFfzGlobalEmotesAsync(),
-            LoadBttvGlobalEmotesAsync());
+        try
+        {
+            await Task.WhenAll(
+                LoadSevenTvGlobalEmotesAsync(),
+                LoadFfzGlobalEmotesAsync(),
+                LoadBttvGlobalEmotesAsync()).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning("Загрузка глобальных эмотов 7TV/FFZ/BTTV прервана по таймауту (5с)");
+        }
     }
 
     public async Task LoadChannelDataAsync()
@@ -267,10 +274,17 @@ public class TwitchChatService : ITwitchChatService
         }
 
         await LoadTwitchChannelBadgesAsync(twitchSettings);
-        await Task.WhenAll(
-            LoadSevenTvChannelEmotesAsync(twitchSettings),
-            LoadFfzChannelEmotesAsync(twitchSettings),
-            LoadBttvChannelEmotesAsync(twitchSettings));
+        try
+        {
+            await Task.WhenAll(
+                LoadSevenTvChannelEmotesAsync(twitchSettings),
+                LoadFfzChannelEmotesAsync(twitchSettings),
+                LoadBttvChannelEmotesAsync(twitchSettings)).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning("Загрузка эмотов канала 7TV/FFZ/BTTV прервана по таймауту (5с)");
+        }
     }
 
     private async Task LoadTwitchGlobalBadgesAsync()
