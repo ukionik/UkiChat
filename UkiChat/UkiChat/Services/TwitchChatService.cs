@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using TwitchLib.Client;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
@@ -32,6 +33,7 @@ public class TwitchChatService : ITwitchChatService
     private readonly ILocalizationService _localizationService;
     private readonly ITwitchApiService _twitchApiService;
     private readonly ITwitchBadgesRepository _twitchBadgesRepository;
+    private readonly ILogger<TwitchChatService> _logger;
 
     // ReconnectionPolicy(5000): бесконечные попытки, фиксированный интервал 5с.
     // TwitchLib.Communication сам управляет переподключением — кастомный цикл не нужен.
@@ -52,6 +54,7 @@ public class TwitchChatService : ITwitchChatService
         , IBttvApiService bttvApiService
         , IBttvEmotesRepository bttvEmotesRepository
         , ITwitchApiService twitchApiService
+        , ILogger<TwitchChatService> logger
     )
     {
         _databaseContext = databaseContext;
@@ -65,26 +68,28 @@ public class TwitchChatService : ITwitchChatService
         _bttvApiService = bttvApiService;
         _bttvEmotesRepository = bttvEmotesRepository;
         _twitchApiService = twitchApiService;
+        _logger = logger;
 
         _twitchClient.OnMessageReceived += async (_, e) =>
         {
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
             var thirdPartyEmotes = GetThirdPartyEmotes();
-            Console.WriteLine(
-                $"[Twitch] Message received from: {e.ChatMessage.DisplayName}. Message: {e.ChatMessage.Message}");
+            _logger.LogDebug("Получено сообщение от {DisplayName}: {Message}",
+                e.ChatMessage.DisplayName, e.ChatMessage.Message);
             await signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes));
-        }; 
+        };
 
         _twitchClient.OnError += (_, e) =>
         {
-            Console.WriteLine(e.Exception.ToString());
+            _logger.LogError(e.Exception, "TwitchClient ошибка");
             return Task.CompletedTask;
         };
 
         _twitchClient.OnJoinedChannel += async (_, e) =>
         {
             StartupDiagnostics.Log("twitch-chat", $"OnJoinedChannel: {e.Channel}");
+            _logger.LogInformation("Присоединились к каналу: {Channel}", e.Channel);
             await SendChatMessageNotification(string.Format(localizationService.GetString("twitch.connectedToChannel"),
                 e.Channel));
         };
@@ -92,6 +97,7 @@ public class TwitchChatService : ITwitchChatService
         _twitchClient.OnLeftChannel += async (_, e) =>
         {
             StartupDiagnostics.Log("twitch-chat", $"OnLeftChannel: {e.Channel}");
+            _logger.LogInformation("Покинули канал: {Channel}", e.Channel);
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), e.Channel));
         };
@@ -99,6 +105,7 @@ public class TwitchChatService : ITwitchChatService
         _twitchClient.OnConnected += (_, _) =>
         {
             StartupDiagnostics.Log("twitch-chat", "OnConnected (IRC handshake done)");
+            _logger.LogInformation("Подключено (IRC handshake done)");
             return Task.CompletedTask;
         };
 
@@ -107,6 +114,7 @@ public class TwitchChatService : ITwitchChatService
         _twitchClient.OnDisconnected += async (_, _) =>
         {
             StartupDiagnostics.Log("twitch-chat", "OnDisconnected");
+            _logger.LogWarning("Отключено от канала: {Channel}", _channelName);
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
         };
@@ -114,6 +122,7 @@ public class TwitchChatService : ITwitchChatService
         _twitchClient.OnConnectionError += async (_, e) =>
         {
             StartupDiagnostics.LogError("twitch-chat", $"OnConnectionError: {e.Error?.Message}");
+            _logger.LogError("Ошибка подключения: {Error}", e.Error?.Message);
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
         };
@@ -123,24 +132,26 @@ public class TwitchChatService : ITwitchChatService
         _twitchClient.OnReconnected += (_, _) =>
         {
             StartupDiagnostics.Log("twitch-chat", "OnReconnected (TwitchLib auto-reconnect)");
+            _logger.LogInformation("Переподключено (TwitchLib auto-reconnect)");
             return Task.CompletedTask;
         };
-        
+
         _twitchClient.OnMessageCleared += async (_, e) =>
         {
-            Console.WriteLine($"[Twitch] Message cleared: {e.TargetMessageId}");
+            _logger.LogDebug("Сообщение удалено: {MessageId}", e.TargetMessageId);
             await signalRService.SendMessageDeletedAsync(e.TargetMessageId);
         };
 
         _twitchClient.OnUserBanned += async (_, e) =>
         {
-            Console.WriteLine($"[Twitch] User banned: {e.UserBan.Username}");
+            _logger.LogInformation("Пользователь забанен: {Username}", e.UserBan.Username);
             await signalRService.SendUserMessagesDeletedAsync(e.UserBan.Username);
         };
 
         _twitchClient.OnUserTimedout += async (_, e) =>
         {
-            Console.WriteLine($"[Twitch] User timed out: {e.UserTimeout.Username} ({e.UserTimeout.TimeoutDuration}s)");
+            _logger.LogInformation("Таймаут пользователя: {Username} ({Duration}с)",
+                e.UserTimeout.Username, e.UserTimeout.TimeoutDuration);
             await signalRService.SendUserMessagesDeletedAsync(e.UserTimeout.Username);
         };
 
@@ -149,8 +160,15 @@ public class TwitchChatService : ITwitchChatService
         {
             var watchStreak = TwitchWatchStreak.ParseFromRawIrc(e.RawIRC);
             if (watchStreak == null) return;
-            Console.WriteLine($"[Twitch] Watch streak: {watchStreak.DisplayName} x{watchStreak.StreakCount}");
+            _logger.LogInformation("Watch streak: {DisplayName} x{StreakCount}",
+                watchStreak.DisplayName, watchStreak.StreakCount);
             await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchWatchStreak(watchStreak));
+        };
+
+        _twitchClient.OnSendReceiveData += (_, e) =>
+        {
+            _logger.LogDebug("IRC [{Direction}]: {Data}", e.Direction, e.Data);
+            return Task.CompletedTask;
         };
     }
 
@@ -159,9 +177,12 @@ public class TwitchChatService : ITwitchChatService
         using var _ = StartupDiagnostics.Measure("twitch-chat",
             $"ConnectAsync(old={connectionParams.OldChannel}, new={connectionParams.NewChannel})");
         _broadcasterId = connectionParams.BroadcasterId;
+        _logger.LogInformation("ConnectAsync: старый={OldChannel} новый={NewChannel} broadcasterId={BroadcasterId}",
+            connectionParams.OldChannel, connectionParams.NewChannel, connectionParams.BroadcasterId);
 
         if (!_twitchClient.IsConnected)
         {
+            _logger.LogInformation("TwitchClient не подключён — инициализируем и подключаемся (WebSocket)");
             var credentials =
                 new ConnectionCredentials(connectionParams.ChatbotUsername, connectionParams.ChatbotAccessToken);
             _twitchClient.Initialize(credentials);
@@ -173,6 +194,7 @@ public class TwitchChatService : ITwitchChatService
 
         if (_twitchClient.JoinedChannels.Any(x => x.Channel == connectionParams.OldChannel))
         {
+            _logger.LogInformation("Покидаем старый канал: {OldChannel}", connectionParams.OldChannel);
             using (StartupDiagnostics.Measure("twitch-chat", $"  LeaveChannelAsync({connectionParams.OldChannel})"))
             {
                 await _twitchClient.LeaveChannelAsync(connectionParams.OldChannel);
@@ -180,9 +202,13 @@ public class TwitchChatService : ITwitchChatService
         }
 
         if (connectionParams.NewChannel == "")
+        {
+            _logger.LogInformation("Новый канал пустой — завершаем ConnectAsync");
             return;
+        }
 
         await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"), connectionParams.NewChannel));
+        _logger.LogInformation("Входим в канал: {NewChannel}", connectionParams.NewChannel);
         using (StartupDiagnostics.Measure("twitch-chat", $"  JoinChannelAsync({connectionParams.NewChannel})"))
         {
             await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
@@ -193,23 +219,30 @@ public class TwitchChatService : ITwitchChatService
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         var oldChannel = twitchSettings.Channel;
+        _logger.LogInformation("ChangeChannelAsync: старый={OldChannel} новый={NewChannel}", oldChannel, newChannel);
+
         if (oldChannel == newChannel)
+        {
+            _logger.LogDebug("ChangeChannelAsync: каналы совпадают, пропускаем");
             return;
+        }
 
         if (newChannel.Length == 0)
         {
+            _logger.LogInformation("ChangeChannelAsync: новый канал пустой, отключаемся от {OldChannel}", oldChannel);
             UpdateTwitchDbSettings(twitchSettings);
-            if (oldChannel != null) 
+            if (oldChannel != null)
                 await _twitchClient.LeaveChannelAsync(oldChannel);
             return;
         }
-        
+
         _channelName = newChannel;
         _broadcasterId = await LoadBroadcasterIdAsync(newChannel);
+        _logger.LogInformation("ChangeChannelAsync: broadcasterId={BroadcasterId}", _broadcasterId);
         UpdateTwitchDbSettings(twitchSettings);
         await Task.WhenAll(
             LoadChannelDataAsync(),
-            ConnectAsync(TwitchConnectionParams.OfTwitchSettings(oldChannel ?? "", newChannel, twitchSettings))            
+            ConnectAsync(TwitchConnectionParams.OfTwitchSettings(oldChannel ?? "", newChannel, twitchSettings))
         );
     }
 
@@ -246,11 +279,11 @@ public class TwitchChatService : ITwitchChatService
         {
             var twitchGlobalBadges = await _twitchApiService.GetGlobalChatBadgesAsync();
             _twitchBadgesRepository.SetGlobalBadges(twitchGlobalBadges);
-            Console.WriteLine($"Loaded {twitchGlobalBadges.EmoteSet.Length} global badge sets");
+            _logger.LogInformation("Загружено {Count} глобальных наборов значков Twitch", twitchGlobalBadges.EmoteSet.Length);
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error loading twitch global badges: {e.Message}");
+            _logger.LogError(e, "Ошибка загрузки глобальных значков Twitch");
         }
     }
 
@@ -261,7 +294,7 @@ public class TwitchChatService : ITwitchChatService
         if (dbEmotes.Count > 0)
         {
             _sevenTvEmotesRepository.SetGlobalEmotes(dbEmotes.Select(e => new SevenTvEmote(e.EmoteId, e.Name, e.Url)).ToList());
-            Console.WriteLine($"Loaded {dbEmotes.Count} global 7TV emotes from DB");
+            _logger.LogInformation("Загружено {Count} глобальных эмотов 7TV из БД", dbEmotes.Count);
         }
 
         try
@@ -270,11 +303,11 @@ public class TwitchChatService : ITwitchChatService
             _sevenTvEmotesRepository.SetGlobalEmotes(globalEmotes);
             _databaseContext.SevenTvEmoteRepository.SaveGlobalEmotes(
                 globalEmotes.Select(e => new SevenTvEmoteEntity {EmoteId = e.Id, Name = e.Name, Url = e.Url }));
-            Console.WriteLine($"Loaded {globalEmotes.Count} global 7TV emotes");
+            _logger.LogInformation("Загружено {Count} глобальных эмотов 7TV", globalEmotes.Count);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading Global 7TV emotes: {ex.Message}");
+            _logger.LogError(ex, "Ошибка загрузки глобальных эмотов 7TV");
         }
     }
 
@@ -287,11 +320,12 @@ public class TwitchChatService : ITwitchChatService
 
             var channelBadges = await _twitchApiService.GetChannelChatBadgesAsync(twitchSettings.ApiBroadcasterId);
             _twitchBadgesRepository.SetChannelBadges(twitchSettings.ApiBroadcasterId, channelBadges);
-            Console.WriteLine($"Loaded {channelBadges.EmoteSet.Length} channel badge sets for {twitchSettings.Channel}");
+            _logger.LogInformation("Загружено {Count} наборов значков канала {Channel}",
+                channelBadges.EmoteSet.Length, twitchSettings.Channel);
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error loading twitch chat badges: {e.Message}");
+            _logger.LogError(e, "Ошибка загрузки значков канала {Channel}", twitchSettings.Channel);
         }
     }
 
@@ -307,7 +341,7 @@ public class TwitchChatService : ITwitchChatService
         if (dbEmotes.Count > 0)
         {
             _sevenTvEmotesRepository.SetChannelEmotes(broadcasterId, dbEmotes.Select(e => new SevenTvEmote(e.EmoteId, e.Name, e.Url)).ToList());
-            Console.WriteLine($"Loaded {dbEmotes.Count} channel 7TV emotes for {twitchSettings.Channel} from DB");
+            _logger.LogInformation("Загружено {Count} эмотов 7TV канала {Channel} из БД", dbEmotes.Count, twitchSettings.Channel);
         }
 
         try
@@ -317,11 +351,11 @@ public class TwitchChatService : ITwitchChatService
             _databaseContext.SevenTvEmoteRepository.SaveChannelEmotes(
                 broadcasterId,
                 channelEmotes.Select(e => new SevenTvEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
-            Console.WriteLine($"Loaded {channelEmotes.Count} channel 7TV emotes for {twitchSettings.Channel}");
+            _logger.LogInformation("Загружено {Count} эмотов 7TV канала {Channel}", channelEmotes.Count, twitchSettings.Channel);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading channel={twitchSettings.Channel} 7TV emotes: {ex.Message}");
+            _logger.LogError(ex, "Ошибка загрузки эмотов 7TV канала {Channel}", twitchSettings.Channel);
         }
     }
 
@@ -332,7 +366,7 @@ public class TwitchChatService : ITwitchChatService
         if (dbEmotes.Count > 0)
         {
             _ffzEmotesRepository.SetGlobalEmotes(dbEmotes.Select(e => new FfzEmote(e.EmoteId, e.Name, e.Url)).ToList());
-            Console.WriteLine($"Loaded {dbEmotes.Count} global FFZ emotes from DB");
+            _logger.LogInformation("Загружено {Count} глобальных эмотов FFZ из БД", dbEmotes.Count);
         }
 
         try
@@ -341,11 +375,11 @@ public class TwitchChatService : ITwitchChatService
             _ffzEmotesRepository.SetGlobalEmotes(globalEmotes);
             _databaseContext.FfzEmoteRepository.SaveGlobalEmotes(
                 globalEmotes.Select(e => new FfzEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
-            Console.WriteLine($"Loaded {globalEmotes.Count} global FFZ emotes");
+            _logger.LogInformation("Загружено {Count} глобальных эмотов FFZ", globalEmotes.Count);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading global FFZ emotes: {ex.Message}");
+            _logger.LogError(ex, "Ошибка загрузки глобальных эмотов FFZ");
         }
     }
 
@@ -361,7 +395,7 @@ public class TwitchChatService : ITwitchChatService
         if (dbEmotes.Count > 0)
         {
             _ffzEmotesRepository.SetChannelEmotes(broadcasterId, dbEmotes.Select(e => new FfzEmote(e.EmoteId, e.Name, e.Url)).ToList());
-            Console.WriteLine($"Loaded {dbEmotes.Count} channel FFZ emotes for {twitchSettings.Channel} from DB");
+            _logger.LogInformation("Загружено {Count} эмотов FFZ канала {Channel} из БД", dbEmotes.Count, twitchSettings.Channel);
         }
 
         try
@@ -371,11 +405,11 @@ public class TwitchChatService : ITwitchChatService
             _databaseContext.FfzEmoteRepository.SaveChannelEmotes(
                 broadcasterId,
                 channelEmotes.Select(e => new FfzEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
-            Console.WriteLine($"Loaded {channelEmotes.Count} channel FFZ emotes for {twitchSettings.Channel}");
+            _logger.LogInformation("Загружено {Count} эмотов FFZ канала {Channel}", channelEmotes.Count, twitchSettings.Channel);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading channel={twitchSettings.Channel} FFZ emotes: {ex.Message}");
+            _logger.LogError(ex, "Ошибка загрузки эмотов FFZ канала {Channel}", twitchSettings.Channel);
         }
     }
 
@@ -390,11 +424,13 @@ public class TwitchChatService : ITwitchChatService
     {
         try
         {
-            return await _twitchApiService.GetBroadcasterIdAsync(newChannel);
+            var id = await _twitchApiService.GetBroadcasterIdAsync(newChannel);
+            _logger.LogInformation("Загружен broadcasterId={BroadcasterId} для канала {Channel}", id, newChannel);
+            return id;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Console.WriteLine($"Can't load Twitch API Broadcaster Id for Channel={newChannel}");
+            _logger.LogError(ex, "Не удалось загрузить broadcasterId для канала {Channel}", newChannel);
             return "";
         }
     }
@@ -429,7 +465,7 @@ public class TwitchChatService : ITwitchChatService
         if (dbEmotes.Count > 0)
         {
             _bttvEmotesRepository.SetGlobalEmotes(dbEmotes.Select(e => new BttvEmote(e.EmoteId, e.Name, e.Url)).ToList());
-            Console.WriteLine($"Loaded {dbEmotes.Count} global BTTV emotes from DB");
+            _logger.LogInformation("Загружено {Count} глобальных эмотов BTTV из БД", dbEmotes.Count);
         }
 
         try
@@ -438,11 +474,11 @@ public class TwitchChatService : ITwitchChatService
             _bttvEmotesRepository.SetGlobalEmotes(globalEmotes);
             _databaseContext.BttvEmoteRepository.SaveGlobalEmotes(
                 globalEmotes.Select(e => new BttvEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
-            Console.WriteLine($"Loaded {globalEmotes.Count} global BTTV emotes");
+            _logger.LogInformation("Загружено {Count} глобальных эмотов BTTV", globalEmotes.Count);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading global BTTV emotes: {ex.Message}");
+            _logger.LogError(ex, "Ошибка загрузки глобальных эмотов BTTV");
         }
     }
 
@@ -457,7 +493,7 @@ public class TwitchChatService : ITwitchChatService
         if (dbEmotes.Count > 0)
         {
             _bttvEmotesRepository.SetChannelEmotes(broadcasterId, dbEmotes.Select(e => new BttvEmote(e.EmoteId, e.Name, e.Url)).ToList());
-            Console.WriteLine($"Loaded {dbEmotes.Count} channel BTTV emotes for {twitchSettings.Channel} from DB");
+            _logger.LogInformation("Загружено {Count} эмотов BTTV канала {Channel} из БД", dbEmotes.Count, twitchSettings.Channel);
         }
 
         try
@@ -467,11 +503,11 @@ public class TwitchChatService : ITwitchChatService
             _databaseContext.BttvEmoteRepository.SaveChannelEmotes(
                 broadcasterId,
                 channelEmotes.Select(e => new BttvEmoteEntity { EmoteId = e.Id, Name = e.Name, Url = e.Url }));
-            Console.WriteLine($"Loaded {channelEmotes.Count} channel BTTV emotes for {twitchSettings.Channel}");
+            _logger.LogInformation("Загружено {Count} эмотов BTTV канала {Channel}", channelEmotes.Count, twitchSettings.Channel);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading channel={twitchSettings.Channel} BTTV emotes: {ex.Message}");
+            _logger.LogError(ex, "Ошибка загрузки эмотов BTTV канала {Channel}", twitchSettings.Channel);
         }
     }
 

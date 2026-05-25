@@ -6,6 +6,7 @@ using Serilog.Extensions.Logging;
 using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
 using UkiChat.Model.VkVideoLive;
+using UkiChat.Services;
 
 namespace UkiChat.Configuration;
 
@@ -47,14 +48,24 @@ public static class DIConfiguration
             builder.AddSerilog(logger, dispose: true);
         });
 
-        var vkChatSessionTimestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var sessionTimestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+
         var vkChatLogger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File($"logs/vk-video-live-chat-{vkChatSessionTimestamp}.txt"))
+            .WriteTo.Async(a => a.File($"logs/vk-video-live-chat-{sessionTimestamp}.txt"))
             .CreateLogger();
 
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(vkChatLogger, dispose: true))
                 .CreateLogger<VkVideoLiveChatClient>());
+
+        var twitchChatLogger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Async(a => a.File($"logs/twitch-chat-log-{sessionTimestamp}.txt"))
+            .CreateLogger();
+
+        services.AddSingleton(
+            LoggerFactory.Create(b => b.AddSerilog(twitchChatLogger, dispose: true))
+                .CreateLogger<TwitchChatService>());
     }
 }
