@@ -34,18 +34,27 @@ async function getActiveAppSettingsInfo() {
 
 // Запуск SignalR при монтировании компонента
 onMounted(async () => {
-  let connection = await startSignalR()
-  appSettingsInfo.value = await getActiveAppSettingsInfo()
-  await getLanguage(appSettingsInfo.value.language, connection)
+  console.log('[index.vue] onMounted: BEGIN')
+  const tMount = performance.now()
+  try {
+    let connection = await startSignalR()
+    console.log(`[index.vue] startSignalR done (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
-  const scaleSettings = await invokeGet('GetScaleSettings')
-  mainWindowScale.value = scaleSettings.mainWindowScale
+    appSettingsInfo.value = await getActiveAppSettingsInfo()
+    console.log(`[index.vue] getActiveAppSettingsInfo done lang=${appSettingsInfo.value.language} (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
-  const themeSettings = await invokeGet('GetThemeSettings')
-  mainWindowTheme.value = themeSettings.mainWindowTheme
+    await getLanguage(appSettingsInfo.value.language, connection)
+    console.log(`[index.vue] getLanguage done (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
-  const messageHideSettings = await invokeGet('GetMessageHideSettings')
-  mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
+    const scaleSettings = await invokeGet('GetScaleSettings')
+    mainWindowScale.value = scaleSettings.mainWindowScale
+
+    const themeSettings = await invokeGet('GetThemeSettings')
+    mainWindowTheme.value = themeSettings.mainWindowTheme
+
+    const messageHideSettings = await invokeGet('GetMessageHideSettings')
+    mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
+    console.log(`[index.vue] all settings loaded (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
   connection.on("OnScaleSettingsChanged", (main: number, _overlay: number) => {
     mainWindowScale.value = main
@@ -78,6 +87,11 @@ onMounted(async () => {
         .filter(m => m.displayName.toLowerCase() === username.toLowerCase() && m.messageType !== 'Deleted')
         .forEach(m => m.messageType = 'Deleted')
   })
+
+    console.log(`[index.vue] onMounted: END (+${(performance.now() - tMount).toFixed(0)}ms)`)
+  } catch (err) {
+    console.error(`[index.vue] onMounted FAILED (+${(performance.now() - tMount).toFixed(0)}ms)`, err)
+  }
 })
 
 function openLink(url: string) {

@@ -7,6 +7,7 @@ using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
 using UkiChat.Configuration;
+using UkiChat.Diagnostics;
 using UkiChat.Entities;
 using UkiChat.Model.Bttv;
 using UkiChat.Model.Chat;
@@ -83,28 +84,36 @@ public class TwitchChatService : ITwitchChatService
 
         _twitchClient.OnJoinedChannel += async (_, e) =>
         {
-            Console.WriteLine($"[Twitch] Joined channel: {e.Channel}");
+            StartupDiagnostics.Log("twitch-chat", $"OnJoinedChannel: {e.Channel}");
             await SendChatMessageNotification(string.Format(localizationService.GetString("twitch.connectedToChannel"),
                 e.Channel));
         };
 
         _twitchClient.OnLeftChannel += async (_, e) =>
         {
-            Console.WriteLine($"[Twitch] Left channel: {e.Channel}");
+            StartupDiagnostics.Log("twitch-chat", $"OnLeftChannel: {e.Channel}");
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), e.Channel));
+        };
+
+        _twitchClient.OnConnected += (_, _) =>
+        {
+            StartupDiagnostics.Log("twitch-chat", "OnConnected (IRC handshake done)");
+            return Task.CompletedTask;
         };
 
         // TwitchLib.Communication автоматически переподключается согласно ReconnectionPolicy.
         // OnDisconnected — только логирование; библиотека сама инициирует попытки.
         _twitchClient.OnDisconnected += async (_, _) =>
         {
+            StartupDiagnostics.Log("twitch-chat", "OnDisconnected");
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
         };
 
-        _twitchClient.OnConnectionError += async (_, _) =>
+        _twitchClient.OnConnectionError += async (_, e) =>
         {
+            StartupDiagnostics.LogError("twitch-chat", $"OnConnectionError: {e.Error?.Message}");
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
         };
@@ -113,7 +122,7 @@ public class TwitchChatService : ITwitchChatService
         // Каналы TwitchLib переходит автоматически → OnJoinedChannel уведомит пользователя.
         _twitchClient.OnReconnected += (_, _) =>
         {
-            Console.WriteLine("[Twitch] Переподключён (TwitchLib auto-reconnect)");
+            StartupDiagnostics.Log("twitch-chat", "OnReconnected (TwitchLib auto-reconnect)");
             return Task.CompletedTask;
         };
         
@@ -147,6 +156,8 @@ public class TwitchChatService : ITwitchChatService
 
     public async Task ConnectAsync(TwitchConnectionParams connectionParams)
     {
+        using var _ = StartupDiagnostics.Measure("twitch-chat",
+            $"ConnectAsync(old={connectionParams.OldChannel}, new={connectionParams.NewChannel})");
         _broadcasterId = connectionParams.BroadcasterId;
 
         if (!_twitchClient.IsConnected)
@@ -154,17 +165,28 @@ public class TwitchChatService : ITwitchChatService
             var credentials =
                 new ConnectionCredentials(connectionParams.ChatbotUsername, connectionParams.ChatbotAccessToken);
             _twitchClient.Initialize(credentials);
-            await _twitchClient.ConnectAsync();
+            using (StartupDiagnostics.Measure("twitch-chat", "  TwitchClient.ConnectAsync (WebSocket)"))
+            {
+                await _twitchClient.ConnectAsync();
+            }
         }
 
         if (_twitchClient.JoinedChannels.Any(x => x.Channel == connectionParams.OldChannel))
-            await _twitchClient.LeaveChannelAsync(connectionParams.OldChannel);
+        {
+            using (StartupDiagnostics.Measure("twitch-chat", $"  LeaveChannelAsync({connectionParams.OldChannel})"))
+            {
+                await _twitchClient.LeaveChannelAsync(connectionParams.OldChannel);
+            }
+        }
 
         if (connectionParams.NewChannel == "")
             return;
 
         await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"), connectionParams.NewChannel));
-        await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
+        using (StartupDiagnostics.Measure("twitch-chat", $"  JoinChannelAsync({connectionParams.NewChannel})"))
+        {
+            await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
+        }
     }
 
     public async Task ChangeChannelAsync(string newChannel)
@@ -193,6 +215,7 @@ public class TwitchChatService : ITwitchChatService
 
     public async Task LoadGlobalDataAsync()
     {
+        using var _ = StartupDiagnostics.Measure("twitch-chat", "LoadGlobalDataAsync");
         await LoadTwitchGlobalBadgesAsync();
         await Task.WhenAll(
             LoadSevenTvGlobalEmotesAsync(),
@@ -202,9 +225,13 @@ public class TwitchChatService : ITwitchChatService
 
     public async Task LoadChannelDataAsync()
     {
+        using var _ = StartupDiagnostics.Measure("twitch-chat", "LoadChannelDataAsync");
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         if (string.IsNullOrEmpty(twitchSettings.Channel))
+        {
+            StartupDiagnostics.Log("twitch-chat", "  no channel configured, skipping channel data");
             return;
+        }
 
         await LoadTwitchChannelBadgesAsync(twitchSettings);
         await Task.WhenAll(

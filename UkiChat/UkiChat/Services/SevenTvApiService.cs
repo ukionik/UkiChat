@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using UkiChat.Diagnostics;
 using UkiChat.Model.SevenTv;
 
 namespace UkiChat.Services;
@@ -17,7 +18,7 @@ public class SevenTvApiService : ISevenTvApiService
 
     public SevenTvApiService()
     {
-        _httpClient = new HttpClient
+        _httpClient = new HttpClient(new DiagnosticHttpHandler("7tv"))
         {
             BaseAddress = new Uri(BaseUrl),
             Timeout = TimeSpan.FromSeconds(10)

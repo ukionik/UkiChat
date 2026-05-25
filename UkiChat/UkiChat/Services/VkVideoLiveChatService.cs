@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using UkiChat.Configuration;
+using UkiChat.Diagnostics;
 using UkiChat.Entities;
 using UkiChat.Model.Chat;
 using UkiChat.Model.VkVideoLive;
@@ -65,7 +66,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
         _chatClient.Connected += async (_, _) =>
         {
-            Console.WriteLine("[VkVideoLive] Connected");
+            StartupDiagnostics.Log("vk-chat", "Connected");
             await SendChatMessageNotification(string.Format(
                 localizationService.GetString("vkvideolive.connectedToChannel"),
                 _channelName));
@@ -73,7 +74,7 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
 
         _chatClient.Disconnected += async (_, e) =>
         {
-            Console.WriteLine($"[VkVideoLive] Disconnected: {e.Reason}");
+            StartupDiagnostics.Log("vk-chat", $"Disconnected: reason={e.Reason} channel={e.ChannelName}");
             await SendChatMessageNotification(
                 string.Format(localizationService.GetString("vkvideolive.disconnectedFromChannel"), e.ChannelName));
 
@@ -81,24 +82,25 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
                 StartReconnectLoop();
         };
 
-        _chatClient.Error += (_, e) => { Console.WriteLine($"[VkVideoLive] Error: {e.Message}"); };
+        _chatClient.Error += (_, e) => { StartupDiagnostics.LogError("vk-chat", $"Error: {e.Message}"); };
     }
 
     public async Task ConnectAsync(VkVideoLiveConnectionParams connectionParams)
     {
+        using var _ = StartupDiagnostics.Measure("vk-chat", $"ConnectAsync(channel={connectionParams.ChannelName})");
         if (string.IsNullOrEmpty(connectionParams.ChannelName))
         {
-            Console.WriteLine("[VkVideoLive] Channel not configured");
+            StartupDiagnostics.Log("vk-chat", "Channel not configured, aborting connect");
             return;
         }
 
         if (connectionParams.ChannelId == 0 || string.IsNullOrEmpty(connectionParams.WsAccessToken))
         {
-            Console.WriteLine("[VkVideoLive] Connection params not configured");
+            StartupDiagnostics.Log("vk-chat",
+                $"Connection params not configured: channelId={connectionParams.ChannelId} hasToken={!string.IsNullOrEmpty(connectionParams.WsAccessToken)}");
             return;
         }
 
-        // Отменяем текущий цикл переподключения перед новым подключением
         CancelReconnectLoop();
 
         try
@@ -108,13 +110,15 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
             await SendChatMessageNotification(string.Format(
                 _localizationService.GetString("vkvideolive.connectingToChannel"), connectionParams.ChannelName));
 
-            await _chatClient.ConnectAsync(connectionParams.WsAccessToken, connectionParams.ChannelId, connectionParams.ChannelName);
-            // Сбрасываем флаг только после успешного подключения, чтобы Disconnected от старого соединения не запустил цикл переподключения
+            using (StartupDiagnostics.Measure("vk-chat", "  _chatClient.ConnectAsync (WebSocket/Centrifuge)"))
+            {
+                await _chatClient.ConnectAsync(connectionParams.WsAccessToken, connectionParams.ChannelId, connectionParams.ChannelName);
+            }
             _intentionalDisconnect = false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[VkVideoLive] Connection error: {ex.Message}");
+            StartupDiagnostics.LogError("vk-chat", $"Connection error: {ex.Message}", ex);
             await SendChatMessageNotification(string.Format(
                 _localizationService.GetString("vkvideolive.connectingToChannelError"),
                 connectionParams.ChannelName));

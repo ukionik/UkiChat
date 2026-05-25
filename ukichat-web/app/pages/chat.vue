@@ -32,18 +32,27 @@ async function getActiveAppSettingsInfo() {
 }
 
 onMounted(async () => {
-  let connection = await startSignalR()
-  appSettingsInfo.value = await getActiveAppSettingsInfo()
-  await getLanguage(appSettingsInfo.value.language, connection)
+  console.log('[chat.vue] onMounted: BEGIN')
+  const tMount = performance.now()
+  try {
+    let connection = await startSignalR()
+    console.log(`[chat.vue] startSignalR done (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
-  const scaleSettings = await invokeGet('GetScaleSettings')
-  overlayScale.value = scaleSettings.overlayScale
+    appSettingsInfo.value = await getActiveAppSettingsInfo()
+    console.log(`[chat.vue] getActiveAppSettingsInfo done (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
-  const themeSettings = await invokeGet('GetThemeSettings')
-  overlayTheme.value = themeSettings.overlayTheme
+    await getLanguage(appSettingsInfo.value.language, connection)
+    console.log(`[chat.vue] getLanguage done (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
-  const messageHideSettings = await invokeGet('GetMessageHideSettings')
-  overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
+    const scaleSettings = await invokeGet('GetScaleSettings')
+    overlayScale.value = scaleSettings.overlayScale
+
+    const themeSettings = await invokeGet('GetThemeSettings')
+    overlayTheme.value = themeSettings.overlayTheme
+
+    const messageHideSettings = await invokeGet('GetMessageHideSettings')
+    overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
+    console.log(`[chat.vue] all settings loaded (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
   connection.on("OnThemeSettingsChanged", (_main: string, overlay: string) => {
     overlayTheme.value = overlay as 'default' | 'box'
@@ -76,6 +85,11 @@ onMounted(async () => {
       .filter(m => m.displayName.toLowerCase() === username.toLowerCase() && m.messageType !== 'Deleted')
       .forEach(m => m.messageType = 'Deleted')
   })
+
+    console.log(`[chat.vue] onMounted: END (+${(performance.now() - tMount).toFixed(0)}ms)`)
+  } catch (err) {
+    console.error(`[chat.vue] onMounted FAILED (+${(performance.now() - tMount).toFixed(0)}ms)`, err)
+  }
 })
 </script>
 

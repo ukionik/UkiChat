@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetChannelChatBadges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetGlobalChatBadges;
+using UkiChat.Diagnostics;
 
 namespace UkiChat.Services;
 
@@ -14,6 +16,7 @@ public class TwitchApiService : ITwitchApiService
 
     public Task InitializeAsync(string clientId, string accessToken)
     {
+        StartupDiagnostics.Log("twitch-api", "InitializeAsync");
         _api = new TwitchAPI
         {
             Settings =
@@ -26,68 +29,103 @@ public class TwitchApiService : ITwitchApiService
         return Task.CompletedTask;
     }
 
-    public async Task<bool> ValidateAccessTokenAsync()
+    public Task<bool> ValidateAccessTokenAsync()
     {
-        EnsureInitialized();
-        var result = await _api!.Auth.ValidateAccessTokenAsync();
-        return result != null;
+        return MeasureAsync("ValidateAccessTokenAsync", async () =>
+        {
+            EnsureInitialized();
+            var result = await _api!.Auth.ValidateAccessTokenAsync();
+            return result != null;
+        });
     }
 
-    public async Task<GetGlobalChatBadgesResponse> GetGlobalChatBadgesAsync()
+    public Task<GetGlobalChatBadgesResponse> GetGlobalChatBadgesAsync()
     {
-        EnsureInitialized();
-        return await _api!.Helix.Chat.GetGlobalChatBadgesAsync();
+        return MeasureAsync("GetGlobalChatBadgesAsync", () =>
+        {
+            EnsureInitialized();
+            return _api!.Helix.Chat.GetGlobalChatBadgesAsync();
+        });
     }
 
-    public async Task<GetChannelChatBadgesResponse> GetChannelChatBadgesAsync(string broadcasterId)
+    public Task<GetChannelChatBadgesResponse> GetChannelChatBadgesAsync(string broadcasterId)
     {
-        EnsureInitialized();
-        return await _api!.Helix.Chat.GetChannelChatBadgesAsync(broadcasterId);
+        return MeasureAsync($"GetChannelChatBadgesAsync({broadcasterId})", () =>
+        {
+            EnsureInitialized();
+            return _api!.Helix.Chat.GetChannelChatBadgesAsync(broadcasterId);
+        });
     }
 
-    public async Task<RefreshResponse> RefreshAccessTokenAsync(string refreshToken, string clientId, string clientSecret)
+    public Task<RefreshResponse> RefreshAccessTokenAsync(string refreshToken, string clientId, string clientSecret)
     {
-        EnsureInitialized();
-        var response = await _api!.Auth.RefreshAuthTokenAsync(refreshToken, clientSecret, clientId);
-
-        // Обновляем AccessToken в текущем экземпляре API
-        _api.Settings.AccessToken = response.AccessToken;
-
-        return response;
+        return MeasureAsync("RefreshAccessTokenAsync", async () =>
+        {
+            EnsureInitialized();
+            var response = await _api!.Auth.RefreshAuthTokenAsync(refreshToken, clientSecret, clientId);
+            _api.Settings.AccessToken = response.AccessToken;
+            return response;
+        });
     }
 
-    public async Task<string> GetBroadcasterIdAsync(string channelName)
+    public Task<string> GetBroadcasterIdAsync(string channelName)
     {
-        EnsureInitialized();
-
-        var users = await _api!.Helix.Users.GetUsersAsync(logins: [channelName.ToLower()]);
-        return users.Users.Length > 0 ? users.Users[0].Id : "";
+        return MeasureAsync($"GetBroadcasterIdAsync({channelName})", async () =>
+        {
+            EnsureInitialized();
+            var users = await _api!.Helix.Users.GetUsersAsync(logins: [channelName.ToLower()]);
+            return users.Users.Length > 0 ? users.Users[0].Id : "";
+        });
     }
 
-    public async Task<RefreshResponse?> EnsureValidTokenAsync(string refreshToken, string clientId, string clientSecret)
+    public Task<RefreshResponse?> EnsureValidTokenAsync(string refreshToken, string clientId, string clientSecret)
     {
-        EnsureInitialized();
-
-        var validationResult = await _api!.Auth.ValidateAccessTokenAsync();
-
-        // Токен валиден - обновление не требуется
-        if (validationResult != null)
-            return null;
-
-        // Токен невалиден - обновляем
-        return await RefreshAccessTokenAsync(refreshToken, clientId, clientSecret);
+        return MeasureAsync("EnsureValidTokenAsync", async () =>
+        {
+            EnsureInitialized();
+            var validationResult = await _api!.Auth.ValidateAccessTokenAsync();
+            if (validationResult != null)
+            {
+                StartupDiagnostics.Log("twitch-api", "  token still valid");
+                return (RefreshResponse?)null;
+            }
+            StartupDiagnostics.Log("twitch-api", "  token invalid, refreshing...");
+            return await RefreshAccessTokenAsync(refreshToken, clientId, clientSecret);
+        });
     }
 
-    public async Task<int?> GetViewerCountAsync(string channel)
+    public Task<int?> GetViewerCountAsync(string channel)
     {
-        EnsureInitialized();
-        var response = await _api!.Helix.Streams.GetStreamsAsync(userLogins: [channel]);
-        return response.Streams.Length > 0 ? response.Streams[0].ViewerCount : null;
+        return MeasureAsync($"GetViewerCountAsync({channel})", async () =>
+        {
+            EnsureInitialized();
+            var response = await _api!.Helix.Streams.GetStreamsAsync(userLogins: [channel]);
+            return response.Streams.Length > 0 ? (int?)response.Streams[0].ViewerCount : null;
+        });
     }
 
     private void EnsureInitialized()
     {
         if (!_isInitialized)
             throw new InvalidOperationException("TwitchApiService not initialized. Call InitializeAsync first.");
+    }
+
+    private static async Task<T> MeasureAsync<T>(string operation, Func<Task<T>> action)
+    {
+        var sw = Stopwatch.StartNew();
+        StartupDiagnostics.Log("twitch-api", $"-> {operation}");
+        try
+        {
+            var result = await action();
+            sw.Stop();
+            StartupDiagnostics.Log("twitch-api", $"<- {operation} took={sw.ElapsedMilliseconds} ms");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            StartupDiagnostics.LogError("twitch-api", $"!! {operation} took={sw.ElapsedMilliseconds} ms", ex);
+            throw;
+        }
     }
 }

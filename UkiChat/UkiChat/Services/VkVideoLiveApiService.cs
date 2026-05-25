@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using UkiChat.Diagnostics;
 using UkiChat.Model.VkVideoLive;
 
 namespace UkiChat.Services;
@@ -20,7 +21,7 @@ public class VkVideoLiveApiService : IVkVideoLiveApiService
 
     public VkVideoLiveApiService()
     {
-        _httpClient = new HttpClient
+        _httpClient = new HttpClient(new DiagnosticHttpHandler("vkvl"))
         {
             Timeout = TimeSpan.FromSeconds(10)
         };

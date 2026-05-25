@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using UkiChat.Diagnostics;
 using UkiChat.Model.Ffz;
 
 namespace UkiChat.Services;
@@ -14,7 +15,7 @@ public class FfzApiService : IFfzApiService
 
     public FfzApiService()
     {
-        _httpClient = new HttpClient
+        _httpClient = new HttpClient(new DiagnosticHttpHandler("ffz"))
         {
             BaseAddress = new Uri(BaseUrl),
             Timeout = TimeSpan.FromSeconds(10)
