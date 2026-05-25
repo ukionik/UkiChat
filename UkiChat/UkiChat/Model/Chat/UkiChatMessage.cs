@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using TwitchLib.Client.Models;
 using UkiChat.Model.Twitch;
 using UkiChat.Model.VkVideoLive;
@@ -20,7 +21,8 @@ public record UkiChatMessage(ChatPlatform Platform
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null)
     {
-        var messageParts = ParseMessageParts(twitchMessage.Message, twitchMessage.EmoteSet, thirdPartyEmotes);
+        var message = SanitizeTwitchMessage(twitchMessage.Message);
+        var messageParts = ParseMessageParts(message, twitchMessage.EmoteSet, thirdPartyEmotes);
         var displayNameColor = ColorUtil.GetDisplayNameColor(twitchMessage.DisplayName, twitchMessage.HexColor);
 
         UkiChatReplyInfo? replyTo = null;
@@ -174,6 +176,19 @@ public record UkiChatMessage(ChatPlatform Platform
         }
 
         return parts;
+    }
+
+    // Баг TwitchLib: два IRC-сообщения в одном WebSocket-фрейме иногда склеиваются.
+    // IRC-теги следующего сообщения (@badge-info= / @badges=) попадают в текст предыдущего.
+    private static readonly Regex IrcMessageLeakPattern =
+        new(@"@(?:badge-info|badges)=", RegexOptions.Compiled);
+
+    private static string SanitizeTwitchMessage(string message)
+    {
+        var match = IrcMessageLeakPattern.Match(message);
+        if (!match.Success || match.Index == 0) return message;
+        Console.WriteLine($"[Twitch] Sanitized leaked IRC data from message at index {match.Index}");
+        return message[..match.Index].TrimEnd();
     }
 
     private static List<UkiChatMessagePart> ParseMessageParts(string message, EmoteSet emoteSet, Dictionary<string, string>? thirdPartyEmotes = null)
