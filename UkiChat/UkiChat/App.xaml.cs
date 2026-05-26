@@ -1,4 +1,6 @@
 using System;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -32,6 +34,12 @@ public partial class App
     {
         StartupDiagnostics.Log("app", "App.ctor: BEGIN");
         InstallGlobalExceptionHandlers();
+
+        // Отключаем системный proxy auto-detect (WPAD) для всех HttpClient в процессе.
+        // Без этого на машинах без WPAD-сервера первый исходящий запрос висит ~21 с
+        // на таймауте WinHTTP — это блокирует и Twitch, и VK, и WebView2-навигацию.
+        HttpClient.DefaultProxy = new WebProxy();
+
         using (StartupDiagnostics.Measure("app", "HttpServerConfiguration.CreateHost"))
         {
             _webHost = HttpServerConfiguration.CreateHost();

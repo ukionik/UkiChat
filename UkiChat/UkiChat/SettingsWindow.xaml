@@ -35,6 +35,6 @@
     </mah:MetroWindow.IconTemplate>
 
     <Grid>
-        <wpf:WebView2 HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
+        <wpf:WebView2 x:Name="WebView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
     </Grid>
 </mah:MetroWindow>

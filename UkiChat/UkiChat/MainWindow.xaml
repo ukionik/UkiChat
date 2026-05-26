@@ -48,7 +48,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <wpf:WebView2 x:Name="WebView" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Source="{Binding WebSource}" />
+        <wpf:WebView2 x:Name="WebView" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
         <StatusBar Grid.Row="1" Background="#2d2c34" Foreground="#CCCCCC" Height="24">
             <StatusBar.ItemsPanel>

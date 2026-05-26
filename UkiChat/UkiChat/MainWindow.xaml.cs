@@ -1,7 +1,9 @@
 using System;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
+using UkiChat.Configuration;
 using UkiChat.Diagnostics;
+using UkiChat.ViewModels;
 
 namespace UkiChat
 {
@@ -43,13 +45,20 @@ namespace UkiChat
             {
                 StartupDiagnostics.Log("webview2", "EnsureCoreWebView2Async: BEGIN");
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                await WebView.EnsureCoreWebView2Async();
+                var env = await WebView2EnvironmentHelper.GetEnvironmentAsync();
+                await WebView.EnsureCoreWebView2Async(env);
                 sw.Stop();
                 StartupDiagnostics.Log("webview2", $"EnsureCoreWebView2Async: END took={sw.ElapsedMilliseconds} ms");
 
-                var env = WebView.CoreWebView2.Environment;
                 StartupDiagnostics.Log("webview2",
                     $"Runtime version: {env.BrowserVersionString}; UserDataFolder: {env.UserDataFolder}");
+
+                // Source ставим вручную после Ensure, чтобы XAML-биндинг не успел
+                // инициализировать WebView2 с дефолтным Environment
+                if (DataContext is MainWindowViewModel vm && !string.IsNullOrEmpty(vm.WebSource))
+                {
+                    WebView.Source = new Uri(vm.WebSource);
+                }
             }
             catch (Exception ex)
             {
