@@ -27,6 +27,7 @@
                  WindowTransitionsEnabled="False"
                  ShowIconOnTitleBar="True"
                  TitleCharacterCasing="Normal"
+                 Topmost="{Binding IsTopMost}"
                  >
     <mah:MetroWindow.IconTemplate>
         <DataTemplate>
@@ -36,6 +37,20 @@
 
     <mah:MetroWindow.RightWindowCommands>
         <mah:WindowCommands>
+            <Button Command="{Binding ToggleTopMostCommand}" ToolTip="Поверх окон">
+                <iconPacks:PackIconMaterial Width="14" Height="14">
+                    <iconPacks:PackIconMaterial.Style>
+                        <Style TargetType="iconPacks:PackIconMaterial">
+                            <Setter Property="Kind" Value="PinOff" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.IsTopMost, RelativeSource={RelativeSource AncestorType=mah:MetroWindow}}" Value="True">
+                                    <Setter Property="Kind" Value="Pin" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </iconPacks:PackIconMaterial.Style>
+                </iconPacks:PackIconMaterial>
+            </Button>
             <Button Command="{Binding OpenSettingsWindowCommand}" ToolTip="Settings">
                 <iconPacks:PackIconMaterial Kind="Cog" Width="14" Height="14" />
             </Button>

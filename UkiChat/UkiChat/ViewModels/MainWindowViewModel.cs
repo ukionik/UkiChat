@@ -34,6 +34,7 @@ public class MainWindowViewModel : BindableBase
         _localizationService = localizationService;
         OpenProfileWindowCommand = new DelegateCommand(OpenProfileWindow);
         OpenSettingsWindowCommand = new DelegateCommand(OnOpenSettingsWindow);
+        ToggleTopMostCommand = new DelegateCommand(() => IsTopMost = !IsTopMost);
         WebSource = $"http://localhost:5000?ts={DateTime.Now.Ticks}";
 
         eventAggregator.GetEvent<TwitchViewerCountUpdatedEvent>()
@@ -65,8 +66,16 @@ public class MainWindowViewModel : BindableBase
 
     public DelegateCommand OpenProfileWindowCommand { get; }
     public DelegateCommand OpenSettingsWindowCommand { get; }
+    public DelegateCommand ToggleTopMostCommand { get; }
 
     public string AppVersion { get; } = BuildAppVersion();
+
+    private bool _isTopMost;
+    public bool IsTopMost
+    {
+        get => _isTopMost;
+        set => SetProperty(ref _isTopMost, value);
+    }
 
     public string WebSource
     {
