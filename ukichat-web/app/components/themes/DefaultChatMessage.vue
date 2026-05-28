@@ -96,7 +96,7 @@ const emoteStyle = computed(() => ({
     <div>
       <img :style="iconStyle" :alt="message.platform" :src="getPlatformImage(message.platform)">
       <img :style="iconStyle" v-for="badge in message.badges" :key="badge" :src="badge" alt="badge">
-      <span v-if="message.messageType !== 'Notification'" class="font-bold align-middle"
+      <span class="font-bold align-middle"
             :style="{ marginRight: marginRight, color: message.displayNameColor }">{{ message.displayName }}:</span>
       <span class="inline">
         <template v-if="message.messageType === 'Deleted'">

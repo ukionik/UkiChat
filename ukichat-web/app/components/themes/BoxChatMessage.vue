@@ -105,7 +105,6 @@ const boxStyle = computed(() => {
         :style="{ height: iconSize, display: 'block', flexShrink: '0' }"
       >
       <span
-        v-if="message.messageType !== 'Notification'"
         class="font-bold leading-none"
         :style="{ color: message.displayNameColor, fontSize: nameFontSize }"
       >{{ message.displayName }}</span>
