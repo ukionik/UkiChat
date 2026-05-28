@@ -47,11 +47,13 @@ watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }
       <MenuTabSettingsItem
         :title="t('settings.twitch.name')"
         :active="activeSub === 'twitch'"
+        icon="/images/twitch.svg"
         @click="activeSub = 'twitch'"
       />
       <MenuTabSettingsItem
         :title="t('settings.vkVideoLive.name')"
         :active="activeSub === 'vkVideoLive'"
+        icon="/images/vk-video-live.svg"
         @click="activeSub = 'vkVideoLive'"
       />
     </div>
