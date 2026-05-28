@@ -31,7 +31,13 @@
       "title": "Платформы"
     },
     "twitch": {
-      "name": "Twitch"
+      "name": "Twitch",
+      "authTitle": "Авторизация",
+      "authHint": "Войдите через Twitch, чтобы отображались названия наград за баллы (только для вашего канала).",
+      "authorize": "Войти через Twitch",
+      "logout": "Выйти",
+      "authorizedAs": "Авторизован как {login}",
+      "notAuthorized": "Не авторизован"
     },
     "vkVideoLive": {
       "name": "VK Видео Live"

@@ -117,6 +117,35 @@ public class TwitchApiService : ITwitchApiService
         });
     }
 
+    public Task<AuthCodeResponse> ExchangeCodeForTokensAsync(string code, string clientId, string clientSecret, string redirectUri)
+    {
+        return MeasureAsync("ExchangeCodeForTokensAsync", () =>
+        {
+            EnsureInitialized();
+            return _api!.Auth.GetAccessTokenFromCodeAsync(code, clientSecret, redirectUri, clientId);
+        });
+    }
+
+    public Task<ValidateAccessTokenResponse?> GetTokenInfoAsync(string accessToken)
+    {
+        return MeasureAsync("GetTokenInfoAsync", async () =>
+        {
+            EnsureInitialized();
+            return (ValidateAccessTokenResponse?)await _api!.Auth.ValidateAccessTokenAsync(accessToken);
+        });
+    }
+
+    public Task<RefreshResponse> RefreshTokenAsync(string refreshToken, string clientId, string clientSecret)
+    {
+        return MeasureAsync("RefreshTokenAsync", () =>
+        {
+            EnsureInitialized();
+            // В отличие от RefreshAccessTokenAsync — НЕ перезаписываем _api.Settings.AccessToken,
+            // чтобы токен приложения (для бейджей/зрителей) не подменялся пользовательским.
+            return _api!.Auth.RefreshAuthTokenAsync(refreshToken, clientSecret, clientId);
+        });
+    }
+
     private void EnsureInitialized()
     {
         if (!_isInitialized)

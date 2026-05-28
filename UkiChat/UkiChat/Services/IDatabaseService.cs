@@ -12,6 +12,9 @@ public interface IDatabaseService
     MessageHideSettingsData GetMessageHideSettings();
     void UpdateTwitchSettings(TwitchSettingsData data);
     void UpdateTwitchApiTokens(string accessToken, string refreshToken);
+    void UpdateTwitchUserTokens(string accessToken, string refreshToken, string userId, string login);
+    void ClearTwitchUserAuth();
+    TwitchAuthStatusData GetTwitchAuthStatus();
     void UpdateVkVideoLiveSettings(VkVideoLiveSettingsData data);
     void UpdateVkVideoLiveTokens(string apiAccessToken, string wsAccessToken);
     void UpdateScaleSettings(ScaleSettingsData data);

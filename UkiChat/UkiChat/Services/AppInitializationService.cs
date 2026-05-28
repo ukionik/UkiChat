@@ -77,8 +77,43 @@ public class AppInitializationService(
 
         await twitchApiService.InitializeAsync(twitchSettings.ApiClientId, twitchSettings.ApiAccessToken ?? "");
 
-        // Проверяем валидность токена и обновляем при необходимости
+        // Проверяем валидность токена приложения и обновляем при необходимости
         await RefreshTwitchApiTokensAsync(twitchSettings);
+
+        // Обновляем токен авторизованного пользователя (если есть)
+        await RefreshTwitchUserTokenAsync(twitchSettings);
+    }
+
+    private async Task RefreshTwitchUserTokenAsync(TwitchSettings twitchSettings)
+    {
+        if (string.IsNullOrEmpty(twitchSettings.UserAccessToken) ||
+            string.IsNullOrEmpty(twitchSettings.UserRefreshToken) ||
+            string.IsNullOrEmpty(twitchSettings.ApiClientId) ||
+            string.IsNullOrEmpty(twitchSettings.ApiClientSecret))
+            return;
+
+        // Токен ещё валиден — ничего не делаем
+        var tokenInfo = await twitchApiService.GetTokenInfoAsync(twitchSettings.UserAccessToken);
+        if (tokenInfo != null)
+        {
+            StartupDiagnostics.Log("app-init", "[Twitch] User access token is valid");
+            return;
+        }
+
+        try
+        {
+            var refreshed = await twitchApiService.RefreshTokenAsync(
+                twitchSettings.UserRefreshToken, twitchSettings.ApiClientId, twitchSettings.ApiClientSecret);
+            databaseService.UpdateTwitchUserTokens(
+                refreshed.AccessToken, refreshed.RefreshToken,
+                twitchSettings.UserId ?? "", twitchSettings.UserLogin ?? "");
+            StartupDiagnostics.Log("app-init", "[Twitch] User access token refreshed");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogError("app-init", "[Twitch] User token refresh failed, clearing auth", ex);
+            databaseService.ClearTwitchUserAuth();
+        }
     }
 
     private async Task RefreshTwitchApiTokensAsync(TwitchSettings twitchSettings)

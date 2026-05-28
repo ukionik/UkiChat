@@ -19,6 +19,7 @@ public class AppHub : Hub
     private readonly ITwitchChatService _twitchChatService = ContainerLocator.Container.Resolve<ITwitchChatService>();
     private readonly IVkVideoLiveChatService _vkVideoLiveChatService = ContainerLocator.Container.Resolve<IVkVideoLiveChatService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
+    private readonly ITwitchAuthService _twitchAuthService = ContainerLocator.Container.Resolve<ITwitchAuthService>();
 
     public override Task OnConnectedAsync()
     {
@@ -65,6 +66,29 @@ public class AppHub : Hub
             }
             return Task.CompletedTask;
         });
+    }
+
+    /// <summary>Открывает системный браузер на странице авторизации Twitch.</summary>
+    public Task StartTwitchAuth()
+    {
+        return Measure(nameof(StartTwitchAuth), () =>
+        {
+            var url = _twitchAuthService.BuildAuthorizeUrl();
+            if (!string.IsNullOrEmpty(url))
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            return Task.CompletedTask;
+        });
+    }
+
+    public Task<TwitchAuthStatusData> GetTwitchAuthStatus()
+    {
+        return MeasureResult(nameof(GetTwitchAuthStatus),
+            () => Task.FromResult(_twitchAuthService.GetStatus()));
+    }
+
+    public Task LogoutTwitch()
+    {
+        return Measure(nameof(LogoutTwitch), () => _twitchAuthService.LogoutAsync());
     }
 
     public async Task<string> GetLanguage(string language)

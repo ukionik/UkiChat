@@ -40,4 +40,20 @@ public interface ITwitchApiService
     /// Требует токен с scope channel:read:redemptions.
     /// </summary>
     Task<Dictionary<string, string>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken);
+
+    /// <summary>
+    /// Обменивает authorization code на access/refresh токены пользователя.
+    /// </summary>
+    Task<AuthCodeResponse> ExchangeCodeForTokensAsync(string code, string clientId, string clientSecret, string redirectUri);
+
+    /// <summary>
+    /// Возвращает информацию о токене (userId, login, scopes) или null если токен невалиден.
+    /// </summary>
+    Task<ValidateAccessTokenResponse?> GetTokenInfoAsync(string accessToken);
+
+    /// <summary>
+    /// Обновляет токен по refresh-токену, НЕ меняя сохранённый в TwitchAPI токен приложения.
+    /// Используется для токенов авторизованного пользователя.
+    /// </summary>
+    Task<RefreshResponse> RefreshTokenAsync(string refreshToken, string clientId, string clientSecret);
 }

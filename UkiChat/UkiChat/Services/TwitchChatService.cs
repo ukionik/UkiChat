@@ -531,24 +531,32 @@ public class TwitchChatService : ITwitchChatService
         }
     }
 
+    public async Task ReloadCustomRewardsAsync()
+    {
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        await LoadCustomRewardsAsync(twitchSettings);
+    }
+
     private async Task LoadCustomRewardsAsync(TwitchSettings twitchSettings)
     {
-        if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId) ||
-            string.IsNullOrEmpty(twitchSettings.ApiAccessToken))
+        // Награды можно прочитать только для собственного канала авторизованного пользователя:
+        // Twitch требует, чтобы broadcaster_id совпадал с user_id токена.
+        if (string.IsNullOrEmpty(twitchSettings.UserId) ||
+            string.IsNullOrEmpty(twitchSettings.UserAccessToken))
             return;
 
         try
         {
             var rewards = await _twitchApiService.GetCustomRewardsAsync(
-                twitchSettings.ApiBroadcasterId, twitchSettings.ApiAccessToken);
-            _channelPointsRewardsRepository.SetRewards(twitchSettings.ApiBroadcasterId, rewards);
-            _logger.LogInformation("Загружено {Count} кастомных наград канала {Channel}",
-                rewards.Count, twitchSettings.Channel);
+                twitchSettings.UserId, twitchSettings.UserAccessToken);
+            _channelPointsRewardsRepository.SetRewards(twitchSettings.UserId, rewards);
+            _logger.LogInformation("Загружено {Count} кастомных наград пользователя {Login}",
+                rewards.Count, twitchSettings.UserLogin);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Не удалось загрузить кастомные награды канала {Channel} (нет scope channel:read:redemptions?)",
-                twitchSettings.Channel);
+            _logger.LogWarning(ex, "Не удалось загрузить кастомные награды пользователя {Login}",
+                twitchSettings.UserLogin);
         }
     }
 
@@ -557,6 +565,8 @@ public class TwitchChatService : ITwitchChatService
         if (chatMessage.IsHighlighted)
             return "Highlight My Message";
 
+        // Названия наград известны только для собственного канала пользователя —
+        // _broadcasterId (текущий просматриваемый канал) совпадёт с UserId лишь на своём канале.
         if (!string.IsNullOrEmpty(chatMessage.CustomRewardId))
             return _channelPointsRewardsRepository.GetRewardTitle(_broadcasterId, chatMessage.CustomRewardId);
 

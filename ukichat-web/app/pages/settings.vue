@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HubConnection } from '@microsoft/signalr'
+import type { TwitchAuthStatus } from '~/types/TwitchAuth'
 import { useSignalR } from '~/composables/useSignalR'
 import MenuSettingsItem from '~/components/MenuSettingsItem.vue'
 import GeneralSettings from '~/components/settings/GeneralSettings.vue'
@@ -40,12 +41,22 @@ const state = reactive({
   }
 })
 
+const twitchAuth = ref<TwitchAuthStatus>({ authorized: false, login: null })
+
 async function changeTwitchChannel(channel: string) {
   await invokeUpdate('ChangeTwitchChannel', channel)
 }
 
 async function changeVkVideoLiveChannel(channel: string) {
   await invokeUpdate('ChangeVkVideoLiveChannel', channel)
+}
+
+async function authorizeTwitch() {
+  await invokeUpdate('StartTwitchAuth')
+}
+
+async function logoutTwitch() {
+  await invokeUpdate('LogoutTwitch')
 }
 
 let scaleSettingsLoaded = false
@@ -89,6 +100,11 @@ onMounted(async () => {
   currentLanguage.value = appSettingsInfo.value.language
   await getLanguage(appSettingsInfo.value.language, connection.value)
   state.settings = await invokeGet('GetActiveAppSettingsData')
+
+  twitchAuth.value = await invokeGet('GetTwitchAuthStatus')
+  connection.value?.on('OnTwitchAuthChanged', (status: TwitchAuthStatus) => {
+    twitchAuth.value = status
+  })
 
   const scaleSettings = await invokeGet('GetScaleSettings')
   mainWindowScale.value = scaleSettings.mainWindowScale
@@ -136,8 +152,11 @@ onMounted(async () => {
           <PlatformSettings
             :twitch-channel="state.settings.twitch.channel"
             :vk-video-live-channel="state.settings.vkVideoLive.channel"
+            :twitch-auth="twitchAuth"
             @save-twitch="changeTwitchChannel"
             @save-vk="changeVkVideoLiveChannel"
+            @authorize-twitch="authorizeTwitch"
+            @logout-twitch="logoutTwitch"
           />
         </MenuSettingsItem>
       </div>

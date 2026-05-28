@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using UkiChat.Hubs;
 using UkiChat.Model.Chat;
+using UkiChat.Model.Settings;
 
 namespace UkiChat.Services;
 
@@ -30,5 +31,10 @@ public class SignalRService(IHubContext<AppHub> hubContext) : ISignalRService
     public async Task SendVkVideoLiveReconnect()
     {
         await hubContext.Clients.All.SendAsync("OnVkVideoLiveReconnect");
+    }
+
+    public async Task SendTwitchAuthChanged(TwitchAuthStatusData status)
+    {
+        await hubContext.Clients.All.SendAsync("OnTwitchAuthChanged", status);
     }
 }

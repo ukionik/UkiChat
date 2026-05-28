@@ -31,7 +31,13 @@
       "title": "Platforms"
     },
     "twitch": {
-      "name": "Twitch"
+      "name": "Twitch",
+      "authTitle": "Authorization",
+      "authHint": "Sign in with Twitch to show channel points reward names (your own channel only).",
+      "authorize": "Sign in with Twitch",
+      "logout": "Sign out",
+      "authorizedAs": "Authorized as {login}",
+      "notAuthorized": "Not authorized"
     },
     "vkVideoLive": {
       "name": "VK Video Live"

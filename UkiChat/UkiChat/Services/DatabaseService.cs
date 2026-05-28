@@ -51,6 +51,33 @@ public class DatabaseService : IDatabaseService
         _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
     }
 
+    public void UpdateTwitchUserTokens(string accessToken, string refreshToken, string userId, string login)
+    {
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        twitchSettings.UserAccessToken = accessToken;
+        twitchSettings.UserRefreshToken = refreshToken;
+        twitchSettings.UserId = userId;
+        twitchSettings.UserLogin = login;
+        _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
+    }
+
+    public void ClearTwitchUserAuth()
+    {
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        twitchSettings.UserAccessToken = null;
+        twitchSettings.UserRefreshToken = null;
+        twitchSettings.UserId = null;
+        twitchSettings.UserLogin = null;
+        _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
+    }
+
+    public TwitchAuthStatusData GetTwitchAuthStatus()
+    {
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        var authorized = !string.IsNullOrEmpty(twitchSettings.UserAccessToken);
+        return new TwitchAuthStatusData(authorized, twitchSettings.UserLogin);
+    }
+
     public void UpdateVkVideoLiveSettings(VkVideoLiveSettingsData data)
     {
         var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
