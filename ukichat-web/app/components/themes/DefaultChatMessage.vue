@@ -73,7 +73,7 @@ const emoteStyle = computed(() => ({
 </script>
 
 <template>
-  <div class="chat-message"
+  <div class="chat-message break-words"
        :style="getMessageStyle()"
        :class="[getMessageClass(message.messageType), message.messageType === 'Deleted' ? (allowRevealDeleted ? '' : 'opacity-50') : '']"
        @click="toggleRevealDeleted">

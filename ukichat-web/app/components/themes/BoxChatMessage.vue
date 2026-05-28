@@ -101,7 +101,7 @@ const boxStyle = computed(() => {
     </div>
 
     <!-- Текст сообщения -->
-    <div class="leading-snug">
+    <div class="leading-snug break-words">
       <template v-if="message.messageType === 'Deleted'">
         <template v-if="allowRevealDeleted && revealed">
           <template v-for="(part, index) in message.messageParts" :key="index">
