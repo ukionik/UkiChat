@@ -5,9 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
+using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetChannelChatBadges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetGlobalChatBadges;
 using UkiChat.Diagnostics;
+using UkiChat.Model.Twitch;
 
 namespace UkiChat.Services;
 
@@ -106,14 +108,33 @@ public class TwitchApiService : ITwitchApiService
         });
     }
 
-    public Task<Dictionary<string, string>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken)
+    public Task<Dictionary<string, TwitchChannelPointReward>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken)
     {
         return MeasureAsync($"GetCustomRewardsAsync({broadcasterId})", async () =>
         {
             EnsureInitialized();
             var response = await _api!.Helix.ChannelPoints.GetCustomRewardAsync(
                 broadcasterId, accessToken: broadcasterAccessToken);
-            return response.Data.ToDictionary(r => r.Id, r => r.Title);
+            // Только включённые награды
+            return response.Data
+                .Where(r => r.IsEnabled)
+                .ToDictionary(r => r.Id, r => new TwitchChannelPointReward(r.Title, r.Cost));
+        });
+    }
+
+    public Task CreateChannelPointsRedemptionSubscriptionAsync(string broadcasterId, string sessionId, string accessToken)
+    {
+        return MeasureAsync($"CreateChannelPointsRedemptionSubscriptionAsync({broadcasterId})", () =>
+        {
+            EnsureInitialized();
+            var condition = new Dictionary<string, string> { ["broadcaster_user_id"] = broadcasterId };
+            return _api!.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                "channel.channel_points_custom_reward_redemption.add",
+                "1",
+                condition,
+                EventSubTransportMethod.Websocket,
+                websocketSessionId: sessionId,
+                accessToken: accessToken);
         });
     }
 

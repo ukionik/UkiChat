@@ -1,21 +1,22 @@
 using System.Collections.Generic;
+using UkiChat.Model.Twitch;
 
 namespace UkiChat.Repositories.Memory;
 
 public class TwitchChannelPointsRewardsRepository : ITwitchChannelPointsRewardsRepository
 {
-    private readonly Dictionary<string, Dictionary<string, string>> _rewardsByBroadcaster = new();
+    private readonly Dictionary<string, Dictionary<string, TwitchChannelPointReward>> _rewardsByBroadcaster = new();
 
-    public void SetRewards(string broadcasterId, Dictionary<string, string> rewardIdToTitle)
+    public void SetRewards(string broadcasterId, Dictionary<string, TwitchChannelPointReward> rewards)
     {
-        _rewardsByBroadcaster[broadcasterId] = rewardIdToTitle;
+        _rewardsByBroadcaster[broadcasterId] = rewards;
     }
 
-    public string? GetRewardTitle(string broadcasterId, string rewardId)
+    public TwitchChannelPointReward? GetReward(string broadcasterId, string rewardId)
     {
         if (_rewardsByBroadcaster.TryGetValue(broadcasterId, out var rewards) &&
-            rewards.TryGetValue(rewardId, out var title))
-            return title;
+            rewards.TryGetValue(rewardId, out var reward))
+            return reward;
         return null;
     }
 }

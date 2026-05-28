@@ -36,6 +36,7 @@
       <PackageReference Include="Tomlyn" Version="0.19.0" />
       <PackageReference Include="TwitchLib.Api" Version="3.10.2" />
       <PackageReference Include="TwitchLib.Client" Version="4.0.1" />
+      <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.8.0" />
     </ItemGroup>
 
     <ItemGroup>

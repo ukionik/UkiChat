@@ -21,6 +21,7 @@ public class TwitchAuthService : ITwitchAuthService
     private readonly ITwitchApiService _twitchApiService;
     private readonly ISignalRService _signalRService;
     private readonly ITwitchChatService _twitchChatService;
+    private readonly ITwitchEventSubService _twitchEventSubService;
     private readonly ILogger<TwitchAuthService> _logger;
 
     // CSRF-state текущей попытки авторизации.
@@ -32,6 +33,7 @@ public class TwitchAuthService : ITwitchAuthService
         ITwitchApiService twitchApiService,
         ISignalRService signalRService,
         ITwitchChatService twitchChatService,
+        ITwitchEventSubService twitchEventSubService,
         ILogger<TwitchAuthService> logger)
     {
         _databaseContext = databaseContext;
@@ -39,6 +41,7 @@ public class TwitchAuthService : ITwitchAuthService
         _twitchApiService = twitchApiService;
         _signalRService = signalRService;
         _twitchChatService = twitchChatService;
+        _twitchEventSubService = twitchEventSubService;
         _logger = logger;
     }
 
@@ -95,6 +98,7 @@ public class TwitchAuthService : ITwitchAuthService
                 tokenInfo.Login, tokenInfo.UserId);
 
             await _twitchChatService.ReloadCustomRewardsAsync();
+            await _twitchEventSubService.RestartAsync();
             await _signalRService.SendTwitchAuthChanged(GetStatus());
             return true;
         }
@@ -108,6 +112,7 @@ public class TwitchAuthService : ITwitchAuthService
     public async Task LogoutAsync()
     {
         _databaseService.ClearTwitchUserAuth();
+        await _twitchEventSubService.StopAsync();
         _logger.LogInformation("Twitch авторизация сброшена");
         await _signalRService.SendTwitchAuthChanged(GetStatus());
     }

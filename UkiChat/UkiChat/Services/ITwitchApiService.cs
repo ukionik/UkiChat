@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetChannelChatBadges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetGlobalChatBadges;
+using UkiChat.Model.Twitch;
 
 namespace UkiChat.Services;
 
@@ -36,10 +37,15 @@ public interface ITwitchApiService
     Task<int?> GetViewerCountAsync(string channel);
 
     /// <summary>
-    /// Возвращает словарь rewardId → title для всех кастомных наград канала.
+    /// Возвращает словарь rewardId → награда (название + стоимость) для всех ВКЛЮЧЁННЫХ наград канала.
     /// Требует токен с scope channel:read:redemptions.
     /// </summary>
-    Task<Dictionary<string, string>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken);
+    Task<Dictionary<string, TwitchChannelPointReward>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken);
+
+    /// <summary>
+    /// Создаёт EventSub-подписку channel.channel_points_custom_reward_redemption.add через WebSocket-сессию.
+    /// </summary>
+    Task CreateChannelPointsRedemptionSubscriptionAsync(string broadcasterId, string sessionId, string accessToken);
 
     /// <summary>
     /// Обменивает authorization code на access/refresh токены пользователя.

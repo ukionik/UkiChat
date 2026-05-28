@@ -18,9 +18,10 @@ public record UkiChatMessage(ChatPlatform Platform
     , UkiChatReplyInfo? ReplyTo = null
     , UkiChatMessageType MessageType = UkiChatMessageType.Normal
     , string Id = ""
-    , string? RewardTitle = null)
+    , string? RewardTitle = null
+    , int? RewardCost = null)
 {
-    public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null, string? rewardTitle = null)
+    public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null, string? rewardTitle = null, int? rewardCost = null)
     {
         var message = SanitizeTwitchMessage(twitchMessage.Message);
         var messageParts = ParseMessageParts(message, twitchMessage.EmoteSet, thirdPartyEmotes);
@@ -45,7 +46,18 @@ public record UkiChatMessage(ChatPlatform Platform
             messageType = UkiChatMessageType.ChannelPointsRedemption;
         }
 
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id, rewardTitle);
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id, rewardTitle, rewardCost);
+    }
+
+    /// <summary>
+    /// Активация награды без текста (приходит через EventSub, не через IRC).
+    /// </summary>
+    public static UkiChatMessage FromTwitchChannelPointsRedemption(string displayName, string rewardTitle, int rewardCost)
+    {
+        // Цвет ника недоступен в событиях EventSub — используем белый.
+        return new UkiChatMessage(ChatPlatform.Twitch, [], displayName, "#FFFFFF",
+            [], MessageType: UkiChatMessageType.ChannelPointsRedemption,
+            Id: Guid.NewGuid().ToString(), RewardTitle: rewardTitle, RewardCost: rewardCost);
     }
 
     public static UkiChatMessage FromTwitchMessageNotification(string message)

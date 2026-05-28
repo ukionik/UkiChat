@@ -61,6 +61,11 @@ const replyHeaderStyle = computed(() => ({
   marginBottom: `${0.1 * props.scale}rem`,
 }))
 
+const rewardHeaderStyle = computed(() => ({
+  fontSize: `${0.8 * props.scale}rem`,
+  marginBottom: `${0.3 * props.scale}rem`,
+}))
+
 const iconStyle = computed(() => ({
   display: "inline",
   height: `${1.25 * props.scale}rem`,
@@ -78,9 +83,10 @@ const emoteStyle = computed(() => ({
        :style="getMessageStyle()"
        :class="[getMessageClass(message.messageType), message.messageType === 'Deleted' ? (allowRevealDeleted ? '' : 'opacity-50') : '']"
        @click="toggleRevealDeleted">
-    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate" :style="replyHeaderStyle">
-      <span>⭐</span>
+    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate" :style="rewardHeaderStyle">
+      <img src="/images/channel-points.svg" alt="channel points" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-medium">{{ message.rewardTitle }}</span>
+      <span v-if="message.rewardCost != null" class="shrink-0 opacity-75">· {{ message.rewardCost }}</span>
     </div>
     <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate" :style="replyHeaderStyle">
       <span>↩</span>

@@ -20,5 +20,6 @@ export interface ChatMessage {
     messageParts: MessagePart[],
     messageType?: MessageType,
     replyTo?: ReplyInfo,
-    rewardTitle?: string
+    rewardTitle?: string,
+    rewardCost?: number
 }

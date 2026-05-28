@@ -75,10 +75,11 @@ const boxStyle = computed(() => {
     @click="toggleRevealDeleted"
   >
     <!-- Название награды за баллы -->
-    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate mb-0.5"
+    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate mb-1.5"
          :style="{ fontSize: replyFontSize }">
-      <span>⭐</span>
+      <img src="/images/channel-points.svg" alt="channel points" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-medium">{{ message.rewardTitle }}</span>
+      <span v-if="message.rewardCost != null" class="shrink-0 opacity-75">· {{ message.rewardCost }}</span>
     </div>
 
     <!-- Ответ на сообщение -->

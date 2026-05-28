@@ -77,11 +77,11 @@ public class TwitchChatService : ITwitchChatService
         {
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
             var thirdPartyEmotes = GetThirdPartyEmotes();
-            var rewardTitle = ResolveRewardTitle(e.ChatMessage);
+            var (rewardTitle, rewardCost) = ResolveReward(e.ChatMessage);
             _logger.LogDebug("Получено сообщение от {DisplayName}: {Message}",
                 e.ChatMessage.DisplayName, e.ChatMessage.Message);
             await signalRService.SendChatMessageAsync(
-                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes, rewardTitle));
+                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes, rewardTitle, rewardCost));
         };
 
         _twitchClient.OnError += (_, e) =>
@@ -560,17 +560,20 @@ public class TwitchChatService : ITwitchChatService
         }
     }
 
-    private string? ResolveRewardTitle(ChatMessage chatMessage)
+    private (string? Title, int? Cost) ResolveReward(ChatMessage chatMessage)
     {
         if (chatMessage.IsHighlighted)
-            return "Highlight My Message";
+            return ("Highlight My Message", null);
 
         // Названия наград известны только для собственного канала пользователя —
         // _broadcasterId (текущий просматриваемый канал) совпадёт с UserId лишь на своём канале.
         if (!string.IsNullOrEmpty(chatMessage.CustomRewardId))
-            return _channelPointsRewardsRepository.GetRewardTitle(_broadcasterId, chatMessage.CustomRewardId);
+        {
+            var reward = _channelPointsRewardsRepository.GetReward(_broadcasterId, chatMessage.CustomRewardId);
+            return (reward?.Title, reward?.Cost);
+        }
 
-        return null;
+        return (null, null);
     }
 
     private async Task SendChatMessageNotification(string message)

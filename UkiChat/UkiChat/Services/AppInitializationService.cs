@@ -14,6 +14,7 @@ public class AppInitializationService(
     IDatabaseService databaseService,
     ITwitchChatService twitchChatService,
     ITwitchApiService twitchApiService,
+    ITwitchEventSubService twitchEventSubService,
     IVkVideoLiveChatService vkVideoLiveChatService,
     IVkVideoLiveApiService vkVideoLiveApiService
 ) : IAppInitializationService
@@ -58,6 +59,12 @@ public class AppInitializationService(
                 twitchChatService.ConnectAsync(
                     TwitchConnectionParams.OfTwitchSettings("", twitchSettings.Channel ?? "", twitchSettings))
             );
+        }
+
+        // Поднимаем EventSub для наград без текста (если пользователь авторизован)
+        using (StartupDiagnostics.Measure("app-init", "  Twitch EventSub StartAsync"))
+        {
+            await twitchEventSubService.StartAsync();
         }
     }
 
