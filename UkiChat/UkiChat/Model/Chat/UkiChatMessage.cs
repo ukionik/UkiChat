@@ -17,9 +17,10 @@ public record UkiChatMessage(ChatPlatform Platform
     , List<UkiChatMessagePart> MessageParts
     , UkiChatReplyInfo? ReplyTo = null
     , UkiChatMessageType MessageType = UkiChatMessageType.Normal
-    , string Id = "")
+    , string Id = ""
+    , string? RewardTitle = null)
 {
-    public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null)
+    public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null, string? rewardTitle = null)
     {
         var message = SanitizeTwitchMessage(twitchMessage.Message);
         var messageParts = ParseMessageParts(message, twitchMessage.EmoteSet, thirdPartyEmotes);
@@ -39,8 +40,12 @@ public record UkiChatMessage(ChatPlatform Platform
             );
             messageType = UkiChatMessageType.Reply;
         }
+        else if (twitchMessage.IsHighlighted || !string.IsNullOrEmpty(twitchMessage.CustomRewardId))
+        {
+            messageType = UkiChatMessageType.ChannelPointsRedemption;
+        }
 
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id);
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id, rewardTitle);
     }
 
     public static UkiChatMessage FromTwitchMessageNotification(string message)

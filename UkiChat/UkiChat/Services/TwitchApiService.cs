@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
@@ -101,6 +103,17 @@ public class TwitchApiService : ITwitchApiService
             EnsureInitialized();
             var response = await _api!.Helix.Streams.GetStreamsAsync(userLogins: [channel]);
             return response.Streams.Length > 0 ? (int?)response.Streams[0].ViewerCount : null;
+        });
+    }
+
+    public Task<Dictionary<string, string>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken)
+    {
+        return MeasureAsync($"GetCustomRewardsAsync({broadcasterId})", async () =>
+        {
+            EnsureInitialized();
+            var response = await _api!.Helix.ChannelPoints.GetCustomRewardAsync(
+                broadcasterId, accessToken: broadcasterAccessToken);
+            return response.Data.ToDictionary(r => r.Id, r => r.Title);
         });
     }
 

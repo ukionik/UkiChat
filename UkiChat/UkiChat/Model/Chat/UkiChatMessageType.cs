@@ -6,5 +6,6 @@ public enum UkiChatMessageType
     Notification,
     Mention,
     Reply,
-    Deleted
+    Deleted,
+    ChannelPointsRedemption
 }

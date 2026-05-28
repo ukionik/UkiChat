@@ -36,7 +36,7 @@ function getPlatformImage(platform: string) {
 function getMessageStyle() {
   const base: Record<string, string> = { fontSize: `${props.scale}rem` }
   const type = props.message.messageType
-  if (type === 'Notification' || type === 'Mention' || type === 'Reply') {
+  if (type === 'Notification' || type === 'Mention' || type === 'Reply' || type === 'ChannelPointsRedemption') {
     base.paddingLeft = `${0.375 * props.scale}rem`
   }
   return base
@@ -46,6 +46,7 @@ function getMessageClass(messageType: MessageType | undefined) {
   if (messageType === 'Notification') return 'bg-gray-50/10 border-l-[3px] border-gray-50 text-gray-400 rounded-r-sm'
   if (messageType === 'Mention') return 'bg-red-500/10 border-l-[3px] border-red-500 text-red-400 rounded-r-sm'
   if (messageType === 'Reply') return 'border-l-[3px] border-gray-500 rounded-r-sm'
+  if (messageType === 'ChannelPointsRedemption') return 'bg-purple-500/10 border-l-[3px] border-purple-400 rounded-r-sm'
   return ''
 }
 
@@ -77,6 +78,10 @@ const emoteStyle = computed(() => ({
        :style="getMessageStyle()"
        :class="[getMessageClass(message.messageType), message.messageType === 'Deleted' ? (allowRevealDeleted ? '' : 'opacity-50') : '']"
        @click="toggleRevealDeleted">
+    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate" :style="replyHeaderStyle">
+      <span>⭐</span>
+      <span class="truncate font-medium">{{ message.rewardTitle }}</span>
+    </div>
     <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate" :style="replyHeaderStyle">
       <span>↩</span>
       <span class="font-semibold shrink-0">@{{ message.replyTo.displayName }}:</span>

@@ -33,6 +33,7 @@ public class TwitchChatService : ITwitchChatService
     private readonly ILocalizationService _localizationService;
     private readonly ITwitchApiService _twitchApiService;
     private readonly ITwitchBadgesRepository _twitchBadgesRepository;
+    private readonly ITwitchChannelPointsRewardsRepository _channelPointsRewardsRepository;
     private readonly ILogger<TwitchChatService> _logger;
 
     // ReconnectionPolicy(5000): бесконечные попытки, фиксированный интервал 5с.
@@ -48,6 +49,7 @@ public class TwitchChatService : ITwitchChatService
         , ILocalizationService localizationService
         , ISevenTvApiService sevenTvApiService
         , ITwitchBadgesRepository twitchBadgesRepository
+        , ITwitchChannelPointsRewardsRepository channelPointsRewardsRepository
         , ISevenTvEmotesRepository sevenTvEmotesRepository
         , IFfzApiService ffzApiService
         , IFfzEmotesRepository ffzEmotesRepository
@@ -62,6 +64,7 @@ public class TwitchChatService : ITwitchChatService
         _localizationService = localizationService;
         _sevenTvApiService = sevenTvApiService;
         _twitchBadgesRepository = twitchBadgesRepository;
+        _channelPointsRewardsRepository = channelPointsRewardsRepository;
         _sevenTvEmotesRepository = sevenTvEmotesRepository;
         _ffzApiService = ffzApiService;
         _ffzEmotesRepository = ffzEmotesRepository;
@@ -74,10 +77,11 @@ public class TwitchChatService : ITwitchChatService
         {
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
             var thirdPartyEmotes = GetThirdPartyEmotes();
+            var rewardTitle = ResolveRewardTitle(e.ChatMessage);
             _logger.LogDebug("Получено сообщение от {DisplayName}: {Message}",
                 e.ChatMessage.DisplayName, e.ChatMessage.Message);
             await signalRService.SendChatMessageAsync(
-                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes));
+                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes, rewardTitle));
         };
 
         _twitchClient.OnError += (_, e) =>
@@ -285,6 +289,8 @@ public class TwitchChatService : ITwitchChatService
         {
             _logger.LogWarning("Загрузка эмотов канала 7TV/FFZ/BTTV прервана по таймауту (5с)");
         }
+
+        await LoadCustomRewardsAsync(twitchSettings);
     }
 
     private async Task LoadTwitchGlobalBadgesAsync()
@@ -523,6 +529,38 @@ public class TwitchChatService : ITwitchChatService
         {
             _logger.LogError(ex, "Ошибка загрузки эмотов BTTV канала {Channel}", twitchSettings.Channel);
         }
+    }
+
+    private async Task LoadCustomRewardsAsync(TwitchSettings twitchSettings)
+    {
+        if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId) ||
+            string.IsNullOrEmpty(twitchSettings.ApiAccessToken))
+            return;
+
+        try
+        {
+            var rewards = await _twitchApiService.GetCustomRewardsAsync(
+                twitchSettings.ApiBroadcasterId, twitchSettings.ApiAccessToken);
+            _channelPointsRewardsRepository.SetRewards(twitchSettings.ApiBroadcasterId, rewards);
+            _logger.LogInformation("Загружено {Count} кастомных наград канала {Channel}",
+                rewards.Count, twitchSettings.Channel);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось загрузить кастомные награды канала {Channel} (нет scope channel:read:redemptions?)",
+                twitchSettings.Channel);
+        }
+    }
+
+    private string? ResolveRewardTitle(ChatMessage chatMessage)
+    {
+        if (chatMessage.IsHighlighted)
+            return "Highlight My Message";
+
+        if (!string.IsNullOrEmpty(chatMessage.CustomRewardId))
+            return _channelPointsRewardsRepository.GetRewardTitle(_broadcasterId, chatMessage.CustomRewardId);
+
+        return null;
     }
 
     private async Task SendChatMessageNotification(string message)

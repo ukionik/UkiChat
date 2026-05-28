@@ -60,6 +60,9 @@ const boxStyle = computed(() => {
   if (type === 'Notification') {
     return { ...base, background: 'linear-gradient(rgba(60, 60, 60, 0.6), rgba(40, 40, 40, 0.7))' }
   }
+  if (type === 'ChannelPointsRedemption') {
+    return { ...base, background: 'linear-gradient(rgba(100, 40, 140, 0.6), rgba(70, 20, 110, 0.7))' }
+  }
   return { ...base, background: 'linear-gradient(rgba(70, 70, 70, 0.6), rgba(50, 50, 50, 0.7))' }
 })
 </script>
@@ -71,6 +74,13 @@ const boxStyle = computed(() => {
     :style="boxStyle"
     @click="toggleRevealDeleted"
   >
+    <!-- Название награды за баллы -->
+    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate mb-0.5"
+         :style="{ fontSize: replyFontSize }">
+      <span>⭐</span>
+      <span class="truncate font-medium">{{ message.rewardTitle }}</span>
+    </div>
+
     <!-- Ответ на сообщение -->
     <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate mb-0.5"
          :style="{ fontSize: replyFontSize }">

@@ -9,7 +9,7 @@ export interface ReplyInfo {
     messageParts: MessagePart[]
 }
 
-export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply' | 'Deleted'
+export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply' | 'Deleted' | 'ChannelPointsRedemption'
 
 export interface ChatMessage {
     id?: string,
@@ -19,5 +19,6 @@ export interface ChatMessage {
     displayNameColor: string,
     messageParts: MessagePart[],
     messageType?: MessageType,
-    replyTo?: ReplyInfo
+    replyTo?: ReplyInfo,
+    rewardTitle?: string
 }

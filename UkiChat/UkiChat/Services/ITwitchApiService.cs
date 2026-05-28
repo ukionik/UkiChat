@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetChannelChatBadges;
@@ -33,4 +34,10 @@ public interface ITwitchApiService
     /// Возвращает количество зрителей канала, или null если стрим оффлайн.
     /// </summary>
     Task<int?> GetViewerCountAsync(string channel);
+
+    /// <summary>
+    /// Возвращает словарь rewardId → title для всех кастомных наград канала.
+    /// Требует токен с scope channel:read:redemptions.
+    /// </summary>
+    Task<Dictionary<string, string>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken);
 }
