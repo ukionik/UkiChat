@@ -5,6 +5,7 @@ const { t } = useI18n()
 const { mainWindowScale, overlayScale } = useScaleSettings()
 const { mainWindowTheme, overlayTheme } = useThemeSettings()
 const { mainWindowMessageHideDelay, overlayMessageHideDelay } = useMessageHideSettings()
+const { overlayHideClippedMessages } = useClipSettings()
 
 function hideDelayLabel(val: number) {
   return val === 0
@@ -77,6 +78,12 @@ const activeSub = ref('mainWindow')
           </label>
           <USlider v-model="overlayMessageHideDelay" :min="0" :max="180" :step="1" class="flex-1" />
           <span class="text-sm text-gray-400 w-16 text-right">{{ hideDelayLabel(overlayMessageHideDelay) }}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="w-44 text-sm text-gray-400 shrink-0">
+            {{ t('settings.appearance.hideClippedMessages') }}
+          </label>
+          <USwitch v-model="overlayHideClippedMessages" />
         </div>
       </template>
     </div>

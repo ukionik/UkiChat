@@ -8,6 +8,7 @@ const {getLanguage} = useLocalization()
 const { overlayScale, overlayScaleFactor } = useScaleSettings()
 const { overlayTheme } = useThemeSettings()
 const { overlayMessageHideDelay } = useMessageHideSettings()
+const { overlayHideClippedMessages } = useClipSettings()
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -52,6 +53,9 @@ onMounted(async () => {
 
     const messageHideSettings = await invokeGet('GetMessageHideSettings')
     overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
+
+    const clipSettings = await invokeGet('GetClipSettings')
+    overlayHideClippedMessages.value = clipSettings.overlayHideClippedMessages
     console.log(`[chat.vue] all settings loaded (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
   connection.on("OnThemeSettingsChanged", (_main: string, overlay: string) => {
@@ -75,6 +79,10 @@ onMounted(async () => {
     overlayScale.value = overlay
   })
 
+  connection.on("OnClipSettingsChanged", (overlay: boolean) => {
+    overlayHideClippedMessages.value = overlay
+  })
+
   connection.on("OnMessageDeleted", (messageId: string) => {
     const msg = chatMessages.value.find(m => m.id === messageId)
     if (msg) msg.messageType = 'Deleted'
@@ -94,5 +102,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="overlayScaleFactor" :theme="overlayTheme" :hide-vertical-scrollbar="true" />
+  <ChatContainer :messages="chatMessages" :scale="overlayScaleFactor" :theme="overlayTheme" :hide-vertical-scrollbar="true" :hide-clipped="overlayHideClippedMessages" />
 </template>

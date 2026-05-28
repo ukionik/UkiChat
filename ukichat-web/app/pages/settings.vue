@@ -13,6 +13,7 @@ const { t } = useI18n()
 const { mainWindowScale, overlayScale } = useScaleSettings()
 const { mainWindowTheme, overlayTheme } = useThemeSettings()
 const { mainWindowMessageHideDelay, overlayMessageHideDelay } = useMessageHideSettings()
+const { overlayHideClippedMessages } = useClipSettings()
 
 const appSettingsInfo = ref({ profileName: '', language: 'en' })
 const activeRoot = ref('general')
@@ -94,6 +95,13 @@ watch(overlayMessageHideDelay, (val) => {
   invokeUpdate('BroadcastMessageHideSettings', mainWindowMessageHideDelay.value, val)
 })
 
+let clipSettingsLoaded = false
+
+watch(overlayHideClippedMessages, (val) => {
+  if (!clipSettingsLoaded) return
+  invokeUpdate('BroadcastClipSettings', val)
+})
+
 onMounted(async () => {
   connection.value = await startSignalR()
   appSettingsInfo.value = await invokeGet('GetActiveAppSettingsInfo')
@@ -118,10 +126,14 @@ onMounted(async () => {
   mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
   overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
 
+  const clipSettings = await invokeGet('GetClipSettings')
+  overlayHideClippedMessages.value = clipSettings.overlayHideClippedMessages
+
   await nextTick()
   scaleSettingsLoaded = true
   themeSettingsLoaded = true
   messageHideSettingsLoaded = true
+  clipSettingsLoaded = true
 })
 </script>
 

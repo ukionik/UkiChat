@@ -10,6 +10,7 @@ public interface IDatabaseService
     ScaleSettingsData GetScaleSettings();
     ThemeSettingsData GetThemeSettings();
     MessageHideSettingsData GetMessageHideSettings();
+    ClipSettingsData GetClipSettings();
     void UpdateTwitchSettings(TwitchSettingsData data);
     void UpdateTwitchApiTokens(string accessToken, string refreshToken);
     void UpdateTwitchUserTokens(string accessToken, string refreshToken, string userId, string login);
@@ -20,4 +21,5 @@ public interface IDatabaseService
     void UpdateScaleSettings(ScaleSettingsData data);
     void UpdateThemeSettings(ThemeSettingsData data);
     void UpdateMessageHideSettings(MessageHideSettingsData data);
+    void UpdateClipSettings(ClipSettingsData data);
 }

@@ -198,6 +198,21 @@ public class AppHub : Hub
         });
     }
 
+    public Task<ClipSettingsData> GetClipSettings()
+    {
+        return MeasureResult(nameof(GetClipSettings),
+            () => Task.FromResult(_databaseService.GetClipSettings()));
+    }
+
+    public Task BroadcastClipSettings(bool overlayHideClippedMessages)
+    {
+        return Measure(nameof(BroadcastClipSettings), async () =>
+        {
+            _databaseService.UpdateClipSettings(new ClipSettingsData(overlayHideClippedMessages));
+            await Clients.All.SendAsync("OnClipSettingsChanged", overlayHideClippedMessages);
+        });
+    }
+
     public Task SendChatMessage(UkiChatMessage chatMessage)
     {
         return Measure(nameof(SendChatMessage),

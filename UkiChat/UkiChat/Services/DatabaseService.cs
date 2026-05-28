@@ -143,4 +143,17 @@ public class DatabaseService : IDatabaseService
         appSettings.Appearance.Overlay.MessageHideDelay = data.OverlayMessageHideDelay;
         _databaseContext.AppSettingsRepository.Save(appSettings);
     }
+
+    public ClipSettingsData GetClipSettings()
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        return new ClipSettingsData(appSettings.Appearance.Overlay.HideClippedMessages);
+    }
+
+    public void UpdateClipSettings(ClipSettingsData data)
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        appSettings.Appearance.Overlay.HideClippedMessages = data.OverlayHideClippedMessages;
+        _databaseContext.AppSettingsRepository.Save(appSettings);
+    }
 }

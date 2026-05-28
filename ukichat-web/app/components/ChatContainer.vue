@@ -7,11 +7,13 @@ const props = withDefaults(defineProps<{
   hideVerticalScrollbar?: boolean
   allowRevealDeleted?: boolean
   theme?: 'default' | 'box'
+  hideClipped?: boolean
 }>(), {
   scale: 1,
   hideVerticalScrollbar: false,
   allowRevealDeleted: false,
-  theme: 'default'
+  theme: 'default',
+  hideClipped: false,
 })
 
 const themeComponent = computed(() => {
@@ -45,11 +47,81 @@ const containerClass = computed(() => {
   return props.hideVerticalScrollbar ? 'overflow-y-hidden' : 'overflow-y-auto'
 })
 
+// При hideClipped прячем самые старые сообщения, не помещающиеся целиком,
+// и сбрасываем скролл в 0. Видимый блок крепится к верху, пустое место — снизу.
+function updateClippedVisibility() {
+  const el = chatContainer.value
+  if (!el) return
+  const children = el.children
+  // Сначала возвращаем всем display, чтобы корректно измерить высоту.
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i] as HTMLElement
+    child.style.display = ''
+    child.style.visibility = ''
+  }
+  const containerHeight = el.clientHeight
+  let total = 0
+  let firstVisibleIdx = children.length
+  for (let i = children.length - 1; i >= 0; i--) {
+    const h = (children[i] as HTMLElement).offsetHeight
+    if (total + h > containerHeight) break
+    total += h
+    firstVisibleIdx = i
+  }
+  for (let i = 0; i < firstVisibleIdx; i++) {
+    (children[i] as HTMLElement).style.display = 'none'
+  }
+  el.scrollTop = 0
+}
+
+function clearClippedVisibility() {
+  const el = chatContainer.value
+  if (!el) return
+  const children = el.children
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i] as HTMLElement
+    child.style.display = ''
+    child.style.visibility = ''
+  }
+}
+
+let resizeObserver: ResizeObserver | null = null
+
 watch(() => props.messages, async () => {
   await nextTick()
-  if (autoScroll.value) {
+  if (props.hideClipped) {
+    updateClippedVisibility()
+  } else if (autoScroll.value) {
     scrollToBottom()
   }
+})
+
+watch(() => props.hideClipped, async (enabled) => {
+  await nextTick()
+  if (enabled) {
+    updateClippedVisibility()
+  } else {
+    clearClippedVisibility()
+    if (autoScroll.value) scrollToBottom()
+  }
+})
+
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined' && chatContainer.value) {
+    resizeObserver = new ResizeObserver(() => {
+      if (props.hideClipped) {
+        updateClippedVisibility()
+      } else if (autoScroll.value) {
+        scrollToBottom()
+      }
+    })
+    resizeObserver.observe(chatContainer.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
 })
 </script>
 

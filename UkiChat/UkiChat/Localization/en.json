@@ -20,6 +20,7 @@
       "messageHideDelay": "Hide message after",
       "messageHideDelayNever": "Never",
       "messageHideDelaySec": "sec.",
+      "hideClippedMessages": "Hide clipped messages",
       "mainWindow": {
         "title": "Main Window"
       },

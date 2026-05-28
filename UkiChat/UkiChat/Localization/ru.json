@@ -20,6 +20,7 @@
       "messageHideDelay": "Скрывать сообщение через",
       "messageHideDelayNever": "Никогда",
       "messageHideDelaySec": "сек.",
+      "hideClippedMessages": "Скрывать обрезанные сообщения",
       "mainWindow": {
         "title": "Основное окно"
       },
