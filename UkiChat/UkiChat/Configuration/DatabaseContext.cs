@@ -41,6 +41,25 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     private void InitDefaultData(DefaultAppSettings defaultAppSettings)
     {
         InitDefaultProfile(defaultAppSettings);
+        MigrateData(defaultAppSettings);
+    }
+
+    // Миграция для БД, созданных до добавления DonationAlertsSettings
+    private void MigrateData(DefaultAppSettings defaultAppSettings)
+    {
+        if (DonationAlertsSettingsRepository.GetActiveSettings() != null)
+            return;
+
+        var appSettings = AppSettingsRepository.GetActiveAppSettings();
+        if (appSettings == null)
+            return;
+
+        DonationAlertsSettingsRepository.Save(new DonationAlertsSettings
+        {
+            ClientId = defaultAppSettings.DonationAlerts.ClientId,
+            ClientSecret = defaultAppSettings.DonationAlerts.ClientSecret,
+            AppSettings = appSettings
+        });
     }
 
     private void InitDefaultProfile(DefaultAppSettings defaultAppSettings)
