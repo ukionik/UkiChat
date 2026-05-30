@@ -17,6 +17,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         AppSettingsRepository = new AppSettingsRepository(db);
         TwitchSettingsRepository = new TwitchSettingsRepository(db);
         VkVideoLiveSettingsRepository = new VkVideoLiveSettingsRepository(db);
+        DonationAlertsSettingsRepository = new DonationAlertsSettingsRepository(db);
         SevenTvEmoteRepository = new SevenTvEmoteRepository(db);
         FfzEmoteRepository = new FfzEmoteRepository(db);
         BttvEmoteRepository = new BttvEmoteRepository(db);
@@ -25,6 +26,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
 
     public ITwitchSettingsRepository TwitchSettingsRepository { get; }
     public IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
+    public IDonationAlertsSettingsRepository DonationAlertsSettingsRepository { get; }
     public IProfileRepository ProfileRepository { get; }
     public IAppSettingsRepository AppSettingsRepository { get; }
     public ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
@@ -82,5 +84,13 @@ public class DatabaseContext : IDatabaseContext, IDisposable
             AppSettings = appSettings
         };
         VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
+
+        var donationAlertsSettings = new DonationAlertsSettings
+        {
+            ClientId = defaultAppSettings.DonationAlerts.ClientId,
+            ClientSecret = defaultAppSettings.DonationAlerts.ClientSecret,
+            AppSettings = appSettings
+        };
+        DonationAlertsSettingsRepository.Save(donationAlertsSettings);
     }
 }

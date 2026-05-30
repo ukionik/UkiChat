@@ -93,6 +93,33 @@ public class DatabaseService : IDatabaseService
         _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
     }
 
+    public void UpdateDonationAlertsUserTokens(string accessToken, string refreshToken, string userId, string userName)
+    {
+        var settings = _databaseContext.DonationAlertsSettingsRepository.GetActiveSettings();
+        settings.AccessToken = accessToken;
+        settings.RefreshToken = refreshToken;
+        settings.UserId = userId;
+        settings.UserName = userName;
+        _databaseContext.DonationAlertsSettingsRepository.Save(settings);
+    }
+
+    public void ClearDonationAlertsUserAuth()
+    {
+        var settings = _databaseContext.DonationAlertsSettingsRepository.GetActiveSettings();
+        settings.AccessToken = null;
+        settings.RefreshToken = null;
+        settings.UserId = null;
+        settings.UserName = null;
+        _databaseContext.DonationAlertsSettingsRepository.Save(settings);
+    }
+
+    public DonationAlertsAuthStatusData GetDonationAlertsAuthStatus()
+    {
+        var settings = _databaseContext.DonationAlertsSettingsRepository.GetActiveSettings();
+        var authorized = !string.IsNullOrEmpty(settings.AccessToken);
+        return new DonationAlertsAuthStatusData(authorized, settings.UserName);
+    }
+
     public ScaleSettingsData GetScaleSettings()
     {
         var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();

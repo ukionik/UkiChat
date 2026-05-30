@@ -31,6 +31,9 @@
     "platforms": {
       "title": "Платформы"
     },
+    "integrations": {
+      "title": "Интеграции"
+    },
     "twitch": {
       "name": "Twitch",
       "authTitle": "Авторизация",
@@ -42,6 +45,15 @@
     },
     "vkVideoLive": {
       "name": "VK Видео Live"
+    },
+    "donationAlerts": {
+      "name": "Donation Alerts",
+      "authTitle": "Авторизация",
+      "authHint": "Войдите через Donation Alerts, чтобы донаты отображались в чате.",
+      "authorize": "Войти через Donation Alerts",
+      "logout": "Выйти",
+      "authorizedAs": "Авторизован как {name}",
+      "notAuthorized": "Не авторизован"
     }
   },
   "chat": {
@@ -63,5 +75,11 @@
     "disconnectedFromChannel": "Отключился от канала {0}",
     "connectingToChannelError": "Ошибка подключения к каналу {0}",
     "reconnectingInSeconds": "Переподключение через {0} сек. (попытка {1})..."
+  },
+  "donationalerts": {
+    "connecting": "Подключение к Donation Alerts...",
+    "connected": "Подключено к Donation Alerts",
+    "disconnected": "Отключено от Donation Alerts",
+    "connectingError": "Ошибка подключения к Donation Alerts"
   }
 }

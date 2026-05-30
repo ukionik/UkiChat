@@ -37,4 +37,9 @@ public class SignalRService(IHubContext<AppHub> hubContext) : ISignalRService
     {
         await hubContext.Clients.All.SendAsync("OnTwitchAuthChanged", status);
     }
+
+    public async Task SendDonationAlertsAuthChanged(DonationAlertsAuthStatusData status)
+    {
+        await hubContext.Clients.All.SendAsync("OnDonationAlertsAuthChanged", status);
+    }
 }

@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Extensions.Logging;
 using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
+using UkiChat.Model.DonationAlerts;
 using UkiChat.Model.VkVideoLive;
 using UkiChat.Services;
 
@@ -67,5 +68,14 @@ public static class DIConfiguration
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(twitchChatLogger, dispose: true))
                 .CreateLogger<TwitchChatService>());
+
+        var donationAlertsLogger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Async(a => a.File($"logs/donation-alerts-{sessionTimestamp}.txt"))
+            .CreateLogger();
+
+        services.AddSingleton(
+            LoggerFactory.Create(b => b.AddSerilog(donationAlertsLogger, dispose: true))
+                .CreateLogger<DonationAlertsCentrifugeClient>());
     }
 }

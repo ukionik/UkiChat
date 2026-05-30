@@ -16,7 +16,8 @@ public class AppInitializationService(
     ITwitchApiService twitchApiService,
     ITwitchEventSubService twitchEventSubService,
     IVkVideoLiveChatService vkVideoLiveChatService,
-    IVkVideoLiveApiService vkVideoLiveApiService
+    IVkVideoLiveApiService vkVideoLiveApiService,
+    IDonationAlertsService donationAlertsService
 ) : IAppInitializationService
 {
     public async Task InitializeAsync()
@@ -30,7 +31,8 @@ public class AppInitializationService(
         using (StartupDiagnostics.Measure("app-init", "LoadTwitchData + LoadVkVideoLiveData (parallel)"))
         {
             await Task.WhenAll(LoadTwitchDataAsync(),
-                LoadVkVideoLiveDataAsync());
+                LoadVkVideoLiveDataAsync(),
+                LoadDonationAlertsDataAsync());
         }
         StartupDiagnostics.Log("app-init", "InitializeAsync: END");
     }
@@ -165,6 +167,19 @@ public class AppInitializationService(
             await vkVideoLiveChatService.ConnectAsync(
                 VkVideoLiveConnectionParams.OfVkVideoLiveSettings("", vkSettings.Channel ?? "", vkSettings));
         }
+    }
+
+    private async Task LoadDonationAlertsDataAsync()
+    {
+        using var _ = StartupDiagnostics.Measure("app-init", "LoadDonationAlertsDataAsync");
+        var settings = databaseContext.DonationAlertsSettingsRepository.GetActiveSettings();
+        StartupDiagnostics.Log("app-init",
+            $"  DonationAlerts authorized={!string.IsNullOrEmpty(settings.AccessToken)}");
+
+        if (string.IsNullOrEmpty(settings.AccessToken))
+            return;
+
+        await donationAlertsService.ConnectAsync();
     }
 
     private async Task InitializeVkVideoLiveApiAsync(VkVideoLiveSettings vkSettings)

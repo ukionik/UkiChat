@@ -2,5 +2,5 @@
 
 public enum ChatPlatform
 {
-    Twitch, YouTube, VkVideoLive, Kick, Trovo 
+    Twitch, YouTube, VkVideoLive, Kick, Trovo, DonationAlerts
 }

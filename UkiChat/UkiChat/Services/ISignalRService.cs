@@ -12,4 +12,5 @@ public interface ISignalRService
     Task SendTwitchReconnect();
     Task SendVkVideoLiveReconnect();
     Task SendTwitchAuthChanged(TwitchAuthStatusData status);
+    Task SendDonationAlertsAuthChanged(DonationAlertsAuthStatusData status);
 }

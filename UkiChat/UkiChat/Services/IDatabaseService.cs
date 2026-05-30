@@ -18,6 +18,9 @@ public interface IDatabaseService
     TwitchAuthStatusData GetTwitchAuthStatus();
     void UpdateVkVideoLiveSettings(VkVideoLiveSettingsData data);
     void UpdateVkVideoLiveTokens(string apiAccessToken, string wsAccessToken);
+    void UpdateDonationAlertsUserTokens(string accessToken, string refreshToken, string userId, string userName);
+    void ClearDonationAlertsUserAuth();
+    DonationAlertsAuthStatusData GetDonationAlertsAuthStatus();
     void UpdateScaleSettings(ScaleSettingsData data);
     void UpdateThemeSettings(ThemeSettingsData data);
     void UpdateMessageHideSettings(MessageHideSettingsData data);

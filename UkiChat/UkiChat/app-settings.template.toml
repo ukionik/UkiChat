@@ -10,3 +10,6 @@ chatbot_access_token = "your_twitch_access_token"
 [vk_video_live]
 api_client_id = "your_api_client_id"
 api_client_secret = "your_api_client_secret"
+[donation_alerts]
+client_id = "your_client_id"
+client_secret = "your_client_secret"

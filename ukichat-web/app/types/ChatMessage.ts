@@ -9,7 +9,7 @@ export interface ReplyInfo {
     messageParts: MessagePart[]
 }
 
-export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply' | 'Deleted' | 'ChannelPointsRedemption'
+export type MessageType = 'Normal' | 'Notification' | 'Mention' | 'Reply' | 'Deleted' | 'ChannelPointsRedemption' | 'Donation'
 
 export interface ChatMessage {
     id?: string,
@@ -21,5 +21,6 @@ export interface ChatMessage {
     messageType?: MessageType,
     replyTo?: ReplyInfo,
     rewardTitle?: string,
-    rewardCost?: number
+    rewardCost?: number,
+    donationAmount?: string
 }

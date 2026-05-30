@@ -31,6 +31,9 @@
     "platforms": {
       "title": "Platforms"
     },
+    "integrations": {
+      "title": "Integrations"
+    },
     "twitch": {
       "name": "Twitch",
       "authTitle": "Authorization",
@@ -42,6 +45,15 @@
     },
     "vkVideoLive": {
       "name": "VK Video Live"
+    },
+    "donationAlerts": {
+      "name": "Donation Alerts",
+      "authTitle": "Authorization",
+      "authHint": "Sign in with Donation Alerts to show donations in the chat.",
+      "authorize": "Sign in with Donation Alerts",
+      "logout": "Sign out",
+      "authorizedAs": "Authorized as {name}",
+      "notAuthorized": "Not authorized"
     }
   },
   "chat": {
@@ -63,5 +75,11 @@
     "disconnectedFromChannel": "Disconnected from channel {0}",
     "connectingToChannelError": "Failed connecting to channel {0}",
     "reconnectingInSeconds": "Reconnecting in {0} sec. (attempt {1})..."
+  },
+  "donationalerts": {
+    "connecting": "Connecting to Donation Alerts...",
+    "connected": "Connected to Donation Alerts",
+    "disconnected": "Disconnected from Donation Alerts",
+    "connectingError": "Failed connecting to Donation Alerts"
   }
 }

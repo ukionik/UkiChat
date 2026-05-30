@@ -20,6 +20,7 @@ public class AppHub : Hub
     private readonly IVkVideoLiveChatService _vkVideoLiveChatService = ContainerLocator.Container.Resolve<IVkVideoLiveChatService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
     private readonly ITwitchAuthService _twitchAuthService = ContainerLocator.Container.Resolve<ITwitchAuthService>();
+    private readonly IDonationAlertsService _donationAlertsService = ContainerLocator.Container.Resolve<IDonationAlertsService>();
 
     public override Task OnConnectedAsync()
     {
@@ -89,6 +90,29 @@ public class AppHub : Hub
     public Task LogoutTwitch()
     {
         return Measure(nameof(LogoutTwitch), () => _twitchAuthService.LogoutAsync());
+    }
+
+    /// <summary>Открывает системный браузер на странице авторизации Donation Alerts.</summary>
+    public Task StartDonationAlertsAuth()
+    {
+        return Measure(nameof(StartDonationAlertsAuth), () =>
+        {
+            var url = _donationAlertsService.BuildAuthorizeUrl();
+            if (!string.IsNullOrEmpty(url))
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            return Task.CompletedTask;
+        });
+    }
+
+    public Task<DonationAlertsAuthStatusData> GetDonationAlertsAuthStatus()
+    {
+        return MeasureResult(nameof(GetDonationAlertsAuthStatus),
+            () => Task.FromResult(_donationAlertsService.GetStatus()));
+    }
+
+    public Task LogoutDonationAlerts()
+    {
+        return Measure(nameof(LogoutDonationAlerts), () => _donationAlertsService.LogoutAsync());
     }
 
     public async Task<string> GetLanguage(string language)

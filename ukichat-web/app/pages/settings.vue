@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { HubConnection } from '@microsoft/signalr'
 import type { TwitchAuthStatus } from '~/types/TwitchAuth'
+import type { DonationAlertsAuthStatus } from '~/types/DonationAlertsAuth'
 import { useSignalR } from '~/composables/useSignalR'
 import MenuSettingsItem from '~/components/MenuSettingsItem.vue'
 import GeneralSettings from '~/components/settings/GeneralSettings.vue'
 import AppearanceSettings from '~/components/settings/AppearanceSettings.vue'
 import PlatformSettings from '~/components/settings/PlatformSettings.vue'
+import IntegrationsSettings from '~/components/settings/IntegrationsSettings.vue'
 
 const { startSignalR, invokeGet, invokeUpdate } = useSignalR()
 const { getLanguage } = useLocalization()
@@ -43,6 +45,7 @@ const state = reactive({
 })
 
 const twitchAuth = ref<TwitchAuthStatus>({ authorized: false, login: null })
+const donationAlertsAuth = ref<DonationAlertsAuthStatus>({ authorized: false, name: null })
 
 async function changeTwitchChannel(channel: string) {
   await invokeUpdate('ChangeTwitchChannel', channel)
@@ -58,6 +61,14 @@ async function authorizeTwitch() {
 
 async function logoutTwitch() {
   await invokeUpdate('LogoutTwitch')
+}
+
+async function authorizeDonationAlerts() {
+  await invokeUpdate('StartDonationAlertsAuth')
+}
+
+async function logoutDonationAlerts() {
+  await invokeUpdate('LogoutDonationAlerts')
 }
 
 let scaleSettingsLoaded = false
@@ -112,6 +123,11 @@ onMounted(async () => {
   twitchAuth.value = await invokeGet('GetTwitchAuthStatus')
   connection.value?.on('OnTwitchAuthChanged', (status: TwitchAuthStatus) => {
     twitchAuth.value = status
+  })
+
+  donationAlertsAuth.value = await invokeGet('GetDonationAlertsAuthStatus')
+  connection.value?.on('OnDonationAlertsAuthChanged', (status: DonationAlertsAuthStatus) => {
+    donationAlertsAuth.value = status
   })
 
   const scaleSettings = await invokeGet('GetScaleSettings')
@@ -169,6 +185,17 @@ onMounted(async () => {
             @save-vk="changeVkVideoLiveChannel"
             @authorize-twitch="authorizeTwitch"
             @logout-twitch="logoutTwitch"
+          />
+        </MenuSettingsItem>
+        <MenuSettingsItem
+          :title="t('settings.integrations.title')"
+          :active="activeRoot === 'integrations'"
+          @click="selectRoot('integrations')"
+        >
+          <IntegrationsSettings
+            :donation-alerts-auth="donationAlertsAuth"
+            @authorize-donation-alerts="authorizeDonationAlerts"
+            @logout-donation-alerts="logoutDonationAlerts"
           />
         </MenuSettingsItem>
       </div>

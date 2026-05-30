@@ -122,6 +122,24 @@ public static class HttpServerConfiguration
                         context.Response.ContentType = "text/html; charset=utf-8";
                         await context.Response.WriteAsync(BuildCallbackHtml(success));
                     });
+
+                    // OAuth callback Donation Alerts.
+                    endpoints.MapGet("/donationalerts/auth/callback", async context =>
+                    {
+                        var error = context.Request.Query["error"].ToString();
+                        var code = context.Request.Query["code"].ToString();
+                        var state = context.Request.Query["state"].ToString();
+
+                        var success = false;
+                        if (string.IsNullOrEmpty(error) && !string.IsNullOrEmpty(code))
+                        {
+                            var donationAlertsService = ContainerLocator.Container.Resolve<IDonationAlertsService>();
+                            success = await donationAlertsService.HandleCallbackAsync(code, state);
+                        }
+
+                        context.Response.ContentType = "text/html; charset=utf-8";
+                        await context.Response.WriteAsync(BuildCallbackHtml(success));
+                    });
                 });
             })
             .Build();

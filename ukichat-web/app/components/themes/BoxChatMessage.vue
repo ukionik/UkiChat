@@ -29,6 +29,7 @@ function getPlatformImage(platform: string) {
   switch (platform) {
     case "Twitch": return "/images/twitch.svg"
     case "VkVideoLive": return "/images/vk-video-live.svg"
+    case "DonationAlerts": return "/images/donation-alerts.svg"
     default: return ""
   }
 }
@@ -63,6 +64,9 @@ const boxStyle = computed(() => {
   if (type === 'ChannelPointsRedemption') {
     return { ...base, background: 'linear-gradient(rgba(100, 40, 140, 0.6), rgba(70, 20, 110, 0.7))' }
   }
+  if (type === 'Donation') {
+    return { ...base, background: 'linear-gradient(rgba(34, 120, 70, 0.6), rgba(20, 90, 50, 0.7))' }
+  }
   return { ...base, background: 'linear-gradient(rgba(70, 70, 70, 0.6), rgba(50, 50, 50, 0.7))' }
 })
 </script>
@@ -80,6 +84,13 @@ const boxStyle = computed(() => {
       <img src="/images/channel-points.svg" alt="channel points" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-medium">{{ message.rewardTitle }}</span>
       <span v-if="message.rewardCost != null" class="shrink-0 opacity-75">· {{ message.rewardCost }}</span>
+    </div>
+
+    <!-- Сумма доната -->
+    <div v-if="message.donationAmount" class="flex items-center gap-1 text-green-400 truncate mb-1.5"
+         :style="{ fontSize: replyFontSize }">
+      <img src="/images/money.svg" alt="donation" class="shrink-0" :style="{ height: '1em', width: '1em' }">
+      <span class="truncate font-semibold">{{ message.donationAmount }}</span>
     </div>
 
     <!-- Ответ на сообщение -->

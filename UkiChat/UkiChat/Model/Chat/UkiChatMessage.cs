@@ -19,7 +19,8 @@ public record UkiChatMessage(ChatPlatform Platform
     , UkiChatMessageType MessageType = UkiChatMessageType.Normal
     , string Id = ""
     , string? RewardTitle = null
-    , int? RewardCost = null)
+    , int? RewardCost = null
+    , string? DonationAmount = null)
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null, string? rewardTitle = null, int? rewardCost = null)
     {
@@ -130,6 +131,44 @@ public record UkiChatMessage(ChatPlatform Platform
     {
         return new UkiChatMessage(ChatPlatform.VkVideoLive, [], ChatPlatform.VkVideoLive.ToString(), "#FFFFFF",
             [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
+    }
+
+    /// <summary>
+    /// Донат из Donation Alerts: имя донатера + сумма + текст сообщения.
+    /// </summary>
+    public static UkiChatMessage FromDonationAlertsDonation(string donorName, double amount, string currency, string message)
+    {
+        var messageParts = new List<UkiChatMessagePart>();
+        ParseTextWithLinks(message ?? "", messageParts);
+
+        // Цвет имени донатера — зелёный, в тон оформлению доната.
+        return new UkiChatMessage(ChatPlatform.DonationAlerts, [], donorName, "#4ade80",
+            messageParts, MessageType: UkiChatMessageType.Donation, Id: Guid.NewGuid().ToString(),
+            DonationAmount: FormatDonationAmount(amount, currency));
+    }
+
+    public static UkiChatMessage FromDonationAlertsNotification(string message)
+    {
+        return new UkiChatMessage(ChatPlatform.DonationAlerts, [], "Donation Alerts", "#FFFFFF",
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
+    }
+
+    private static string FormatDonationAmount(double amount, string currency)
+    {
+        var symbol = currency?.ToUpperInvariant() switch
+        {
+            "RUB" => "₽",
+            "USD" => "$",
+            "EUR" => "€",
+            "UAH" => "₴",
+            "BRL" => "R$",
+            _ => currency
+        };
+        // Целые суммы — без дробной части, иначе две цифры после запятой.
+        var amountText = amount == Math.Floor(amount)
+            ? amount.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            : amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        return $"{amountText} {symbol}".Trim();
     }
 
     private static List<UkiChatMessagePart> ParseVkVideoLiveContent(List<VkVideoLiveChatContent>? content)
