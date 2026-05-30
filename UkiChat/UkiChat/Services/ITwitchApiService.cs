@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TwitchLib.Api.Auth;
@@ -35,6 +36,11 @@ public interface ITwitchApiService
     /// Возвращает количество зрителей канала, или null если стрим оффлайн.
     /// </summary>
     Task<int?> GetViewerCountAsync(string channel);
+
+    /// <summary>
+    /// Возвращает время начала трансляции (UTC), или null если стрим оффлайн.
+    /// </summary>
+    Task<DateTime?> GetStreamStartedAtAsync(string channel);
 
     /// <summary>
     /// Возвращает словарь rewardId → награда (название + стоимость) для всех ВКЛЮЧЁННЫХ наград канала.

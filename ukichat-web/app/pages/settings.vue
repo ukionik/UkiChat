@@ -39,7 +39,7 @@ async function changeLanguage(lang: string) {
 
 const state = reactive({
   settings: {
-    twitch: { channel: '' },
+    twitch: { channel: '', showStreamUptime: false },
     vkVideoLive: { channel: '' }
   }
 })
@@ -49,6 +49,14 @@ const donationAlertsAuth = ref<DonationAlertsAuthStatus>({ authorized: false, na
 
 async function changeTwitchChannel(channel: string) {
   await invokeUpdate('ChangeTwitchChannel', channel)
+}
+
+async function updateTwitchShowStreamUptime(showStreamUptime: boolean) {
+  state.settings.twitch.showStreamUptime = showStreamUptime
+  await invokeUpdate('UpdateTwitchSettings', {
+    channel: state.settings.twitch.channel,
+    showStreamUptime
+  })
 }
 
 async function changeVkVideoLiveChannel(channel: string) {
@@ -179,12 +187,14 @@ onMounted(async () => {
         >
           <PlatformSettings
             :twitch-channel="state.settings.twitch.channel"
+            :twitch-show-stream-uptime="state.settings.twitch.showStreamUptime"
             :vk-video-live-channel="state.settings.vkVideoLive.channel"
             :twitch-auth="twitchAuth"
             @save-twitch="changeTwitchChannel"
             @save-vk="changeVkVideoLiveChannel"
             @authorize-twitch="authorizeTwitch"
             @logout-twitch="logoutTwitch"
+            @update-twitch-show-stream-uptime="updateTwitchShowStreamUptime"
           />
         </MenuSettingsItem>
         <MenuSettingsItem

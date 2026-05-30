@@ -7,6 +7,7 @@ import type { TwitchAuthStatus } from '~/types/TwitchAuth'
 
 interface Props {
   twitchChannel: string
+  twitchShowStreamUptime: boolean
   vkVideoLiveChannel: string
   twitchAuth: TwitchAuthStatus
 }
@@ -17,6 +18,7 @@ const emit = defineEmits<{
   'save-vk': [value: string]
   'authorize-twitch': []
   'logout-twitch': []
+  'update-twitch-show-stream-uptime': [value: boolean]
 }>()
 
 const { t } = useI18n()
@@ -33,11 +35,12 @@ const schema = v.object({
 })
 
 const state = reactive({
-  twitch: { channel: '' },
+  twitch: { channel: '', showStreamUptime: false },
   vkVideoLive: { channel: '' },
 })
 
 watch(() => props.twitchChannel, val => { state.twitch.channel = val }, { immediate: true })
+watch(() => props.twitchShowStreamUptime, val => { state.twitch.showStreamUptime = val }, { immediate: true })
 watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }, { immediate: true })
 </script>
 
@@ -61,6 +64,12 @@ watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }
       <template v-if="activeSub === 'twitch'">
         <HorizontalFormField :label="t('settings.channel')" name="twitch.channel">
           <UInput v-model="state.twitch.channel" @blur="emit('save-twitch', state.twitch.channel)" />
+        </HorizontalFormField>
+        <HorizontalFormField :label="t('settings.twitch.showStreamUptime')" name="twitch.showStreamUptime">
+          <UCheckbox
+            v-model="state.twitch.showStreamUptime"
+            @update:model-value="emit('update-twitch-show-stream-uptime', $event)"
+          />
         </HorizontalFormField>
 
         <div class="pt-4 border-t border-gray-800 space-y-3">

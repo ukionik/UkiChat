@@ -41,7 +41,8 @@
       "authorize": "Sign in with Twitch",
       "logout": "Sign out",
       "authorizedAs": "Authorized as {login}",
-      "notAuthorized": "Not authorized"
+      "notAuthorized": "Not authorized",
+      "showStreamUptime": "Show stream uptime"
     },
     "vkVideoLive": {
       "name": "VK Video Live"

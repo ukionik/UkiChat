@@ -108,6 +108,16 @@ public class TwitchApiService : ITwitchApiService
         });
     }
 
+    public Task<DateTime?> GetStreamStartedAtAsync(string channel)
+    {
+        return MeasureAsync($"GetStreamStartedAtAsync({channel})", async () =>
+        {
+            EnsureInitialized();
+            var response = await _api!.Helix.Streams.GetStreamsAsync(userLogins: [channel]);
+            return response.Streams.Length > 0 ? (DateTime?)response.Streams[0].StartedAt : null;
+        });
+    }
+
     public Task<Dictionary<string, TwitchChannelPointReward>> GetCustomRewardsAsync(string broadcasterId, string broadcasterAccessToken)
     {
         return MeasureAsync($"GetCustomRewardsAsync({broadcasterId})", async () =>

@@ -41,7 +41,8 @@
       "authorize": "Войти через Twitch",
       "logout": "Выйти",
       "authorizedAs": "Авторизован как {login}",
-      "notAuthorized": "Не авторизован"
+      "notAuthorized": "Не авторизован",
+      "showStreamUptime": "Отображать время трансляции"
     },
     "vkVideoLive": {
       "name": "VK Видео Live"

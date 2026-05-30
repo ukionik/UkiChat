@@ -28,6 +28,8 @@ public class TwitchViewerCountService : ITwitchViewerCountService
         _ = RunAsync();
     }
 
+    public Task PollNowAsync() => PollAsync();
+
     private async Task RunAsync()
     {
         await PollAsync();
@@ -48,8 +50,17 @@ public class TwitchViewerCountService : ITwitchViewerCountService
 
             await _twitchApiService.InitializeAsync(settings.ApiClientId, settings.ApiAccessToken);
             var viewerCount = await _twitchApiService.GetViewerCountAsync(settings.Channel);
-
             _eventAggregator.GetEvent<TwitchViewerCountUpdatedEvent>().Publish(viewerCount);
+
+            if (settings.ShowStreamUptime)
+            {
+                var startedAt = await _twitchApiService.GetStreamStartedAtAsync(settings.Channel);
+                _eventAggregator.GetEvent<TwitchStreamStartedAtUpdatedEvent>().Publish(startedAt);
+            }
+            else
+            {
+                _eventAggregator.GetEvent<TwitchStreamStartedAtUpdatedEvent>().Publish(null);
+            }
         }
         catch (Exception)
         {

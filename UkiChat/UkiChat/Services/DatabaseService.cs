@@ -31,7 +31,7 @@ public class DatabaseService : IDatabaseService
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
         return new AppSettingsData(
-            new TwitchSettingsData(twitchSettings.Channel),
+            new TwitchSettingsData(twitchSettings.Channel, twitchSettings.ShowStreamUptime),
             new VkVideoLiveSettingsData(vkVideoLiveSettings.Channel)
         );
     }
@@ -40,6 +40,7 @@ public class DatabaseService : IDatabaseService
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         twitchSettings.Channel = data.Channel;
+        twitchSettings.ShowStreamUptime = data.ShowStreamUptime;
         _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
     }
 

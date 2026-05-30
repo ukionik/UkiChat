@@ -21,6 +21,7 @@ public class AppHub : Hub
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
     private readonly ITwitchAuthService _twitchAuthService = ContainerLocator.Container.Resolve<ITwitchAuthService>();
     private readonly IDonationAlertsService _donationAlertsService = ContainerLocator.Container.Resolve<IDonationAlertsService>();
+    private readonly ITwitchViewerCountService _twitchViewerCountService = ContainerLocator.Container.Resolve<ITwitchViewerCountService>();
 
     public override Task OnConnectedAsync()
     {
@@ -165,6 +166,7 @@ public class AppHub : Hub
         {
             _databaseService.UpdateTwitchSettings(settings);
             await _signalRService.SendTwitchReconnect();
+            await _twitchViewerCountService.PollNowAsync();
         });
     }
 

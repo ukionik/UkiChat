@@ -1,3 +1,3 @@
 ﻿namespace UkiChat.Model.Settings;
 
-public record TwitchSettingsData(string Channel);
+public record TwitchSettingsData(string Channel, bool ShowStreamUptime = false);

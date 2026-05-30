@@ -26,6 +26,8 @@ public class TwitchSettings : IBaseEntity<long>
     public string? UserId { get; set; }
     public string? UserLogin { get; set; }
 
+    public bool ShowStreamUptime { get; set; }
+
     [BsonRef]
     public required AppSettings? AppSettings { get; set; }
 }

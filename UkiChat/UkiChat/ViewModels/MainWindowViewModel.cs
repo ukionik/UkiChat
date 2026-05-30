@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Threading;
 using Prism.Commands;
 using Prism.Events;
 using Prism.Mvvm;
@@ -21,6 +22,9 @@ public class MainWindowViewModel : BindableBase
 
     private bool _hasReceivedVkCount;
     private int? _lastVkViewerCount;
+
+    private DateTime? _twitchStreamStartedAt;
+    private DispatcherTimer? _streamUptimeTimer;
 
     public MainWindowViewModel(IWindowService windowService
         , IDatabaseContext databaseContext
@@ -51,6 +55,16 @@ public class MainWindowViewModel : BindableBase
                 _hasReceivedVkCount = true;
                 _lastVkViewerCount = count;
                 UpdateVkViewerCountDisplay();
+            }, ThreadOption.UIThread);
+
+        eventAggregator.GetEvent<TwitchStreamStartedAtUpdatedEvent>()
+            .Subscribe(startedAt =>
+            {
+                _twitchStreamStartedAt = startedAt;
+                if (startedAt.HasValue)
+                    StartUptimeTimer();
+                else
+                    StopUptimeTimer();
             }, ThreadOption.UIThread);
 
         localizationService.LanguageChanged += (_, _) => Application.Current.Dispatcher.Invoke(() =>
@@ -104,6 +118,20 @@ public class MainWindowViewModel : BindableBase
         set => SetProperty(ref _totalViewerCount, value);
     }
 
+    private string _streamUptimeDisplay = "";
+    public string StreamUptimeDisplay
+    {
+        get => _streamUptimeDisplay;
+        set => SetProperty(ref _streamUptimeDisplay, value);
+    }
+
+    private Visibility _streamUptimeVisibility = Visibility.Collapsed;
+    public Visibility StreamUptimeVisibility
+    {
+        get => _streamUptimeVisibility;
+        set => SetProperty(ref _streamUptimeVisibility, value);
+    }
+
     private void UpdateTwitchViewerCountDisplay()
     {
         if (!_hasReceivedTwitchCount)
@@ -135,6 +163,32 @@ public class MainWindowViewModel : BindableBase
 
         var total = (_lastTwitchViewerCount ?? 0) + (_lastVkViewerCount ?? 0);
         TotalViewerCount = total.ToString();
+    }
+
+    private void StartUptimeTimer()
+    {
+        if (_streamUptimeTimer == null)
+        {
+            _streamUptimeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _streamUptimeTimer.Tick += (_, _) => UpdateStreamUptimeDisplay();
+        }
+        if (!_streamUptimeTimer.IsEnabled)
+            _streamUptimeTimer.Start();
+        UpdateStreamUptimeDisplay();
+        StreamUptimeVisibility = Visibility.Visible;
+    }
+
+    private void StopUptimeTimer()
+    {
+        _streamUptimeTimer?.Stop();
+        StreamUptimeVisibility = Visibility.Collapsed;
+    }
+
+    private void UpdateStreamUptimeDisplay()
+    {
+        if (!_twitchStreamStartedAt.HasValue) return;
+        var elapsed = DateTime.UtcNow - _twitchStreamStartedAt.Value;
+        StreamUptimeDisplay = elapsed.ToString(@"h\:mm\:ss");
     }
 
     private static string BuildAppVersion()
