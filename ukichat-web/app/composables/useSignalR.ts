@@ -7,7 +7,7 @@ export function useSignalR() {
         const t0 = performance.now()
         console.log(`[signalr] building connection to /apphub ...`)
         connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://localhost:5000/apphub") // сервер WPF
+            .withUrl(window.location.origin + "/apphub") // dev: прокси 3000→5000, prod: 5000 напрямую
             .withAutomaticReconnect()
             .configureLogging(signalR.LogLevel.Information)
             .build()

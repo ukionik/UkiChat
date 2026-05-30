@@ -4,6 +4,17 @@ import {resolve} from 'path'
 export default defineNuxtConfig({
     ssr: false,
     css: ['~/assets/css/main.css'],
+    vite: {
+        server: {
+            proxy: {
+                '/apphub': {
+                    target: 'http://localhost:5000',
+                    changeOrigin: true,
+                    ws: true
+                }
+            }
+        }
+    },
     nitro: {
         // Меняем папку, куда будут складываться публичные файлы
         output: {

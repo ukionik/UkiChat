@@ -23,6 +23,10 @@ async function sendLink() {
   await invokeUpdate("SendChatMessage", generateLink())
 }
 
+async function sendDonation() {
+  await invokeUpdate("SendChatMessage", generateDonation())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -130,6 +134,20 @@ function generateLink() {
   }
 }
 
+function generateDonation() {
+  return {
+    platform: "DonationAlerts",
+    badges: [],
+    displayName: "Donator123",
+    displayNameColor: "#4CAF50",
+    messageType: "Donation",
+    donationAmount: "500 RUB",
+    messageParts: [
+      { type: "Text", content: "Отличный стрим, держи на кофе!" }
+    ]
+  }
+}
+
 onMounted(async () => {
   await startSignalR()
 })
@@ -143,6 +161,7 @@ onMounted(async () => {
     <UButton @click="sendMention">Mention</UButton>
     <UButton @click="sendReply">Reply</UButton>
     <UButton @click="sendLink">Link</UButton>
+    <UButton @click="sendDonation" color="success">Donation</UButton>
   </div>
 </template>
 
