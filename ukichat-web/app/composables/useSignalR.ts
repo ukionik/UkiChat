@@ -6,8 +6,12 @@ export function useSignalR() {
     const startSignalR = async () => {
         const t0 = performance.now()
         console.log(`[signalr] building connection to /apphub ...`)
+        // В dev WebSocket через Vite-прокси не работает — используем LongPolling
+        const transport = import.meta.env.DEV
+            ? signalR.HttpTransportType.LongPolling
+            : signalR.HttpTransportType.WebSockets
         connection = new signalR.HubConnectionBuilder()
-            .withUrl(window.location.origin + "/apphub") // dev: прокси 3000→5000, prod: 5000 напрямую
+            .withUrl(window.location.origin + "/apphub", { transport }) // dev: прокси 3000→5000, prod: 5000 напрямую
             .withAutomaticReconnect()
             .configureLogging(signalR.LogLevel.Information)
             .build()

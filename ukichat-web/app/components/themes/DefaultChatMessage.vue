@@ -59,13 +59,11 @@ function getReplyPreview(replyTo: ReplyInfo) {
 const marginRight = computed(() => `${0.25 * props.scale}rem`)
 
 const replyHeaderStyle = computed(() => ({
-  fontSize: `${0.8 * props.scale}rem`,
-  marginBottom: `${0.1 * props.scale}rem`,
+  fontSize: `${0.8 * props.scale}rem`
 }))
 
 const rewardHeaderStyle = computed(() => ({
-  fontSize: `${0.8 * props.scale}rem`,
-  marginBottom: `${0.3 * props.scale}rem`,
+  fontSize: `${0.8 * props.scale}rem`
 }))
 
 const iconStyle = computed(() => ({

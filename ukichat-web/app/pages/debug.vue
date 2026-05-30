@@ -27,6 +27,10 @@ async function sendDonation() {
   await invokeUpdate("SendChatMessage", generateDonation())
 }
 
+async function sendChannelPoints() {
+  await invokeUpdate("SendChatMessage", generateChannelPoints())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -134,6 +138,23 @@ function generateLink() {
   }
 }
 
+function generateChannelPoints() {
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3158e758-3cb4-43c5-94b3-7639810451c5/3"
+    ],
+    displayName: "Viewer42",
+    displayNameColor: "#9B59B6",
+    messageType: "ChannelPointsRedemption",
+    rewardTitle: "Выбрать следующую песню",
+    rewardCost: 5000,
+    messageParts: [
+      { type: "Text", content: "Поставь что-нибудь из Daft Punk" }
+    ]
+  }
+}
+
 function generateDonation() {
   return {
     platform: "DonationAlerts",
@@ -161,7 +182,8 @@ onMounted(async () => {
     <UButton @click="sendMention">Mention</UButton>
     <UButton @click="sendReply">Reply</UButton>
     <UButton @click="sendLink">Link</UButton>
-    <UButton @click="sendDonation" color="success">Donation</UButton>
+    <UButton @click="sendDonation">Donation</UButton>
+    <UButton @click="sendChannelPoints">Channel Points</UButton>
   </div>
 </template>
 

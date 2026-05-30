@@ -79,7 +79,7 @@ const boxStyle = computed(() => {
     @click="toggleRevealDeleted"
   >
     <!-- Название награды за баллы -->
-    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate mb-0.5"
+    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate mb-1"
          :style="{ fontSize: replyFontSize }">
       <img src="/images/channel-points.svg" alt="channel points" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-medium">{{ message.rewardTitle }}</span>
@@ -87,14 +87,14 @@ const boxStyle = computed(() => {
     </div>
 
     <!-- Сумма доната -->
-    <div v-if="message.donationAmount" class="flex items-center gap-1 text-green-400 truncate mb-0.5"
+    <div v-if="message.donationAmount" class="flex items-center gap-1 text-green-400 truncate mb-1"
          :style="{ fontSize: replyFontSize }">
       <img src="/images/money.svg" alt="donation" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-semibold">{{ message.donationAmount }}</span>
     </div>
 
     <!-- Ответ на сообщение -->
-    <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate mb-0.5"
+    <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate mb-1"
          :style="{ fontSize: replyFontSize }">
       <span>↩</span>
       <span class="font-semibold shrink-0">@{{ message.replyTo.displayName }}:</span>
