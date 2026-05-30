@@ -9,7 +9,9 @@
       "title": "Основные",
       "chatOverlayUrl": "Ссылка на оверлей чата (для OBS)",
       "copyToClipboard": "Скопировать",
-      "copiedToClipboard": "Скопировано в буфер обмена"
+      "copiedToClipboard": "Скопировано в буфер обмена",
+      "mentionNicknames": "Выделение упоминаний",
+      "mentionNicknamesPlaceholder": "Введите ник и нажмите Enter"
     },
     "appearance": {
       "title": "Оформление",

@@ -25,4 +25,6 @@ public interface IDatabaseService
     void UpdateThemeSettings(ThemeSettingsData data);
     void UpdateMessageHideSettings(MessageHideSettingsData data);
     void UpdateClipSettings(ClipSettingsData data);
+    MentionSettingsData GetMentionSettings();
+    void UpdateMentionSettings(MentionSettingsData data);
 }

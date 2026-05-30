@@ -16,6 +16,7 @@ const { mainWindowScale, overlayScale } = useScaleSettings()
 const { mainWindowTheme, overlayTheme } = useThemeSettings()
 const { mainWindowMessageHideDelay, overlayMessageHideDelay } = useMessageHideSettings()
 const { overlayHideClippedMessages } = useClipSettings()
+const { mentionNicknames } = useMentionSettings()
 
 const appSettingsInfo = ref({ profileName: '', language: 'en' })
 const activeRoot = ref('general')
@@ -121,6 +122,13 @@ watch(overlayHideClippedMessages, (val) => {
   invokeUpdate('BroadcastClipSettings', val)
 })
 
+let mentionSettingsLoaded = false
+
+watch(mentionNicknames, (val) => {
+  if (!mentionSettingsLoaded) return
+  invokeUpdate('BroadcastMentionSettings', val)
+}, { deep: true })
+
 onMounted(async () => {
   connection.value = await startSignalR()
   appSettingsInfo.value = await invokeGet('GetActiveAppSettingsInfo')
@@ -153,11 +161,15 @@ onMounted(async () => {
   const clipSettings = await invokeGet('GetClipSettings')
   overlayHideClippedMessages.value = clipSettings.overlayHideClippedMessages
 
+  const mentionSettings = await invokeGet('GetMentionSettings')
+  mentionNicknames.value = mentionSettings.nicknames ?? []
+
   await nextTick()
   scaleSettingsLoaded = true
   themeSettingsLoaded = true
   messageHideSettingsLoaded = true
   clipSettingsLoaded = true
+  mentionSettingsLoaded = true
 })
 </script>
 

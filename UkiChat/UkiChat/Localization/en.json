@@ -9,7 +9,9 @@
       "title": "General",
       "chatOverlayUrl": "Chat Overlay URL (OBS)",
       "copyToClipboard": "Copy",
-      "copiedToClipboard": "Copied to clipboard"
+      "copiedToClipboard": "Copied to clipboard",
+      "mentionNicknames": "Mention highlighting",
+      "mentionNicknamesPlaceholder": "Type a nick and press Enter"
     },
     "appearance": {
       "title": "Appearance",

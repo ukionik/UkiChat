@@ -61,7 +61,9 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
             }
 
             Console.WriteLine($"[VkVideoLive] Message received from: {e.Message.Data?.Author?.DisplayName}");
-            await signalRService.SendChatMessageAsync(UkiChatMessage.FromVkVideoLiveMessage(e.Message));
+            var mentionNicks = _databaseContext.AppSettingsRepository.GetActiveAppSettings().MentionNicknames;
+            await signalRService.SendChatMessageAsync(
+                UkiChatMessage.FromVkVideoLiveMessage(e.Message).WithMentionCheck(mentionNicks));
         };
 
         _chatClient.Connected += async (_, _) =>

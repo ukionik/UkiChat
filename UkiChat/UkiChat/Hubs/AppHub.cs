@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -236,6 +237,21 @@ public class AppHub : Hub
         {
             _databaseService.UpdateClipSettings(new ClipSettingsData(overlayHideClippedMessages));
             await Clients.All.SendAsync("OnClipSettingsChanged", overlayHideClippedMessages);
+        });
+    }
+
+    public Task<MentionSettingsData> GetMentionSettings()
+    {
+        return MeasureResult(nameof(GetMentionSettings),
+            () => Task.FromResult(_databaseService.GetMentionSettings()));
+    }
+
+    public Task BroadcastMentionSettings(List<string> nicknames)
+    {
+        return Measure(nameof(BroadcastMentionSettings), async () =>
+        {
+            _databaseService.UpdateMentionSettings(new MentionSettingsData(nicknames));
+            await Clients.All.SendAsync("OnMentionSettingsChanged", nicknames);
         });
     }
 

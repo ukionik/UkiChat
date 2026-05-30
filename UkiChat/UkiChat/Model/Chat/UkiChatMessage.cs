@@ -147,6 +147,28 @@ public record UkiChatMessage(ChatPlatform Platform
             DonationAmount: FormatDonationAmount(amount, currency));
     }
 
+    /// <summary>
+    /// Проверяет, упоминается ли в тексте один из заданных ников, и если да — помечает сообщение как Mention.
+    /// Применяется только к сообщениям типа Normal.
+    /// </summary>
+    public UkiChatMessage WithMentionCheck(IReadOnlyList<string> nicknames)
+    {
+        if (MessageType != UkiChatMessageType.Normal || nicknames.Count == 0)
+            return this;
+
+        var text = string.Join("", MessageParts
+            .Where(p => p.Type == UkiChatMessagePartType.Text)
+            .Select(p => p.Content));
+
+        foreach (var nick in nicknames)
+        {
+            if (!string.IsNullOrEmpty(nick) && text.Contains(nick, StringComparison.OrdinalIgnoreCase))
+                return this with { MessageType = UkiChatMessageType.Mention };
+        }
+
+        return this;
+    }
+
     public static UkiChatMessage FromDonationAlertsNotification(string message)
     {
         return new UkiChatMessage(ChatPlatform.DonationAlerts, [], "Donation Alerts", "#FFFFFF",

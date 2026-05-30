@@ -1,15 +1,37 @@
 <script setup lang="ts">
 const { t } = useI18n()
+const { mentionNicknames } = useMentionSettings()
 
 const chatOverlayUrl = 'http://localhost:5000/chat'
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout>
+
+const newNick = ref('')
 
 async function copyOverlayUrl() {
   await navigator.clipboard.writeText(chatOverlayUrl)
   copied.value = true
   clearTimeout(copiedTimer)
   copiedTimer = setTimeout(() => { copied.value = false }, 2000)
+}
+
+function addNick() {
+  const nick = newNick.value.trim().replace(/,+$/, '')
+  if (nick && !mentionNicknames.value.includes(nick)) {
+    mentionNicknames.value = [...mentionNicknames.value, nick]
+  }
+  newNick.value = ''
+}
+
+function removeNick(nick: string) {
+  mentionNicknames.value = mentionNicknames.value.filter(n => n !== nick)
+}
+
+function onNickKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault()
+    addNick()
+  }
 }
 </script>
 
@@ -39,6 +61,33 @@ async function copyOverlayUrl() {
         >
           {{ t('settings.general.copiedToClipboard') }}
         </span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3">
+      <label class="w-44 text-sm text-gray-400 shrink-0 pt-2">
+        {{ t('settings.general.mentionNicknames') }}
+      </label>
+      <div class="flex-1 space-y-2">
+        <div v-if="mentionNicknames.length" class="flex flex-wrap gap-1.5">
+          <span
+            v-for="nick in mentionNicknames"
+            :key="nick"
+            class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded bg-gray-700 text-sm text-gray-100"
+          >
+            {{ nick }}
+            <button
+              class="text-gray-400 hover:text-white leading-none px-0.5"
+              @click="removeNick(nick)"
+            >×</button>
+          </span>
+        </div>
+        <UInput
+          v-model="newNick"
+          :placeholder="t('settings.general.mentionNicknamesPlaceholder')"
+          @keydown="onNickKeydown"
+          @blur="addNick"
+        />
       </div>
     </div>
   </div>

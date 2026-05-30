@@ -80,8 +80,10 @@ public class TwitchChatService : ITwitchChatService
             var (rewardTitle, rewardCost) = ResolveReward(e.ChatMessage);
             _logger.LogDebug("Получено сообщение от {DisplayName}: {Message}",
                 e.ChatMessage.DisplayName, e.ChatMessage.Message);
+            var mentionNicks = _databaseContext.AppSettingsRepository.GetActiveAppSettings().MentionNicknames;
             await signalRService.SendChatMessageAsync(
-                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes, rewardTitle, rewardCost));
+                UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes, rewardTitle, rewardCost)
+                    .WithMentionCheck(mentionNicks));
         };
 
         _twitchClient.OnError += (_, e) =>

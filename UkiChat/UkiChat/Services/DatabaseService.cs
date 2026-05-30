@@ -184,4 +184,17 @@ public class DatabaseService : IDatabaseService
         appSettings.Appearance.Overlay.HideClippedMessages = data.OverlayHideClippedMessages;
         _databaseContext.AppSettingsRepository.Save(appSettings);
     }
+
+    public MentionSettingsData GetMentionSettings()
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        return new MentionSettingsData(appSettings.MentionNicknames);
+    }
+
+    public void UpdateMentionSettings(MentionSettingsData data)
+    {
+        var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
+        appSettings.MentionNicknames = data.Nicknames;
+        _databaseContext.AppSettingsRepository.Save(appSettings);
+    }
 }
