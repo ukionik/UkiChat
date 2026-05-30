@@ -12,13 +12,18 @@ using ErrorEventArgs = UkiChat.Model.Chat.EventArgs.ErrorEventArgs;
 namespace UkiChat.Model.DonationAlerts;
 
 /// <summary>
-///     Клиент Centrifugo (v2) для DonationAlerts. В отличие от VK канал приватный
-///     ($alerts:donation_{userId}): после connect сервер выдаёт client id, под который
-///     нужно REST-запросом получить per-channel токен подписки.
+///     Клиент Centrifugo (v1 JSON-протокол, сервер 2.2.1) для DonationAlerts.
+///     Канал приватный ($alerts:donation_{userId}): после connect сервер выдаёт client id,
+///     под который REST-запросом получается per-channel токен подписки.
+///     Команды v1: connect — {"params":{"token":..},"id":N}; subscribe — {"params":{"channel":..,"token":..},"method":1,"id":N}.
 /// </summary>
 public class DonationAlertsCentrifugeClient : IDisposable
 {
     private const string WebSocketUrl = "wss://centrifugo.donationalerts.com/connection/websocket";
+
+    // Методы протокола Centrifuge v1.
+    private const int MethodSubscribe = 1;
+    private const int MethodPing = 7;
 
     private CancellationTokenSource? _cancellationTokenSource;
     private int _commandId;
@@ -61,9 +66,7 @@ public class DonationAlertsCentrifugeClient : IDisposable
     {
         try
         {
-            if (_webSocket != null)
-                OnDisconnected("Reconnect");
-
+            // Тихо закрываем предыдущее соединение (без события Disconnected — это не потеря связи).
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource?.Dispose();
             _webSocket?.Dispose();
@@ -108,7 +111,6 @@ public class DonationAlertsCentrifugeClient : IDisposable
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
 
-            OnDisconnected("Disconnect requested");
             _logger.LogInformation("Отключено");
         }
         catch (Exception ex)
@@ -172,7 +174,7 @@ public class DonationAlertsCentrifugeClient : IDisposable
     }
 
     /// <summary>
-    ///     Сервер может прислать несколько JSON-объектов в одном фрейме.
+    ///     Сервер может прислать несколько JSON-объектов в одном фрейме (конкатенация / перевод строки).
     /// </summary>
     private async Task ProcessJsonMessageAsync(byte[] messageBytes)
     {
@@ -212,7 +214,7 @@ public class DonationAlertsCentrifugeClient : IDisposable
     {
         try
         {
-            // Пустой объект — ping, отвечаем pong.
+            // Пустой объект — серверный ping, отвечаем pong.
             if (root.ValueKind == JsonValueKind.Object && !root.EnumerateObject().MoveNext())
             {
                 await SendPongAsync();
@@ -228,28 +230,62 @@ public class DonationAlertsCentrifugeClient : IDisposable
                 return;
             }
 
-            // Ответ на connect: получаем client id и инициируем подписку на приватный канал.
-            if (root.TryGetProperty("connect", out var connectProp))
+            if (!root.TryGetProperty("result", out var result))
+                return;
+
+            // Ответ на connect: result.client → инициируем подписку на приватный канал.
+            if (result.TryGetProperty("client", out var clientProp))
             {
-                var clientId = connectProp.TryGetProperty("client", out var clientProp)
-                    ? clientProp.GetString() ?? ""
-                    : "";
+                var clientId = clientProp.GetString() ?? "";
                 _logger.LogInformation("Подключено к Centrifugo, client={Client}", clientId);
                 OnConnected();
                 await SubscribeToChannelAsync(clientId);
+                return;
             }
 
-            if (root.TryGetProperty("subscribe", out _))
-                _logger.LogInformation("Подписка на канал {Channel} успешна", _channel);
+            // Серверный disconnect-уведомление.
+            if (result.TryGetProperty("type", out var typeProp) && typeProp.TryGetInt32(out var typeVal) && typeVal == 6)
+            {
+                HandleDisconnectMessage(result);
+                return;
+            }
 
-            if (root.TryGetProperty("push", out var pushProp))
-                ProcessPushMessage(pushProp);
+            // Публикация (донат): result.data.data — полезная нагрузка.
+            if (result.TryGetProperty("data", out var dataProp))
+            {
+                if (dataProp.TryGetProperty("data", out var donationProp))
+                {
+                    _logger.LogDebug("Получен донат: {Data}", donationProp.GetRawText());
+                    OnDonationReceived(donationProp.GetRawText());
+                }
+                else
+                {
+                    // Подтверждение подписки / join — payload без вложенного data.
+                    _logger.LogInformation("Подписка/служебное сообщение по каналу {Channel}", _channel);
+                }
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка обработки JSON-объекта");
             OnError($"Ошибка обработки JSON-объекта: {ex.Message}", ex);
         }
+    }
+
+    private void HandleDisconnectMessage(JsonElement result)
+    {
+        var reconnect = true;
+        var reason = "";
+        if (result.TryGetProperty("data", out var data))
+        {
+            if (data.TryGetProperty("reconnect", out var reconnectProp) &&
+                reconnectProp.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                reconnect = reconnectProp.GetBoolean();
+            if (data.TryGetProperty("reason", out var reasonProp))
+                reason = reasonProp.GetString() ?? "";
+        }
+        _logger.LogWarning("Серверный disconnect: {Reason} (reconnect={Reconnect})", reason, reconnect);
+        OnDisconnected(reason, reconnect);
     }
 
     /// <summary>
@@ -271,46 +307,12 @@ public class DonationAlertsCentrifugeClient : IDisposable
         await SendSubscribeCommandAsync(_channel, channelToken);
     }
 
-    private void ProcessPushMessage(JsonElement push)
-    {
-        try
-        {
-            if (push.TryGetProperty("pub", out var pubProp))
-            {
-                var data = pubProp.TryGetProperty("data", out var dataProp) ? dataProp.GetRawText() : "{}";
-                _logger.LogDebug("Получен донат: {Data}", data);
-                OnDonationReceived(data);
-            }
-
-            if (push.TryGetProperty("unsubscribe", out var unsubProp))
-            {
-                var reason = unsubProp.TryGetProperty("reason", out var reasonProp) ? reasonProp.GetString() : "";
-                _logger.LogWarning("Unsubscribe: {Reason}", reason);
-            }
-
-            if (push.TryGetProperty("disconnect", out var disconnectProp))
-            {
-                var reason = disconnectProp.TryGetProperty("reason", out var reasonProp) ? reasonProp.GetString() : "";
-                _logger.LogWarning("Disconnect push: {Reason}", reason);
-                OnDisconnected(reason ?? "");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка обработки push-сообщения");
-            OnError($"Ошибка обработки push-сообщения: {ex.Message}", ex);
-        }
-    }
-
     private async Task SendConnectCommandAsync(string socketConnectionToken)
     {
+        // Centrifuge v1: connect — это method 0 (поле method опускается).
         var command = new
         {
-            connect = new
-            {
-                token = socketConnectionToken,
-                name = "UkiChat"
-            },
+            @params = new { token = socketConnectionToken },
             id = ++_commandId
         };
 
@@ -321,11 +323,8 @@ public class DonationAlertsCentrifugeClient : IDisposable
     {
         var command = new
         {
-            subscribe = new
-            {
-                channel,
-                token
-            },
+            @params = new { channel, token },
+            method = MethodSubscribe,
             id = ++_commandId
         };
 
@@ -374,8 +373,8 @@ public class DonationAlertsCentrifugeClient : IDisposable
 
     private void OnConnected() => Connected?.Invoke(this, EventArgs.Empty);
 
-    private void OnDisconnected(string reason) =>
-        Disconnected?.Invoke(this, new DisconnectEventArgs { Reason = reason });
+    private void OnDisconnected(string reason, bool reconnect = true) =>
+        Disconnected?.Invoke(this, new DisconnectEventArgs { Reason = reason, Reconnect = reconnect });
 
     private void OnError(string message, Exception? exception = null) =>
         Error?.Invoke(this, new ErrorEventArgs { Message = message, Exception = exception });

@@ -74,9 +74,9 @@ public class DonationAlertsService : IDonationAlertsService
 
         _client.Disconnected += async (_, e) =>
         {
-            StartupDiagnostics.Log("da", $"Disconnected: reason={e.Reason}");
+            StartupDiagnostics.Log("da", $"Disconnected: reason={e.Reason} reconnect={e.Reconnect}");
             await SendNotification(_localizationService.GetString("donationalerts.disconnected"));
-            if (!_intentionalDisconnect)
+            if (!_intentionalDisconnect && e.Reconnect)
                 StartReconnectLoop();
         };
 
@@ -170,13 +170,7 @@ public class DonationAlertsService : IDonationAlertsService
         try
         {
             await SendNotification(_localizationService.GetString("donationalerts.connecting"));
-
-            var accessToken = await EnsureValidAccessTokenAsync(settings.AccessToken);
-            var user = await _apiService.GetUserAsync(accessToken);
-            var channel = $"$alerts:donation_{user.Data.Id}";
-
-            await _client.ConnectAsync(user.Data.SocketConnectionToken, channel,
-                clientId => _apiService.GetCentrifugeSubscribeTokenAsync(accessToken, clientId, channel));
+            await ConnectWithTokenAsync(settings.AccessToken);
         }
         catch (Exception ex)
         {
@@ -188,20 +182,34 @@ public class DonationAlertsService : IDonationAlertsService
     public Task DisconnectAsync() => _client.DisconnectAsync();
 
     /// <summary>
-    ///     Проверяет access-токен через /user/oauth; при 401 обновляет его по refresh_token.
-    ///     Возвращает действующий access-токен.
+    ///     Получает данные пользователя (валидируя/обновляя токен) и подключает Centrifuge-клиент.
     /// </summary>
-    private async Task<string> EnsureValidAccessTokenAsync(string accessToken)
+    private async Task ConnectWithTokenAsync(string accessToken)
+    {
+        var (validToken, user) = await GetUserWithValidTokenAsync(accessToken);
+        var channel = $"$alerts:donation_{user.Data.Id}";
+
+        await _client.ConnectAsync(user.Data.SocketConnectionToken, channel,
+            clientId => _apiService.GetCentrifugeSubscribeTokenAsync(validToken, clientId, channel));
+    }
+
+    /// <summary>
+    ///     Запрашивает /user/oauth; при 401 обновляет токен по refresh_token и повторяет.
+    ///     Возвращает действующий access-токен и данные пользователя (один сетевой вызов в норме).
+    /// </summary>
+    private async Task<(string AccessToken, Model.DonationAlerts.DonationAlertsUserResponse User)> GetUserWithValidTokenAsync(string accessToken)
     {
         try
         {
-            await _apiService.GetUserAsync(accessToken);
-            return accessToken;
+            var user = await _apiService.GetUserAsync(accessToken);
+            return (accessToken, user);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {
             _logger.LogInformation("DonationAlerts access token истёк, обновляем");
-            return await RefreshTokensAsync();
+            var refreshed = await RefreshTokensAsync();
+            var user = await _apiService.GetUserAsync(refreshed);
+            return (refreshed, user);
         }
     }
 
@@ -263,12 +271,7 @@ public class DonationAlertsService : IDonationAlertsService
                 if (string.IsNullOrEmpty(settings.AccessToken))
                     return;
 
-                var accessToken = await EnsureValidAccessTokenAsync(settings.AccessToken);
-                var user = await _apiService.GetUserAsync(accessToken);
-                var channel = $"$alerts:donation_{user.Data.Id}";
-
-                await _client.ConnectAsync(user.Data.SocketConnectionToken, channel,
-                    clientId => _apiService.GetCentrifugeSubscribeTokenAsync(accessToken, clientId, channel));
+                await ConnectWithTokenAsync(settings.AccessToken);
                 _logger.LogInformation("DonationAlerts переподключение успешно");
                 return;
             }
