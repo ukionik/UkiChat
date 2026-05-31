@@ -23,6 +23,9 @@ public class MainWindowViewModel : BindableBase
     private bool _hasReceivedVkCount;
     private int? _lastVkViewerCount;
 
+    private bool _hasReceivedYouTubeCount;
+    private int? _lastYouTubeViewerCount;
+
     private DateTime? _twitchStreamStartedAt;
     private DispatcherTimer? _streamUptimeTimer;
 
@@ -30,6 +33,7 @@ public class MainWindowViewModel : BindableBase
         , IDatabaseContext databaseContext
         , ITwitchViewerCountService twitchViewerCountService
         , IVkVideoLiveViewerCountService vkViewerCountService
+        , IYouTubeViewerCountService youTubeViewerCountService
         , IEventAggregator eventAggregator
         , ILocalizationService localizationService
     )
@@ -57,6 +61,14 @@ public class MainWindowViewModel : BindableBase
                 UpdateVkViewerCountDisplay();
             }, ThreadOption.UIThread);
 
+        eventAggregator.GetEvent<YouTubeViewerCountUpdatedEvent>()
+            .Subscribe(count =>
+            {
+                _hasReceivedYouTubeCount = true;
+                _lastYouTubeViewerCount = count;
+                UpdateYouTubeViewerCountDisplay();
+            }, ThreadOption.UIThread);
+
         eventAggregator.GetEvent<TwitchStreamStartedAtUpdatedEvent>()
             .Subscribe(startedAt =>
             {
@@ -71,11 +83,13 @@ public class MainWindowViewModel : BindableBase
         {
             UpdateTwitchViewerCountDisplay();
             UpdateVkViewerCountDisplay();
+            UpdateYouTubeViewerCountDisplay();
             UpdateTotalViewerCountDisplay();
         });
 
         twitchViewerCountService.Start();
         vkViewerCountService.Start();
+        youTubeViewerCountService.Start();
     }
 
     public DelegateCommand OpenProfileWindowCommand { get; }
@@ -109,6 +123,13 @@ public class MainWindowViewModel : BindableBase
     {
         get => _vkVideoLiveViewerCount;
         set => SetProperty(ref _vkVideoLiveViewerCount, value);
+    }
+
+    private string _youTubeViewerCount = "—";
+    public string YouTubeViewerCount
+    {
+        get => _youTubeViewerCount;
+        set => SetProperty(ref _youTubeViewerCount, value);
     }
 
     private string _totalViewerCount = "—";
@@ -156,12 +177,24 @@ public class MainWindowViewModel : BindableBase
         UpdateTotalViewerCountDisplay();
     }
 
-    private void UpdateTotalViewerCountDisplay()
+    private void UpdateYouTubeViewerCountDisplay()
     {
-        if (!_hasReceivedTwitchCount && !_hasReceivedVkCount)
+        if (!_hasReceivedYouTubeCount)
             return;
 
-        var total = (_lastTwitchViewerCount ?? 0) + (_lastVkViewerCount ?? 0);
+        YouTubeViewerCount = _lastYouTubeViewerCount.HasValue
+            ? _lastYouTubeViewerCount.Value.ToString()
+            : _localizationService.GetString("youtube.offline");
+
+        UpdateTotalViewerCountDisplay();
+    }
+
+    private void UpdateTotalViewerCountDisplay()
+    {
+        if (!_hasReceivedTwitchCount && !_hasReceivedVkCount && !_hasReceivedYouTubeCount)
+            return;
+
+        var total = (_lastTwitchViewerCount ?? 0) + (_lastVkViewerCount ?? 0) + (_lastYouTubeViewerCount ?? 0);
         TotalViewerCount = total.ToString();
     }
 

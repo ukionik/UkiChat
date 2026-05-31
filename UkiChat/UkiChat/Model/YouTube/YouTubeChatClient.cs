@@ -20,10 +20,8 @@ namespace UkiChat.Model.YouTube;
 /// </summary>
 public class YouTubeChatClient : IDisposable
 {
-    private const string BaseUrl = "https://www.youtube.com";
-
-    private const string UserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    private const string BaseUrl = YouTubeUrls.BaseUrl;
+    private const string UserAgent = YouTubeUrls.UserAgent;
 
     // YouTube рекомендует timeoutMs (часто 5-10с). Ограничиваем сверху, чтобы чат был отзывчивее.
     private const int MaxPollIntervalMs = 2000;
@@ -87,7 +85,7 @@ public class YouTubeChatClient : IDisposable
     /// </summary>
     public async Task<string?> ResolveLiveVideoIdAsync(string channel, CancellationToken cancellationToken = default)
     {
-        var liveUrl = BuildLiveUrl(channel);
+        var liveUrl = YouTubeUrls.BuildLiveUrl(channel);
         _logger.LogInformation("Резолвим live-видео канала: {Url}", liveUrl);
 
         var html = await _httpClient.GetStringAsync(liveUrl, cancellationToken);
@@ -413,17 +411,6 @@ public class YouTubeChatClient : IDisposable
         var u = url.GetString() ?? "";
         // Часть картинок (стикеры) приходит с протокол-относительным URL "//..."
         return u.StartsWith("//", StringComparison.Ordinal) ? "https:" + u : u;
-    }
-
-    private static string BuildLiveUrl(string channel)
-    {
-        channel = channel.Trim();
-        if (channel.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            return channel.TrimEnd('/') + "/live";
-        if (channel.StartsWith("UC", StringComparison.Ordinal) && channel.Length == 24)
-            return $"{BaseUrl}/channel/{channel}/live";
-        var handle = channel.StartsWith('@') ? channel : "@" + channel;
-        return $"{BaseUrl}/{handle}/live";
     }
 
     private void EmitMessage(YouTubeChatMessage message)

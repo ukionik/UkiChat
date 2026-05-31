@@ -93,6 +93,14 @@
                     <TextBlock Text="{Binding VkVideoLiveViewerCount}" FontSize="14" VerticalAlignment="Center" />
                 </StackPanel>
             </StatusBarItem>
+            <StatusBarItem Padding="6,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <iconPacks:PackIconMaterial Kind="Youtube" Width="16" Height="16"
+                                               Margin="0,0,5,0" VerticalAlignment="Center"
+                                               Foreground="#FF0000" />
+                    <TextBlock Text="{Binding YouTubeViewerCount}" FontSize="14" VerticalAlignment="Center" />
+                </StackPanel>
+            </StatusBarItem>
             <StatusBarItem DockPanel.Dock="Right" Padding="6,0">
                 <TextBlock Text="{Binding AppVersion}" FontSize="12" VerticalAlignment="Center" Foreground="#888888" />
             </StatusBarItem>
