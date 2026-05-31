@@ -17,6 +17,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         AppSettingsRepository = new AppSettingsRepository(db);
         TwitchSettingsRepository = new TwitchSettingsRepository(db);
         VkVideoLiveSettingsRepository = new VkVideoLiveSettingsRepository(db);
+        YouTubeSettingsRepository = new YouTubeSettingsRepository(db);
         DonationAlertsSettingsRepository = new DonationAlertsSettingsRepository(db);
         SevenTvEmoteRepository = new SevenTvEmoteRepository(db);
         FfzEmoteRepository = new FfzEmoteRepository(db);
@@ -26,6 +27,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
 
     public ITwitchSettingsRepository TwitchSettingsRepository { get; }
     public IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
+    public IYouTubeSettingsRepository YouTubeSettingsRepository { get; }
     public IDonationAlertsSettingsRepository DonationAlertsSettingsRepository { get; }
     public IProfileRepository ProfileRepository { get; }
     public IAppSettingsRepository AppSettingsRepository { get; }
@@ -42,6 +44,20 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     {
         InitDefaultProfile(defaultAppSettings);
         MigrateData(defaultAppSettings);
+        MigrateYouTubeData();
+    }
+
+    // Миграция для БД, созданных до добавления YouTubeSettings
+    private void MigrateYouTubeData()
+    {
+        if (YouTubeSettingsRepository.GetActiveSettings() != null)
+            return;
+
+        var appSettings = AppSettingsRepository.GetActiveAppSettings();
+        if (appSettings == null)
+            return;
+
+        YouTubeSettingsRepository.Save(new YouTubeSettings { AppSettings = appSettings });
     }
 
     // Миграция для БД, созданных до добавления DonationAlertsSettings
@@ -103,6 +119,12 @@ public class DatabaseContext : IDatabaseContext, IDisposable
             AppSettings = appSettings
         };
         VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
+
+        var youTubeSettings = new YouTubeSettings
+        {
+            AppSettings = appSettings
+        };
+        YouTubeSettingsRepository.Save(youTubeSettings);
 
         var donationAlertsSettings = new DonationAlertsSettings
         {

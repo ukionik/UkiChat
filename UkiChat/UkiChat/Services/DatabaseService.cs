@@ -18,11 +18,13 @@ public class DatabaseService : IDatabaseService
         var appSettings = _databaseContext.AppSettingsRepository.GetActiveAppSettings();
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+        var youTubeSettings = _databaseContext.YouTubeSettingsRepository.GetActiveSettings();
         return new AppSettingsInfoData(
             appSettings.Profile.Name,
             appSettings.Language,
             new TwitchSettingsInfo(twitchSettings.Channel),
-            new VkVideoLiveSettingsInfo(vkVideoLiveSettings.Channel)
+            new VkVideoLiveSettingsInfo(vkVideoLiveSettings.Channel),
+            new YouTubeSettingsInfo(youTubeSettings.Channel)
         );
     }
 
@@ -30,9 +32,11 @@ public class DatabaseService : IDatabaseService
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
         var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+        var youTubeSettings = _databaseContext.YouTubeSettingsRepository.GetActiveSettings();
         return new AppSettingsData(
             new TwitchSettingsData(twitchSettings.Channel, twitchSettings.ShowStreamUptime),
-            new VkVideoLiveSettingsData(vkVideoLiveSettings.Channel)
+            new VkVideoLiveSettingsData(vkVideoLiveSettings.Channel),
+            new YouTubeSettingsData(youTubeSettings.Channel)
         );
     }
 
@@ -84,6 +88,13 @@ public class DatabaseService : IDatabaseService
         var vkVideoLiveSettings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
         vkVideoLiveSettings.Channel = data.Channel;
         _databaseContext.VkVideoLiveSettingsRepository.Save(vkVideoLiveSettings);
+    }
+
+    public void UpdateYouTubeSettings(YouTubeSettingsData data)
+    {
+        var youTubeSettings = _databaseContext.YouTubeSettingsRepository.GetActiveSettings();
+        youTubeSettings.Channel = data.Channel;
+        _databaseContext.YouTubeSettingsRepository.Save(youTubeSettings);
     }
 
     public void UpdateVkVideoLiveTokens(string apiAccessToken, string wsAccessToken)

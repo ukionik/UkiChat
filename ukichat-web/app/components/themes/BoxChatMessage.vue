@@ -29,6 +29,7 @@ function getPlatformImage(platform: string) {
   switch (platform) {
     case "Twitch": return "/images/twitch.svg"
     case "VkVideoLive": return "/images/vk-video-live.svg"
+    case "YouTube": return "/images/youtube.svg"
     case "DonationAlerts": return "/images/donation-alerts.svg"
     default: return ""
   }

@@ -41,7 +41,8 @@ async function changeLanguage(lang: string) {
 const state = reactive({
   settings: {
     twitch: { channel: '', showStreamUptime: false },
-    vkVideoLive: { channel: '' }
+    vkVideoLive: { channel: '' },
+    youTube: { channel: '' }
   }
 })
 
@@ -62,6 +63,10 @@ async function updateTwitchShowStreamUptime(showStreamUptime: boolean) {
 
 async function changeVkVideoLiveChannel(channel: string) {
   await invokeUpdate('ChangeVkVideoLiveChannel', channel)
+}
+
+async function changeYouTubeChannel(channel: string) {
+  await invokeUpdate('ChangeYouTubeChannel', channel)
 }
 
 async function authorizeTwitch() {
@@ -201,9 +206,11 @@ onMounted(async () => {
             :twitch-channel="state.settings.twitch.channel"
             :twitch-show-stream-uptime="state.settings.twitch.showStreamUptime"
             :vk-video-live-channel="state.settings.vkVideoLive.channel"
+            :you-tube-channel="state.settings.youTube.channel"
             :twitch-auth="twitchAuth"
             @save-twitch="changeTwitchChannel"
             @save-vk="changeVkVideoLiveChannel"
+            @save-youtube="changeYouTubeChannel"
             @authorize-twitch="authorizeTwitch"
             @logout-twitch="logoutTwitch"
             @update-twitch-show-stream-uptime="updateTwitchShowStreamUptime"

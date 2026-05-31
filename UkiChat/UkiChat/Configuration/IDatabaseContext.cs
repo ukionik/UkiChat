@@ -8,6 +8,7 @@ public interface IDatabaseContext
     IAppSettingsRepository AppSettingsRepository { get; }
     ITwitchSettingsRepository TwitchSettingsRepository { get; }
     IVkVideoLiveSettingsRepository VkVideoLiveSettingsRepository { get; }
+    IYouTubeSettingsRepository YouTubeSettingsRepository { get; }
     IDonationAlertsSettingsRepository DonationAlertsSettingsRepository { get; }
     IProfileRepository ProfileRepository { get; }
     ISevenTvEmoteRepository SevenTvEmoteRepository { get; }

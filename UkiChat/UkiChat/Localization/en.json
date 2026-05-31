@@ -49,6 +49,9 @@
     "vkVideoLive": {
       "name": "VK Video Live"
     },
+    "youtube": {
+      "name": "YouTube"
+    },
     "donationAlerts": {
       "name": "Donation Alerts",
       "authTitle": "Authorization",
@@ -69,6 +72,13 @@
     "disconnectedFromChannel": "Disconnected from channel {0}",
     "connectingToChannelError": "Failed connecting to channel {0}",
     "reconnectingInSeconds": "Reconnecting in {0} sec. (attempt {1})..."
+  },
+  "youtube": {
+    "offline": "Offline",
+    "connectingToChannel": "Connecting to channel {0}...",
+    "connectedToChannel": "Connected to channel {0}",
+    "disconnectedFromChannel": "Disconnected from channel {0}",
+    "connectingToChannelError": "Channel {0} is offline, waiting for the stream..."
   },
   "twitch": {
     "error": "Error",

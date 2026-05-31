@@ -44,6 +44,9 @@ public class YouTubeChatClient : IDisposable
     private CancellationTokenSource? _cts;
     private bool _disposed;
 
+    // Дедуп: стартовый continuation после reconnect повторяет бэклог сообщений
+    private readonly HashSet<string> _seenIds = [];
+
     private string _apiKey = "";
     private string _clientVersion = "";
     private string _continuation = "";
@@ -107,6 +110,11 @@ public class YouTubeChatClient : IDisposable
     {
         try
         {
+            // Останавливаем предыдущий цикл polling, если он ещё жив (переподключение)
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _seenIds.Clear();
+
             await InitChatAsync(videoId, cancellationToken);
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -317,6 +325,15 @@ public class YouTubeChatClient : IDisposable
 
     private void EmitMessage(YouTubeChatMessage message)
     {
+        // Пропускаем повторы (бэклог после reconnect). Кэш ограничиваем, чтобы не рос бесконечно.
+        if (!string.IsNullOrEmpty(message.Id))
+        {
+            if (!_seenIds.Add(message.Id))
+                return;
+            if (_seenIds.Count > 5000)
+                _seenIds.Clear();
+        }
+
         MessageReceived?.Invoke(this, new YouTubeChatMessageEventArgs { Message = message, VideoId = _videoId });
     }
 

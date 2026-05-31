@@ -19,6 +19,7 @@ public class AppHub : Hub
     private readonly ISignalRService _signalRService = ContainerLocator.Container.Resolve<ISignalRService>();
     private readonly ITwitchChatService _twitchChatService = ContainerLocator.Container.Resolve<ITwitchChatService>();
     private readonly IVkVideoLiveChatService _vkVideoLiveChatService = ContainerLocator.Container.Resolve<IVkVideoLiveChatService>();
+    private readonly IYouTubeChatService _youTubeChatService = ContainerLocator.Container.Resolve<IYouTubeChatService>();
     private readonly IWindowService _windowService = ContainerLocator.Container.Resolve<IWindowService>();
     private readonly ITwitchAuthService _twitchAuthService = ContainerLocator.Container.Resolve<ITwitchAuthService>();
     private readonly IDonationAlertsService _donationAlertsService = ContainerLocator.Container.Resolve<IDonationAlertsService>();
@@ -177,6 +178,21 @@ public class AppHub : Hub
         {
             _databaseService.UpdateVkVideoLiveSettings(settings);
             await _signalRService.SendVkVideoLiveReconnect();
+        });
+    }
+
+    public Task ChangeYouTubeChannel(string newChannel)
+    {
+        return Measure($"{nameof(ChangeYouTubeChannel)}({newChannel})",
+            () => _youTubeChatService.ChangeChannelAsync(newChannel));
+    }
+
+    public Task UpdateYouTubeSettings(YouTubeSettingsData settings)
+    {
+        return Measure(nameof(UpdateYouTubeSettings), async () =>
+        {
+            _databaseService.UpdateYouTubeSettings(settings);
+            await _signalRService.SendYouTubeReconnect();
         });
     }
 

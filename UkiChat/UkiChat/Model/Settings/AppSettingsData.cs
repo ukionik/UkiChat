@@ -1,3 +1,3 @@
 ﻿namespace UkiChat.Model.Settings;
 
-public record AppSettingsData(TwitchSettingsData Twitch, VkVideoLiveSettingsData VkVideoLive);
+public record AppSettingsData(TwitchSettingsData Twitch, VkVideoLiveSettingsData VkVideoLive, YouTubeSettingsData YouTube);

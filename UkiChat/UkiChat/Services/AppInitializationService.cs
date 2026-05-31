@@ -5,6 +5,7 @@ using UkiChat.Diagnostics;
 using UkiChat.Entities;
 using UkiChat.Model.Twitch;
 using UkiChat.Model.VkVideoLive;
+using UkiChat.Model.YouTube;
 
 namespace UkiChat.Services;
 
@@ -17,6 +18,7 @@ public class AppInitializationService(
     ITwitchEventSubService twitchEventSubService,
     IVkVideoLiveChatService vkVideoLiveChatService,
     IVkVideoLiveApiService vkVideoLiveApiService,
+    IYouTubeChatService youTubeChatService,
     IDonationAlertsService donationAlertsService
 ) : IAppInitializationService
 {
@@ -32,6 +34,7 @@ public class AppInitializationService(
         {
             await Task.WhenAll(LoadTwitchDataAsync(),
                 LoadVkVideoLiveDataAsync(),
+                LoadYouTubeDataAsync(),
                 LoadDonationAlertsDataAsync());
         }
         StartupDiagnostics.Log("app-init", "InitializeAsync: END");
@@ -167,6 +170,16 @@ public class AppInitializationService(
             await vkVideoLiveChatService.ConnectAsync(
                 VkVideoLiveConnectionParams.OfVkVideoLiveSettings("", vkSettings.Channel ?? "", vkSettings));
         }
+    }
+
+    private async Task LoadYouTubeDataAsync()
+    {
+        using var _ = StartupDiagnostics.Measure("app-init", "LoadYouTubeDataAsync");
+        var youTubeSettings = databaseContext.YouTubeSettingsRepository.GetActiveSettings();
+        StartupDiagnostics.Log("app-init", $"  YouTube channel={youTubeSettings.Channel ?? "<none>"}");
+
+        await youTubeChatService.ConnectAsync(
+            YouTubeConnectionParams.OfYouTubeSettings("", youTubeSettings.Channel ?? "", youTubeSettings));
     }
 
     private async Task LoadDonationAlertsDataAsync()

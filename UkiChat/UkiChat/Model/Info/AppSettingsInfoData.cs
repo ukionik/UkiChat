@@ -5,4 +5,5 @@ namespace UkiChat.Model.Info;
 public record AppSettingsInfoData(string ProfileName
     , string Language
     , TwitchSettingsInfo Twitch
-    , VkVideoLiveSettingsInfo VkVideoLive);
+    , VkVideoLiveSettingsInfo VkVideoLive
+    , YouTubeSettingsInfo YouTube);

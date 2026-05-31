@@ -7,6 +7,7 @@ using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Entities;
 using UkiChat.Model.DonationAlerts;
 using UkiChat.Model.VkVideoLive;
+using UkiChat.Model.YouTube;
 using UkiChat.Services;
 
 namespace UkiChat.Configuration;
@@ -59,6 +60,15 @@ public static class DIConfiguration
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(vkChatLogger, dispose: true))
                 .CreateLogger<VkVideoLiveChatClient>());
+
+        var youTubeChatLogger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Async(a => a.File($"logs/youtube-chat-{sessionTimestamp}.txt"))
+            .CreateLogger();
+
+        services.AddSingleton(
+            LoggerFactory.Create(b => b.AddSerilog(youTubeChatLogger, dispose: true))
+                .CreateLogger<YouTubeChatClient>());
 
         var twitchChatLogger = new LoggerConfiguration()
             .MinimumLevel.Debug()

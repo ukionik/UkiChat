@@ -9,6 +9,7 @@ interface Props {
   twitchChannel: string
   twitchShowStreamUptime: boolean
   vkVideoLiveChannel: string
+  youTubeChannel: string
   twitchAuth: TwitchAuthStatus
 }
 
@@ -16,6 +17,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'save-twitch': [value: string]
   'save-vk': [value: string]
+  'save-youtube': [value: string]
   'authorize-twitch': []
   'logout-twitch': []
   'update-twitch-show-stream-uptime': [value: boolean]
@@ -32,16 +34,21 @@ const schema = v.object({
   vkVideoLive: v.object({
     channel: v.pipe(v.string(), v.minLength(1, 'Test'))
   }),
+  youTube: v.object({
+    channel: v.pipe(v.string(), v.minLength(1, 'Test'))
+  }),
 })
 
 const state = reactive({
   twitch: { channel: '', showStreamUptime: false },
   vkVideoLive: { channel: '' },
+  youTube: { channel: '' },
 })
 
 watch(() => props.twitchChannel, val => { state.twitch.channel = val }, { immediate: true })
 watch(() => props.twitchShowStreamUptime, val => { state.twitch.showStreamUptime = val }, { immediate: true })
 watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }, { immediate: true })
+watch(() => props.youTubeChannel, val => { state.youTube.channel = val }, { immediate: true })
 </script>
 
 <template>
@@ -58,6 +65,12 @@ watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }
         :active="activeSub === 'vkVideoLive'"
         icon="/images/vk-video-live.svg"
         @click="activeSub = 'vkVideoLive'"
+      />
+      <MenuTabSettingsItem
+        :title="t('settings.youtube.name')"
+        :active="activeSub === 'youTube'"
+        icon="/images/youtube.svg"
+        @click="activeSub = 'youTube'"
       />
     </div>
     <UForm :schema="schema" :state="state" class="p-6 space-y-4 max-w-xl">
@@ -99,6 +112,11 @@ watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }
       <template v-if="activeSub === 'vkVideoLive'">
         <HorizontalFormField :label="t('settings.channel')" name="vkVideoLive.channel">
           <UInput v-model="state.vkVideoLive.channel" @blur="emit('save-vk', state.vkVideoLive.channel)" />
+        </HorizontalFormField>
+      </template>
+      <template v-if="activeSub === 'youTube'">
+        <HorizontalFormField :label="t('settings.channel')" name="youTube.channel">
+          <UInput v-model="state.youTube.channel" @blur="emit('save-youtube', state.youTube.channel)" />
         </HorizontalFormField>
       </template>
     </UForm>

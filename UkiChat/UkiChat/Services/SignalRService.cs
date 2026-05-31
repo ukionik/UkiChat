@@ -33,6 +33,11 @@ public class SignalRService(IHubContext<AppHub> hubContext) : ISignalRService
         await hubContext.Clients.All.SendAsync("OnVkVideoLiveReconnect");
     }
 
+    public async Task SendYouTubeReconnect()
+    {
+        await hubContext.Clients.All.SendAsync("OnYouTubeReconnect");
+    }
+
     public async Task SendTwitchAuthChanged(TwitchAuthStatusData status)
     {
         await hubContext.Clients.All.SendAsync("OnTwitchAuthChanged", status);

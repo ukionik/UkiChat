@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using TwitchLib.Client.Models;
 using UkiChat.Model.Twitch;
 using UkiChat.Model.VkVideoLive;
+using UkiChat.Model.YouTube;
 using UkiChat.Utils;
 
 namespace UkiChat.Model.Chat;
@@ -127,6 +128,40 @@ public record UkiChatMessage(ChatPlatform Platform
         return new UkiChatMessage(ChatPlatform.VkVideoLive, badges, displayName, displayNameColor, messageParts, replyTo, Id: messageId);
     }
     
+    public static UkiChatMessage FromYouTubeMessage(YouTubeChatMessage chatMessage)
+    {
+        var displayName = string.IsNullOrEmpty(chatMessage.AuthorName) ? "Unknown" : chatMessage.AuthorName;
+        var displayNameColor = ColorUtil.GetDisplayNameColor(displayName, "");
+
+        // Бейджи: берём только картиночные (спонсорство). Системные (MOD/OWNER/VERIFIED)
+        // приходят вектором без URL — их пока пропускаем.
+        var badges = chatMessage.Badges
+            .Where(b => !string.IsNullOrEmpty(b.ImageUrl))
+            .Select(b => b.ImageUrl!)
+            .ToList();
+
+        var messageParts = chatMessage.Parts
+            .Select(p => p.Kind == YouTubeChatPartKind.Emote
+                ? new UkiChatMessagePart(UkiChatMessagePartType.Emote, p.Content)
+                : new UkiChatMessagePart(UkiChatMessagePartType.Text, p.Content))
+            .ToList();
+
+        // Суперчат — оформляем как донат (имя зелёным, сумма как у DonationAlerts).
+        if (chatMessage.IsSuperChat)
+            return new UkiChatMessage(ChatPlatform.YouTube, badges, displayName, "#4ade80",
+                messageParts, MessageType: UkiChatMessageType.Donation, Id: chatMessage.Id,
+                DonationAmount: chatMessage.AmountText);
+
+        return new UkiChatMessage(ChatPlatform.YouTube, badges, displayName, displayNameColor, messageParts,
+            Id: chatMessage.Id);
+    }
+
+    public static UkiChatMessage FromYouTubeMessageNotification(string message)
+    {
+        return new UkiChatMessage(ChatPlatform.YouTube, [], "YouTube", "#FFFFFF",
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
+    }
+
     public static UkiChatMessage FromVkVideoLiveMessageNotification(string message)
     {
         return new UkiChatMessage(ChatPlatform.VkVideoLive, [], ChatPlatform.VkVideoLive.ToString(), "#FFFFFF",

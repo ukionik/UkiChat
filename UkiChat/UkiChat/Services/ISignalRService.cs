@@ -11,6 +11,7 @@ public interface ISignalRService
     Task SendUserMessagesDeletedAsync(string username);
     Task SendTwitchReconnect();
     Task SendVkVideoLiveReconnect();
+    Task SendYouTubeReconnect();
     Task SendTwitchAuthChanged(TwitchAuthStatusData status);
     Task SendDonationAlertsAuthChanged(DonationAlertsAuthStatusData status);
 }
