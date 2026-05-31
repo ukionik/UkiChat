@@ -87,13 +87,41 @@ function clearClippedVisibility() {
 
 let resizeObserver: ResizeObserver | null = null
 
-watch(() => props.messages, async () => {
-  await nextTick()
+// Применяем текущий layout: либо обрезку старых сообщений, либо автоскролл вниз.
+function applyLayout() {
   if (props.hideClipped) {
     updateClippedVisibility()
   } else if (autoScroll.value) {
     scrollToBottom()
   }
+}
+
+// Картинки (эмодзи, бейджи, иконки) грузятся асинхронно, поэтому высота сообщений
+// сразу после nextTick занижена. Пересчитываем layout повторно по мере догрузки,
+// иначе нижнее сообщение «уезжает» за край и выглядит обрезанным/недоскролленным.
+const trackedImages = new WeakSet<HTMLImageElement>()
+
+function scheduleLayoutWithImages() {
+  applyLayout()
+  const el = chatContainer.value
+  if (!el) return
+  const images = el.querySelectorAll('img')
+  images.forEach((img) => {
+    if (img.complete || trackedImages.has(img)) return
+    trackedImages.add(img)
+    const onSettled = () => {
+      img.removeEventListener('load', onSettled)
+      img.removeEventListener('error', onSettled)
+      applyLayout()
+    }
+    img.addEventListener('load', onSettled)
+    img.addEventListener('error', onSettled)
+  })
+}
+
+watch(() => props.messages, async () => {
+  await nextTick()
+  scheduleLayoutWithImages()
 })
 
 watch(() => props.hideClipped, async (enabled) => {
@@ -109,11 +137,7 @@ watch(() => props.hideClipped, async (enabled) => {
 onMounted(() => {
   if (typeof ResizeObserver !== 'undefined' && chatContainer.value) {
     resizeObserver = new ResizeObserver(() => {
-      if (props.hideClipped) {
-        updateClippedVisibility()
-      } else if (autoScroll.value) {
-        scrollToBottom()
-      }
+      applyLayout()
     })
     resizeObserver.observe(chatContainer.value)
   }
