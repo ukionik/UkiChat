@@ -63,7 +63,8 @@
     }
   },
   "chat": {
-    "messageDeleted": "<message deleted>"
+    "messageDeleted": "<message deleted>",
+    "bits": "{0} bits"
   },
   "vkvideolive": {
     "offline": "Offline",
@@ -87,7 +88,13 @@
     "connectedToChannel": "Connected to channel {0}",
     "disconnectedFromChannel": "Disconnected from channel {0}",
     "connectingToChannelError": "Failed connecting to channel {0}",
-    "reconnectingInSeconds": "Reconnecting in {0} sec. (attempt {1})..."
+    "reconnectingInSeconds": "Reconnecting in {0} sec. (attempt {1})...",
+    "sub": "subscribed {0}!",
+    "resub": "resubscribed {0} ({1} months)!",
+    "subGift": "gifted a {0} sub to {1}!",
+    "subGiftCommunity": "gifted {0} {1} subs to the channel!",
+    "raid": "is raiding with {0} viewers!",
+    "anonymousGifter": "Anonymous"
   },
   "donationalerts": {
     "connecting": "Connecting to Donation Alerts...",

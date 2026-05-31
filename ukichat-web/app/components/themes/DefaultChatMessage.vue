@@ -38,7 +38,8 @@ function getPlatformImage(platform: string) {
 function getMessageStyle() {
   const base: Record<string, string> = { fontSize: `${props.scale}rem` }
   const type = props.message.messageType
-  if (type === 'Notification' || type === 'Mention' || type === 'Reply' || type === 'ChannelPointsRedemption' || type === 'Donation') {
+  if (type === 'Notification' || type === 'Mention' || type === 'Reply' || type === 'ChannelPointsRedemption'
+      || type === 'Donation' || type === 'Subscription' || type === 'Raid' || type === 'Cheer') {
     base.paddingLeft = `${0.375 * props.scale}rem`
   }
   return base
@@ -50,6 +51,9 @@ function getMessageClass(messageType: MessageType | undefined) {
   if (messageType === 'Reply') return 'border-l-[3px] border-gray-500 rounded-r-sm'
   if (messageType === 'ChannelPointsRedemption') return 'bg-purple-500/10 border-l-[3px] border-purple-400 rounded-r-sm'
   if (messageType === 'Donation') return 'bg-green-500/10 border-l-[3px] border-green-400 rounded-r-sm'
+  if (messageType === 'Subscription') return 'bg-violet-500/10 border-l-[3px] border-violet-400 rounded-r-sm'
+  if (messageType === 'Raid') return 'bg-blue-500/10 border-l-[3px] border-blue-400 rounded-r-sm'
+  if (messageType === 'Cheer') return 'bg-cyan-500/10 border-l-[3px] border-cyan-400 rounded-r-sm'
   return ''
 }
 
@@ -92,6 +96,10 @@ const emoteStyle = computed(() => ({
     <div v-if="message.donationAmount" class="flex items-center gap-1 text-green-400 truncate" :style="rewardHeaderStyle">
       <img src="/images/money.svg" alt="donation" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-semibold">{{ message.donationAmount }}</span>
+    </div>
+    <div v-if="message.bits != null" class="flex items-center gap-1 text-cyan-400 truncate" :style="rewardHeaderStyle">
+      <img src="/images/bits.svg" alt="bits" class="shrink-0" :style="{ height: '1em', width: '1em' }">
+      <span class="truncate font-semibold">{{ t('chat.bits', [message.bits]) }}</span>
     </div>
     <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate" :style="replyHeaderStyle">
       <span>↩</span>

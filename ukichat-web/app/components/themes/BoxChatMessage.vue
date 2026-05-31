@@ -68,6 +68,15 @@ const boxStyle = computed(() => {
   if (type === 'Donation') {
     return { ...base, background: 'linear-gradient(rgba(34, 120, 70, 0.6), rgba(20, 90, 50, 0.7))' }
   }
+  if (type === 'Subscription') {
+    return { ...base, background: 'linear-gradient(rgba(110, 70, 180, 0.6), rgba(80, 45, 140, 0.7))' }
+  }
+  if (type === 'Raid') {
+    return { ...base, background: 'linear-gradient(rgba(40, 90, 170, 0.6), rgba(25, 65, 130, 0.7))' }
+  }
+  if (type === 'Cheer') {
+    return { ...base, background: 'linear-gradient(rgba(30, 130, 150, 0.6), rgba(20, 100, 120, 0.7))' }
+  }
   return { ...base, background: 'linear-gradient(rgba(70, 70, 70, 0.6), rgba(50, 50, 50, 0.7))' }
 })
 </script>
@@ -92,6 +101,13 @@ const boxStyle = computed(() => {
          :style="{ fontSize: replyFontSize }">
       <img src="/images/money.svg" alt="donation" class="shrink-0" :style="{ height: '1em', width: '1em' }">
       <span class="truncate font-semibold">{{ message.donationAmount }}</span>
+    </div>
+
+    <!-- Количество бит -->
+    <div v-if="message.bits != null" class="flex items-center gap-1 text-cyan-400 truncate mb-1"
+         :style="{ fontSize: replyFontSize }">
+      <img src="/images/bits.svg" alt="bits" class="shrink-0" :style="{ height: '1em', width: '1em' }">
+      <span class="truncate font-semibold">{{ t('chat.bits', [message.bits]) }}</span>
     </div>
 
     <!-- Ответ на сообщение -->

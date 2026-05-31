@@ -63,7 +63,8 @@
     }
   },
   "chat": {
-    "messageDeleted": "<сообщение удалено>"
+    "messageDeleted": "<сообщение удалено>",
+    "bits": "{0} бит"
   },
   "vkvideolive": {
     "offline": "Офлайн",
@@ -87,7 +88,13 @@
     "connectedToChannel": "Подключился к каналу {0}",
     "disconnectedFromChannel": "Отключился от канала {0}",
     "connectingToChannelError": "Ошибка подключения к каналу {0}",
-    "reconnectingInSeconds": "Переподключение через {0} сек. (попытка {1})..."
+    "reconnectingInSeconds": "Переподключение через {0} сек. (попытка {1})...",
+    "sub": "оформил подписку {0}!",
+    "resub": "продлил подписку {0} ({1} мес.)!",
+    "subGift": "подарил подписку {0} для {1}!",
+    "subGiftCommunity": "разыграл {0} подписок {1} на канале!",
+    "raid": "влетел на канал с {0} зрителями!",
+    "anonymousGifter": "Аноним"
   },
   "donationalerts": {
     "connecting": "Подключение к Donation Alerts...",

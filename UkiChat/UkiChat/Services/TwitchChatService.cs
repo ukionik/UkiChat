@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Client;
+using TwitchLib.Client.Enums;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Models;
@@ -43,6 +44,9 @@ public class TwitchChatService : ITwitchChatService
 
     private string _broadcasterId = "";
     private string _channelName = "";
+
+    // Origin-id недавних массовых подарков — чтобы не дублировать отдельными subgift-событиями.
+    private readonly Dictionary<string, DateTime> _communityGiftOrigins = new();
 
     public TwitchChatService(IDatabaseContext databaseContext
         , ISignalRService signalRService
@@ -161,6 +165,65 @@ public class TwitchChatService : ITwitchChatService
             await signalRService.SendUserMessagesDeletedAsync(e.UserTimeout.Username);
         };
 
+        _twitchClient.OnNewSubscriber += async (_, e) =>
+        {
+            var s = e.Subscriber;
+            _logger.LogInformation("Новая подписка: {DisplayName} ({Tier})", s.DisplayName, s.MsgParamSubPlan);
+            var text = string.Format(localizationService.GetString("twitch.sub"), TierLabel(s.MsgParamSubPlan));
+            await signalRService.SendChatMessageAsync(
+                UkiChatMessage.FromTwitchEvent(s.DisplayName, s.HexColor, text, UkiChatMessageType.Subscription));
+        };
+
+        _twitchClient.OnReSubscriber += async (_, e) =>
+        {
+            var s = e.ReSubscriber;
+            _logger.LogInformation("Ресаб: {DisplayName} ({Months} мес.)", s.DisplayName, s.MsgParamCumulativeMonths);
+            var text = string.Format(localizationService.GetString("twitch.resub"),
+                TierLabel(s.MsgParamSubPlan), s.MsgParamCumulativeMonths);
+            await signalRService.SendChatMessageAsync(
+                UkiChatMessage.FromTwitchEvent(s.DisplayName, s.HexColor, text, UkiChatMessageType.Subscription));
+        };
+
+        _twitchClient.OnGiftedSubscription += async (_, e) =>
+        {
+            var g = e.GiftedSubscription;
+            // Массовый подарок шлёт сводку (OnCommunitySubscription) + по одному subgift на каждого
+            // получателя с тем же origin-id. Сводку уже показали — отдельные дубли пропускаем.
+            if (IsPartOfCommunityGift(g.MsgParamOriginId))
+                return;
+
+            var gifter = g.IsAnonymous ? localizationService.GetString("twitch.anonymousGifter") : g.DisplayName;
+            _logger.LogInformation("Подарочная подписка: {Gifter} -> {Recipient}",
+                gifter, g.MsgParamRecipientDisplayName);
+            var text = string.Format(localizationService.GetString("twitch.subGift"),
+                TierLabel(g.MsgParamSubPlan), g.MsgParamRecipientDisplayName);
+            await signalRService.SendChatMessageAsync(
+                UkiChatMessage.FromTwitchEvent(gifter, g.HexColor, text, UkiChatMessageType.Subscription));
+        };
+
+        _twitchClient.OnCommunitySubscription += async (_, e) =>
+        {
+            var g = e.GiftedSubscription;
+            RegisterCommunityGift(g.MsgParamOriginId);
+
+            var gifter = g.IsAnonymous ? localizationService.GetString("twitch.anonymousGifter") : g.DisplayName;
+            _logger.LogInformation("Массовый подарок: {Gifter} x{Count}", gifter, g.MsgParamMassGiftCount);
+            var text = string.Format(localizationService.GetString("twitch.subGiftCommunity"),
+                g.MsgParamMassGiftCount, TierLabel(g.MsgParamSubPlan));
+            await signalRService.SendChatMessageAsync(
+                UkiChatMessage.FromTwitchEvent(gifter, g.HexColor, text, UkiChatMessageType.Subscription));
+        };
+
+        _twitchClient.OnRaidNotification += async (_, e) =>
+        {
+            var r = e.RaidNotification;
+            int.TryParse(r.MsgParamViewerCount, out var viewers);
+            _logger.LogInformation("Рейд: {DisplayName} ({Viewers} зрителей)", r.MsgParamDisplayName, viewers);
+            var text = string.Format(localizationService.GetString("twitch.raid"), viewers);
+            await signalRService.SendChatMessageAsync(
+                UkiChatMessage.FromTwitchEvent(r.MsgParamDisplayName, r.HexColor, text, UkiChatMessageType.Raid));
+        };
+
         // Watch streak — Twitch шлёт как USERNOTICE viewermilestone, TwitchLib не обрабатывает нативно
         _twitchClient.OnUnaccountedFor += async (_, e) =>
         {
@@ -176,6 +239,44 @@ public class TwitchChatService : ITwitchChatService
             _logger.LogDebug("IRC [{Direction}]: {Data}", e.Direction, e.Data);
             return Task.CompletedTask;
         };
+    }
+
+    // Человекочитаемая метка уровня подписки для текста события.
+    private static string TierLabel(SubscriptionPlan plan) => plan switch
+    {
+        SubscriptionPlan.Prime => "Prime",
+        SubscriptionPlan.Tier2 => "Tier 2",
+        SubscriptionPlan.Tier3 => "Tier 3",
+        _ => "Tier 1"
+    };
+
+    private void RegisterCommunityGift(string? originId)
+    {
+        if (string.IsNullOrEmpty(originId)) return;
+        lock (_communityGiftOrigins)
+        {
+            PruneCommunityGiftOrigins();
+            _communityGiftOrigins[originId] = DateTime.UtcNow;
+        }
+    }
+
+    private bool IsPartOfCommunityGift(string? originId)
+    {
+        if (string.IsNullOrEmpty(originId)) return false;
+        lock (_communityGiftOrigins)
+        {
+            PruneCommunityGiftOrigins();
+            return _communityGiftOrigins.ContainsKey(originId);
+        }
+    }
+
+    // Отдельные subgift приходят сразу следом за сводкой; держим origin-id пару минут с запасом.
+    private void PruneCommunityGiftOrigins()
+    {
+        var cutoff = DateTime.UtcNow.AddMinutes(-2);
+        var stale = _communityGiftOrigins.Where(kv => kv.Value < cutoff).Select(kv => kv.Key).ToList();
+        foreach (var key in stale)
+            _communityGiftOrigins.Remove(key);
     }
 
     public async Task ConnectAsync(TwitchConnectionParams connectionParams)

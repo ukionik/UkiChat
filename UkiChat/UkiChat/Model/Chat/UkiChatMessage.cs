@@ -21,7 +21,8 @@ public record UkiChatMessage(ChatPlatform Platform
     , string Id = ""
     , string? RewardTitle = null
     , int? RewardCost = null
-    , string? DonationAmount = null)
+    , string? DonationAmount = null
+    , int? Bits = null)
 {
     public static UkiChatMessage FromTwitchMessage(ChatMessage twitchMessage, List<string> badgeUrls, Dictionary<string, string>? thirdPartyEmotes = null, string? rewardTitle = null, int? rewardCost = null)
     {
@@ -47,8 +48,26 @@ public record UkiChatMessage(ChatPlatform Platform
         {
             messageType = UkiChatMessageType.ChannelPointsRedemption;
         }
+        else if (twitchMessage.Bits > 0)
+        {
+            // Cheer — обычное PRIVMSG с тегом bits. Эмоуты/чирмоуты и бейджи уже разобраны выше.
+            messageType = UkiChatMessageType.Cheer;
+        }
 
-        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id, rewardTitle, rewardCost);
+        var bits = twitchMessage.Bits > 0 ? twitchMessage.Bits : (int?)null;
+        return new UkiChatMessage(ChatPlatform.Twitch, badgeUrls, twitchMessage.DisplayName, displayNameColor, messageParts, replyTo, messageType, twitchMessage.Id, rewardTitle, rewardCost, Bits: bits);
+    }
+
+    /// <summary>
+    /// Событие канала, приходящее через IRC USERNOTICE (подписка, ресаб, подарок, рейд).
+    /// Текст уже локализован вызывающей стороной. Имя показывается с цветом отправителя.
+    /// </summary>
+    public static UkiChatMessage FromTwitchEvent(string displayName, string hexColor, string text, UkiChatMessageType messageType)
+    {
+        var displayNameColor = ColorUtil.GetDisplayNameColor(displayName, hexColor);
+        return new UkiChatMessage(ChatPlatform.Twitch, [], displayName, displayNameColor,
+            [new UkiChatMessagePart(UkiChatMessagePartType.Text, text)],
+            MessageType: messageType, Id: Guid.NewGuid().ToString());
     }
 
     /// <summary>

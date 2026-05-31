@@ -31,6 +31,18 @@ async function sendChannelPoints() {
   await invokeUpdate("SendChatMessage", generateChannelPoints())
 }
 
+async function sendSubscription() {
+  await invokeUpdate("SendChatMessage", generateSubscription())
+}
+
+async function sendRaid() {
+  await invokeUpdate("SendChatMessage", generateRaid())
+}
+
+async function sendCheer() {
+  await invokeUpdate("SendChatMessage", generateCheer())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -169,6 +181,48 @@ function generateDonation() {
   }
 }
 
+function generateSubscription() {
+  return {
+    platform: "Twitch",
+    badges: [],
+    displayName: "Viewer42",
+    displayNameColor: "#9147FF",
+    messageType: "Subscription",
+    messageParts: [
+      { type: "Text", content: "продлил подписку Tier 1 (7 мес.)!" }
+    ]
+  }
+}
+
+function generateRaid() {
+  return {
+    platform: "Twitch",
+    badges: [],
+    displayName: "BigStreamer",
+    displayNameColor: "#1E90FF",
+    messageType: "Raid",
+    messageParts: [
+      { type: "Text", content: "влетел на канал с 256 зрителями!" }
+    ]
+  }
+}
+
+function generateCheer() {
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3158e758-3cb4-43c5-94b3-7639810451c5/3"
+    ],
+    displayName: "BitsFan",
+    displayNameColor: "#22D3EE",
+    messageType: "Cheer",
+    bits: 500,
+    messageParts: [
+      { type: "Text", content: "Cheer500 отличный стрим!" }
+    ]
+  }
+}
+
 onMounted(async () => {
   await startSignalR()
 })
@@ -184,6 +238,9 @@ onMounted(async () => {
     <UButton @click="sendLink">Link</UButton>
     <UButton @click="sendDonation">Donation</UButton>
     <UButton @click="sendChannelPoints">Channel Points</UButton>
+    <UButton @click="sendSubscription">Subscription</UButton>
+    <UButton @click="sendRaid">Raid</UButton>
+    <UButton @click="sendCheer">Cheer</UButton>
   </div>
 </template>
 

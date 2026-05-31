@@ -8,5 +8,8 @@ public enum UkiChatMessageType
     Reply,
     Deleted,
     ChannelPointsRedemption,
-    Donation
+    Donation,
+    Subscription,
+    Raid,
+    Cheer
 }
