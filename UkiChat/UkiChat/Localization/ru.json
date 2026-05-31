@@ -10,7 +10,7 @@
       "chatOverlayUrl": "Ссылка на оверлей чата (для OBS)",
       "copyToClipboard": "Скопировать",
       "copiedToClipboard": "Скопировано в буфер обмена",
-      "mentionNicknames": "Выделение упоминаний",
+      "mentionNicknames": "Подсветка сообщений по никам",
       "mentionNicknamesPlaceholder": "Введите ник и нажмите Enter"
     },
     "appearance": {

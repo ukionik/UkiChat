@@ -214,7 +214,19 @@ public record UkiChatMessage(ChatPlatform Platform
 
         foreach (var nick in nicknames)
         {
-            if (!string.IsNullOrEmpty(nick) && text.Contains(nick, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(nick))
+                continue;
+
+            // Убираем ведущий символ "собаки", если ник задан как "@nick".
+            var bareNick = nick.TrimStart('@');
+            if (bareNick.Length == 0)
+                continue;
+
+            // Ищем ник как отдельное слово, а не как подстроку внутри другого слова
+            // (чтобы "uki" не срабатывал в "ukichat"). Перед ником допускается
+            // символ "собаки" (@nick), но не буква/цифра другого слова.
+            var pattern = $@"(?<![\p{{L}}\p{{N}}_]){Regex.Escape(bareNick)}\b";
+            if (Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
                 return this with { MessageType = UkiChatMessageType.Mention };
         }
 
