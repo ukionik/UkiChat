@@ -25,6 +25,9 @@ public class YouTubeChatClient : IDisposable
     private const string UserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+    // YouTube рекомендует timeoutMs (часто 5-10с). Ограничиваем сверху, чтобы чат был отзывчивее.
+    private const int MaxPollIntervalMs = 2000;
+
     // Извлечение параметров InnerTube и стартового continuation со страницы live_chat
     private static readonly Regex ApiKeyRegex = new("\"INNERTUBE_API_KEY\":\"([^\"]+)\"", RegexOptions.Compiled);
 
@@ -70,6 +73,10 @@ public class YouTubeChatClient : IDisposable
     }
 
     public event EventHandler<YouTubeChatMessageEventArgs>? MessageReceived;
+
+    /// <summary>Удаление сообщения модератором. Аргумент — id удалённого сообщения.</summary>
+    public event EventHandler<string>? MessageDeleted;
+
     public event EventHandler? Connected;
     public event EventHandler<DisconnectEventArgs>? Disconnected;
     public event EventHandler<ErrorEventArgs>? Error;
@@ -177,7 +184,7 @@ public class YouTubeChatClient : IDisposable
 
             try
             {
-                await Task.Delay(timeoutMs, cancellationToken);
+                await Task.Delay(Math.Min(timeoutMs, MaxPollIntervalMs), cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -239,49 +246,77 @@ public class YouTubeChatClient : IDisposable
 
     private void ProcessAction(JsonElement action)
     {
-        if (!action.TryGetProperty("addChatItemAction", out var add) ||
-            !add.TryGetProperty("item", out var item))
+        if (action.TryGetProperty("addChatItemAction", out var add) &&
+            add.TryGetProperty("item", out var item))
+        {
+            if (item.TryGetProperty("liveChatTextMessageRenderer", out var textRenderer))
+                EmitMessage(ParseRenderer(textRenderer, isSuperChat: false));
+            else if (item.TryGetProperty("liveChatPaidMessageRenderer", out var paidRenderer))
+                EmitMessage(ParseRenderer(paidRenderer, isSuperChat: true));
+            else if (item.TryGetProperty("liveChatPaidStickerRenderer", out var stickerRenderer))
+                EmitMessage(ParsePaidSticker(stickerRenderer));
+            else if (item.TryGetProperty("liveChatMembershipItemRenderer", out var memberRenderer))
+                EmitMessage(ParseMembership(memberRenderer));
             return;
+        }
 
-        if (item.TryGetProperty("liveChatTextMessageRenderer", out var textRenderer))
-            EmitMessage(ParseRenderer(textRenderer, isSuperChat: false));
-        else if (item.TryGetProperty("liveChatPaidMessageRenderer", out var paidRenderer))
-            EmitMessage(ParseRenderer(paidRenderer, isSuperChat: true));
+        // Удаление одного сообщения модератором (markChatItemAsDeletedAction / removeChatItemAction)
+        if ((action.TryGetProperty("markChatItemAsDeletedAction", out var del) &&
+             del.TryGetProperty("targetItemId", out var delId)) ||
+            (action.TryGetProperty("removeChatItemAction", out del) &&
+             del.TryGetProperty("targetItemId", out delId)))
+        {
+            var id = delId.GetString();
+            if (!string.IsNullOrEmpty(id))
+                MessageDeleted?.Invoke(this, id);
+        }
     }
 
     private YouTubeChatMessage ParseRenderer(JsonElement r, bool isSuperChat)
     {
-        var parts = new List<YouTubeChatPart>();
-        if (r.TryGetProperty("message", out var message) && message.TryGetProperty("runs", out var runs))
-            foreach (var run in runs.EnumerateArray())
-            {
-                if (run.TryGetProperty("text", out var text))
-                    parts.Add(new YouTubeChatPart(YouTubeChatPartKind.Text, text.GetString() ?? ""));
-                else if (run.TryGetProperty("emoji", out var emoji))
-                {
-                    var emoteUrl = LastThumbnailUrl(emoji.TryGetProperty("image", out var img) ? img : default);
-                    if (!string.IsNullOrEmpty(emoteUrl))
-                        parts.Add(new YouTubeChatPart(YouTubeChatPartKind.Emote, emoteUrl));
-                }
-            }
-
-        var badges = new List<YouTubeChatBadge>();
-        if (r.TryGetProperty("authorBadges", out var authorBadges))
-            foreach (var b in authorBadges.EnumerateArray())
-            {
-                if (!b.TryGetProperty("liveChatAuthorBadgeRenderer", out var br)) continue;
-                var tooltip = br.TryGetProperty("tooltip", out var tt) ? tt.GetString() ?? "" : "";
-                if (br.TryGetProperty("customThumbnail", out var ct))
-                    badges.Add(new YouTubeChatBadge(null, LastThumbnailUrl(ct), tooltip));
-                else if (br.TryGetProperty("icon", out var icon) && icon.TryGetProperty("iconType", out var it))
-                    badges.Add(new YouTubeChatBadge(it.GetString(), null, tooltip));
-            }
-
         string? amountText = null;
         if (isSuperChat && r.TryGetProperty("purchaseAmountText", out var amount) &&
             amount.TryGetProperty("simpleText", out var amountSimple))
             amountText = amountSimple.GetString();
 
+        return BuildMessage(r, ParseRuns(r), isSuperChat, amountText);
+    }
+
+    /// <summary>Супер-стикер (liveChatPaidStickerRenderer): сумма + картинка стикера, текста нет.</summary>
+    private YouTubeChatMessage ParsePaidSticker(JsonElement r)
+    {
+        var parts = new List<YouTubeChatPart>();
+        if (r.TryGetProperty("sticker", out var sticker))
+        {
+            var stickerUrl = LastThumbnailUrl(sticker);
+            if (!string.IsNullOrEmpty(stickerUrl))
+                parts.Add(new YouTubeChatPart(YouTubeChatPartKind.Emote, stickerUrl));
+        }
+
+        string? amountText = null;
+        if (r.TryGetProperty("purchaseAmountText", out var amount) &&
+            amount.TryGetProperty("simpleText", out var amountSimple))
+            amountText = amountSimple.GetString();
+
+        return BuildMessage(r, parts, isSuperChat: true, amountText);
+    }
+
+    /// <summary>
+    ///     Спонсорство (liveChatMembershipItemRenderer): новый участник или веха ("Участник уже 6 мес.").
+    ///     Текст шапки кладём в AmountText, чтобы оформить как платную поддержку (зелёный хайлайт).
+    /// </summary>
+    private YouTubeChatMessage ParseMembership(JsonElement r)
+    {
+        // headerPrimaryText — для вех, headerSubtext — для новых участников
+        var label = TextOf(r, "headerPrimaryText");
+        if (string.IsNullOrEmpty(label)) label = TextOf(r, "headerSubtext");
+
+        return BuildMessage(r, ParseRuns(r), isSuperChat: true, string.IsNullOrEmpty(label) ? null : label);
+    }
+
+    private YouTubeChatMessage BuildMessage(JsonElement r, List<YouTubeChatPart> parts, bool isSuperChat,
+        string? amountText)
+    {
         return new YouTubeChatMessage
         {
             Id = r.TryGetProperty("id", out var id) ? id.GetString() ?? "" : "",
@@ -291,13 +326,78 @@ public class YouTubeChatClient : IDisposable
             AuthorChannelId = r.TryGetProperty("authorExternalChannelId", out var ac) ? ac.GetString() ?? "" : "",
             AuthorPhotoUrl = r.TryGetProperty("authorPhoto", out var ap) ? LastThumbnailUrl(ap) : "",
             Parts = parts,
-            Badges = badges,
+            Badges = ParseBadges(r),
             IsSuperChat = isSuperChat,
             AmountText = amountText,
             TimestampUsec = r.TryGetProperty("timestampUsec", out var ts) && long.TryParse(ts.GetString(), out var v)
                 ? v
                 : 0
         };
+    }
+
+    /// <summary>Разбирает message.runs в части (текст + эмодзи).</summary>
+    private static List<YouTubeChatPart> ParseRuns(JsonElement r)
+    {
+        var parts = new List<YouTubeChatPart>();
+        if (!r.TryGetProperty("message", out var message) || !message.TryGetProperty("runs", out var runs))
+            return parts;
+
+        foreach (var run in runs.EnumerateArray())
+        {
+            if (run.TryGetProperty("text", out var text))
+                parts.Add(new YouTubeChatPart(YouTubeChatPartKind.Text, text.GetString() ?? ""));
+            else if (run.TryGetProperty("emoji", out var emoji))
+            {
+                // Стандартные unicode-эмодзи (isCustomEmoji отсутствует) отдаём символом из emojiId,
+                // кастомные эмодзи канала — картинкой.
+                var isCustom = emoji.TryGetProperty("isCustomEmoji", out var ic) && ic.GetBoolean();
+                if (!isCustom && emoji.TryGetProperty("emojiId", out var eid) &&
+                    eid.GetString() is { Length: > 0 } symbol)
+                {
+                    parts.Add(new YouTubeChatPart(YouTubeChatPartKind.Text, symbol));
+                    continue;
+                }
+
+                var emoteUrl = LastThumbnailUrl(emoji.TryGetProperty("image", out var img) ? img : default);
+                if (!string.IsNullOrEmpty(emoteUrl))
+                    parts.Add(new YouTubeChatPart(YouTubeChatPartKind.Emote, emoteUrl));
+            }
+        }
+
+        return parts;
+    }
+
+    private static List<YouTubeChatBadge> ParseBadges(JsonElement r)
+    {
+        var badges = new List<YouTubeChatBadge>();
+        if (!r.TryGetProperty("authorBadges", out var authorBadges))
+            return badges;
+
+        foreach (var b in authorBadges.EnumerateArray())
+        {
+            if (!b.TryGetProperty("liveChatAuthorBadgeRenderer", out var br)) continue;
+            var tooltip = br.TryGetProperty("tooltip", out var tt) ? tt.GetString() ?? "" : "";
+            if (br.TryGetProperty("customThumbnail", out var ct))
+                badges.Add(new YouTubeChatBadge(null, LastThumbnailUrl(ct), tooltip));
+            else if (br.TryGetProperty("icon", out var icon) && icon.TryGetProperty("iconType", out var it))
+                badges.Add(new YouTubeChatBadge(it.GetString(), null, tooltip));
+        }
+
+        return badges;
+    }
+
+    /// <summary>Достаёт текст из поля, которое может быть simpleText или { runs: [...] }.</summary>
+    private static string TextOf(JsonElement r, string propertyName)
+    {
+        if (!r.TryGetProperty(propertyName, out var el)) return "";
+        if (el.TryGetProperty("simpleText", out var simple)) return simple.GetString() ?? "";
+        if (!el.TryGetProperty("runs", out var runs)) return "";
+
+        var sb = new StringBuilder();
+        foreach (var run in runs.EnumerateArray())
+            if (run.TryGetProperty("text", out var t))
+                sb.Append(t.GetString());
+        return sb.ToString();
     }
 
     /// <summary>Берёт URL последней (самой крупной) миниатюры из объекта с массивом thumbnails.</summary>
@@ -309,7 +409,10 @@ public class YouTubeChatClient : IDisposable
             return "";
 
         var last = thumbs[thumbs.GetArrayLength() - 1];
-        return last.TryGetProperty("url", out var url) ? url.GetString() ?? "" : "";
+        if (!last.TryGetProperty("url", out var url)) return "";
+        var u = url.GetString() ?? "";
+        // Часть картинок (стикеры) приходит с протокол-относительным URL "//..."
+        return u.StartsWith("//", StringComparison.Ordinal) ? "https:" + u : u;
     }
 
     private static string BuildLiveUrl(string channel)

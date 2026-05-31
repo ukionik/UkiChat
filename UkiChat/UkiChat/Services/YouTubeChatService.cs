@@ -40,6 +40,12 @@ public class YouTubeChatService : IYouTubeChatService
                 UkiChatMessage.FromYouTubeMessage(e.Message).WithMentionCheck(mentionNicks));
         };
 
+        _chatClient.MessageDeleted += async (_, messageId) =>
+        {
+            StartupDiagnostics.Log("yt-chat", $"Message deleted: {messageId}");
+            await signalRService.SendMessageDeletedAsync(messageId);
+        };
+
         _chatClient.Connected += async (_, _) =>
         {
             StartupDiagnostics.Log("yt-chat", "Connected");

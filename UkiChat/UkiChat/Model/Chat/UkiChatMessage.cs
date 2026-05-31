@@ -133,11 +133,12 @@ public record UkiChatMessage(ChatPlatform Platform
         var displayName = string.IsNullOrEmpty(chatMessage.AuthorName) ? "Unknown" : chatMessage.AuthorName;
         var displayNameColor = ColorUtil.GetDisplayNameColor(displayName, "");
 
-        // Бейджи: берём только картиночные (спонсорство). Системные (MOD/OWNER/VERIFIED)
-        // приходят вектором без URL — их пока пропускаем.
+        // Бейджи: картиночные (спонсорство) берём как есть, системные (вектор без URL)
+        // мапим на локальные иконки.
         var badges = chatMessage.Badges
-            .Where(b => !string.IsNullOrEmpty(b.ImageUrl))
-            .Select(b => b.ImageUrl!)
+            .Select(YouTubeBadgeUrl)
+            .Where(url => !string.IsNullOrEmpty(url))
+            .Select(url => url!)
             .ToList();
 
         var messageParts = chatMessage.Parts
@@ -154,6 +155,22 @@ public record UkiChatMessage(ChatPlatform Platform
 
         return new UkiChatMessage(ChatPlatform.YouTube, badges, displayName, displayNameColor, messageParts,
             Id: chatMessage.Id);
+    }
+
+    /// <summary>
+    /// URL бейджа YouTube: картиночные (спонсорство) — как есть, системные — локальная иконка по iconType.
+    /// </summary>
+    private static string? YouTubeBadgeUrl(YouTubeChatBadge badge)
+    {
+        if (!string.IsNullOrEmpty(badge.ImageUrl))
+            return badge.ImageUrl;
+
+        return badge.IconType switch
+        {
+            "MODERATOR" => "/images/youtube/moderator.svg",
+            "VERIFIED" => "/images/youtube/verified.svg",
+            _ => null
+        };
     }
 
     public static UkiChatMessage FromYouTubeMessageNotification(string message)
