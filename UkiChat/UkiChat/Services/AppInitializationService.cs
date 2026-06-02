@@ -11,6 +11,7 @@ namespace UkiChat.Services;
 
 public class AppInitializationService(
     ILocalizationService localizationService,
+    IFrontendReadyService frontendReadyService,
     IDatabaseContext databaseContext,
     IDatabaseService databaseService,
     ITwitchChatService twitchChatService,
@@ -28,6 +29,11 @@ public class AppInitializationService(
         using (StartupDiagnostics.Measure("app-init", "SetCulture(ru)"))
         {
             localizationService.SetCulture("ru");
+        }
+
+        using (StartupDiagnostics.Measure("app-init", "WaitForFrontendAsync"))
+        {
+            await frontendReadyService.WaitAsync().WaitAsync(TimeSpan.FromSeconds(30));
         }
 
         using (StartupDiagnostics.Measure("app-init", "LoadTwitchData + LoadVkVideoLiveData (parallel)"))

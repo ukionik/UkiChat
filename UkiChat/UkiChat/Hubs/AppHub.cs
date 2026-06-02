@@ -24,6 +24,7 @@ public class AppHub : Hub
     private readonly ITwitchAuthService _twitchAuthService = ContainerLocator.Container.Resolve<ITwitchAuthService>();
     private readonly IDonationAlertsService _donationAlertsService = ContainerLocator.Container.Resolve<IDonationAlertsService>();
     private readonly ITwitchViewerCountService _twitchViewerCountService = ContainerLocator.Container.Resolve<ITwitchViewerCountService>();
+    private readonly IFrontendReadyService _frontendReadyService = ContainerLocator.Container.Resolve<IFrontendReadyService>();
 
     public override Task OnConnectedAsync()
     {
@@ -31,6 +32,7 @@ public class AppHub : Hub
         var remote = ctx?.Connection.RemoteIpAddress?.ToString() ?? "?";
         var userAgent = ctx?.Request.Headers["User-Agent"].ToString() ?? "?";
         StartupDiagnostics.Log("hub", $"OnConnectedAsync: connId={Context.ConnectionId} remote={remote} ua=\"{userAgent}\"");
+        _frontendReadyService.NotifyReady();
         return base.OnConnectedAsync();
     }
 
