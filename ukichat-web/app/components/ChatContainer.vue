@@ -59,16 +59,29 @@ function updateClippedVisibility() {
     child.style.display = ''
     child.style.visibility = ''
   }
-  const containerHeight = el.clientHeight
+  // clientHeight включает вертикальные паддинги контейнера, а сообщения рендерятся
+  // внутри них — поэтому доступная под сообщения высота меньше на величину паддингов.
+  const style = getComputedStyle(el)
+  const paddingTop = parseFloat(style.paddingTop) || 0
+  const paddingBottom = parseFloat(style.paddingBottom) || 0
+  const available = el.clientHeight - paddingTop - paddingBottom
   let total = 0
   let firstVisibleIdx = children.length
   for (let i = children.length - 1; i >= 0; i--) {
-    const h = (children[i] as HTMLElement).offsetHeight
-    if (total + h > containerHeight) break
+    // getBoundingClientRect даёт дробную высоту: сумма offsetHeight (целые px)
+    // накапливает ошибку округления и выталкивает нижнее сообщение за край.
+    const h = (children[i] as HTMLElement).getBoundingClientRect().height
+    if (total + h > available) break
     total += h
     firstVisibleIdx = i
   }
   for (let i = 0; i < firstVisibleIdx; i++) {
+    (children[i] as HTMLElement).style.display = 'none'
+  }
+  // Подстраховка: если из-за округления/субпиксельных высот блок всё же выше
+  // контейнера, прячем верхние сообщения по одному, пока низ не перестанет обрезаться.
+  // Последнее (самое новое) сообщение не трогаем.
+  for (let i = firstVisibleIdx; i < children.length - 1 && el.scrollHeight > el.clientHeight; i++) {
     (children[i] as HTMLElement).style.display = 'none'
   }
   el.scrollTop = 0
