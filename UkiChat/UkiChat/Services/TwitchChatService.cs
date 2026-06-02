@@ -45,6 +45,10 @@ public class TwitchChatService : ITwitchChatService
     private string _broadcasterId = "";
     private string _channelName = "";
 
+    // true — отключение инициировано намеренно (пустой канал): перезаходить в канал после
+    // авто-реконнекта TwitchLib не нужно.
+    private volatile bool _intentionalDisconnect;
+
     // Origin-id недавних массовых подарков — чтобы не дублировать отдельными subgift-событиями.
     private readonly Dictionary<string, DateTime> _communityGiftOrigins = new();
 
@@ -137,13 +141,24 @@ public class TwitchChatService : ITwitchChatService
                 string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
         };
 
-        // Срабатывает когда TwitchLib успешно восстановил соединение.
-        // Каналы TwitchLib переходит автоматически → OnJoinedChannel уведомит пользователя.
-        _twitchClient.OnReconnected += (_, _) =>
+        // Срабатывает когда TwitchLib успешно восстановил соединение (сокет).
+        // TwitchLib восстанавливает только транспорт; повторный заход в канал после реконнекта
+        // не гарантирован, поэтому перезаходим вручную (если отключение не было намеренным).
+        _twitchClient.OnReconnected += async (_, _) =>
         {
             StartupDiagnostics.Log("twitch-chat", "OnReconnected (TwitchLib auto-reconnect)");
             _logger.LogInformation("Переподключено (TwitchLib auto-reconnect)");
-            return Task.CompletedTask;
+
+            if (_intentionalDisconnect || string.IsNullOrEmpty(_channelName))
+                return;
+
+            // Если TwitchLib уже перезашёл в канал — повторно не заходим.
+            if (_twitchClient.JoinedChannels.Any(c =>
+                    string.Equals(c.Channel, _channelName, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            _logger.LogInformation("Перезаходим в канал после реконнекта: {Channel}", _channelName);
+            await _twitchClient.JoinChannelAsync(_channelName);
         };
 
         _twitchClient.OnMessageCleared += async (_, e) =>
@@ -310,9 +325,16 @@ public class TwitchChatService : ITwitchChatService
 
         if (connectionParams.NewChannel == "")
         {
+            // Намеренное отключение от канала — после авто-реконнекта перезаходить не нужно.
+            _intentionalDisconnect = true;
+            _channelName = "";
             _logger.LogInformation("Новый канал пустой — завершаем ConnectAsync");
             return;
         }
+
+        // Запоминаем активный канал для перезахода после авто-реконнекта.
+        _channelName = connectionParams.NewChannel;
+        _intentionalDisconnect = false;
 
         await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"), connectionParams.NewChannel));
         _logger.LogInformation("Входим в канал: {NewChannel}", connectionParams.NewChannel);
@@ -337,6 +359,9 @@ public class TwitchChatService : ITwitchChatService
         if (newChannel.Length == 0)
         {
             _logger.LogInformation("ChangeChannelAsync: новый канал пустой, отключаемся от {OldChannel}", oldChannel);
+            // Намеренное отключение — гасим перезаход после авто-реконнекта.
+            _intentionalDisconnect = true;
+            _channelName = "";
             UpdateTwitchDbSettings(twitchSettings);
             if (oldChannel != null)
                 await _twitchClient.LeaveChannelAsync(oldChannel);
@@ -344,6 +369,7 @@ public class TwitchChatService : ITwitchChatService
         }
 
         _channelName = newChannel;
+        _intentionalDisconnect = false;
         _broadcasterId = await LoadBroadcasterIdAsync(newChannel);
         _logger.LogInformation("ChangeChannelAsync: broadcasterId={BroadcasterId}", _broadcasterId);
         UpdateTwitchDbSettings(twitchSettings);
