@@ -25,6 +25,10 @@ public class DonationAlertsService : IDonationAlertsService
     private const string AuthorizeEndpoint = "https://www.donationalerts.com/oauth/authorize";
     private const string Scopes = "oauth-user-show oauth-donation-subscribe";
 
+    // Возрастающая задержка переподключения: стартовая, множитель и потолок.
+    private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromSeconds(30);
+
     private readonly IDatabaseContext _databaseContext;
     private readonly IDatabaseService _databaseService;
     private readonly IDonationAlertsApiService _apiService;
@@ -230,13 +234,13 @@ public class DonationAlertsService : IDonationAlertsService
     {
         lock (_reconnectLock)
         {
-            if (_reconnectCts != null && !_reconnectCts.IsCancellationRequested)
+            if (_reconnectCts is { IsCancellationRequested: false })
                 return;
 
-            _reconnectCts?.Cancel();
             _reconnectCts?.Dispose();
-            _reconnectCts = new CancellationTokenSource();
-            _ = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+            var cts = new CancellationTokenSource();
+            _reconnectCts = cts;
+            _ = Task.Run(() => ReconnectLoopAsync(cts));
         }
     }
 
@@ -250,38 +254,59 @@ public class DonationAlertsService : IDonationAlertsService
         }
     }
 
-    private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
+    private async Task ReconnectLoopAsync(CancellationTokenSource cts)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        var cancellationToken = cts.Token;
+        var delay = InitialReconnectDelay;
+        try
         {
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-
-            if (cancellationToken.IsCancellationRequested) return;
-
-            try
-            {
-                var settings = _databaseContext.DonationAlertsSettingsRepository.GetActiveSettings();
-                if (string.IsNullOrEmpty(settings.AccessToken))
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
                     return;
+                }
 
-                await ConnectWithTokenAsync(settings.AccessToken);
-                _logger.LogInformation("DonationAlerts переподключение успешно");
-                return;
+                if (cancellationToken.IsCancellationRequested) return;
+
+                try
+                {
+                    var settings = _databaseContext.DonationAlertsSettingsRepository.GetActiveSettings();
+                    if (string.IsNullOrEmpty(settings.AccessToken))
+                        return;
+
+                    await ConnectWithTokenAsync(settings.AccessToken);
+                    _logger.LogInformation("DonationAlerts переподключение успешно");
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("DonationAlerts ошибка переподключения (следующая попытка через {Delay} с): {Message}",
+                        delay.TotalSeconds, ex.Message);
+                    // Удваиваем задержку до потолка MaxReconnectDelay.
+                    delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, MaxReconnectDelay.Ticks));
+                }
             }
-            catch (OperationCanceledException)
+        }
+        finally
+        {
+            // Освобождаем _reconnectCts при выходе из цикла, чтобы следующий разрыв смог
+            // запустить новый цикл (иначе живой неотменённый CTS навсегда блокирует StartReconnectLoop).
+            lock (_reconnectLock)
             {
-                return;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("DonationAlerts ошибка переподключения: {Message}", ex.Message);
+                if (_reconnectCts == cts)
+                {
+                    _reconnectCts.Dispose();
+                    _reconnectCts = null;
+                }
             }
         }
     }
