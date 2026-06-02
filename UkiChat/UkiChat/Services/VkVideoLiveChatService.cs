@@ -181,13 +181,13 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
     {
         lock (_reconnectLock)
         {
-            if (_reconnectCts != null && !_reconnectCts.IsCancellationRequested)
+            if (_reconnectCts is { IsCancellationRequested: false })
                 return;
 
-            _reconnectCts?.Cancel();
             _reconnectCts?.Dispose();
-            _reconnectCts = new CancellationTokenSource();
-            _ = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+            var cts = new CancellationTokenSource();
+            _reconnectCts = cts;
+            _ = Task.Run(() => ReconnectLoopAsync(cts));
         }
     }
 
@@ -205,46 +205,63 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
     ///     Цикл переподключения с фиксированным интервалом 5с.
     ///     Перед каждой попыткой запрашивает свежий WS-токен через API.
     /// </summary>
-    private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
+    private async Task ReconnectLoopAsync(CancellationTokenSource cts)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        var cancellationToken = cts.Token;
+        try
         {
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-
-            if (cancellationToken.IsCancellationRequested) return;
-
-            try
-            {
-                var settings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
-                if (string.IsNullOrEmpty(settings.ApiAccessToken))
+                try
                 {
-                    Console.WriteLine("[VkVideoLive] Нет API токена — переподключение невозможно");
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
                     return;
                 }
 
-                // Получаем свежий WS-токен (старый мог истечь)
-                var wsTokenResponse = await _vkVideoLiveApiService.GetWebSocketTokenAsync(settings.ApiAccessToken);
-                var wsToken = wsTokenResponse.Data.Token;
-                _databaseService.UpdateVkVideoLiveTokens(settings.ApiAccessToken, wsToken);
+                if (cancellationToken.IsCancellationRequested) return;
 
-                await _chatClient.ConnectAsync(wsToken, _channelId, _channelName);
-                Console.WriteLine("[VkVideoLive] Переподключение успешно");
-                return;
+                try
+                {
+                    var settings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
+                    if (string.IsNullOrEmpty(settings.ApiAccessToken))
+                    {
+                        Console.WriteLine("[VkVideoLive] Нет API токена — переподключение невозможно");
+                        return;
+                    }
+
+                    // Получаем свежий WS-токен (старый мог истечь)
+                    var wsTokenResponse = await _vkVideoLiveApiService.GetWebSocketTokenAsync(settings.ApiAccessToken);
+                    var wsToken = wsTokenResponse.Data.Token;
+                    _databaseService.UpdateVkVideoLiveTokens(settings.ApiAccessToken, wsToken);
+
+                    await _chatClient.ConnectAsync(wsToken, _channelId, _channelName);
+                    Console.WriteLine("[VkVideoLive] Переподключение успешно");
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[VkVideoLive] Ошибка переподключения: {ex.Message}");
+                }
             }
-            catch (OperationCanceledException)
+        }
+        finally
+        {
+            // Освобождаем _reconnectCts при выходе из цикла, чтобы следующий разрыв смог
+            // запустить новый цикл (иначе живой неотменённый CTS навсегда блокирует StartReconnectLoop).
+            lock (_reconnectLock)
             {
-                return;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[VkVideoLive] Ошибка переподключения: {ex.Message}");
+                if (_reconnectCts == cts)
+                {
+                    _reconnectCts.Dispose();
+                    _reconnectCts = null;
+                }
             }
         }
     }

@@ -137,13 +137,13 @@ public class YouTubeChatService : IYouTubeChatService
     {
         lock (_reconnectLock)
         {
-            if (_reconnectCts != null && !_reconnectCts.IsCancellationRequested)
+            if (_reconnectCts is { IsCancellationRequested: false })
                 return;
 
-            _reconnectCts?.Cancel();
             _reconnectCts?.Dispose();
-            _reconnectCts = new CancellationTokenSource();
-            _ = Task.Run(() => ReconnectLoopAsync(_reconnectCts.Token));
+            var cts = new CancellationTokenSource();
+            _reconnectCts = cts;
+            _ = Task.Run(() => ReconnectLoopAsync(cts));
         }
     }
 
@@ -161,36 +161,53 @@ public class YouTubeChatService : IYouTubeChatService
     ///     Цикл переподключения с интервалом 15с. На каждой попытке заново резолвит активную
     ///     трансляцию канала (videoId меняется при рестарте стрима).
     /// </summary>
-    private async Task ReconnectLoopAsync(CancellationToken cancellationToken)
+    private async Task ReconnectLoopAsync(CancellationTokenSource cts)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        var cancellationToken = cts.Token;
+        try
         {
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
 
-            if (cancellationToken.IsCancellationRequested) return;
-            if (string.IsNullOrEmpty(_channelName)) return;
+                if (cancellationToken.IsCancellationRequested) return;
+                if (string.IsNullOrEmpty(_channelName)) return;
 
-            try
-            {
-                await _chatClient.ConnectByChannelAsync(_channelName, cancellationToken);
-                StartupDiagnostics.Log("yt-chat", "Переподключение успешно");
-                return;
+                try
+                {
+                    await _chatClient.ConnectByChannelAsync(_channelName, cancellationToken);
+                    StartupDiagnostics.Log("yt-chat", "Переподключение успешно");
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    // Канал всё ещё не в эфире — продолжаем ждать
+                    StartupDiagnostics.Log("yt-chat", $"Reconnect attempt failed: {ex.Message}");
+                }
             }
-            catch (OperationCanceledException)
+        }
+        finally
+        {
+            // Освобождаем _reconnectCts при выходе из цикла, чтобы следующий разрыв смог
+            // запустить новый цикл (иначе живой неотменённый CTS навсегда блокирует StartReconnectLoop).
+            lock (_reconnectLock)
             {
-                return;
-            }
-            catch (Exception ex)
-            {
-                // Канал всё ещё не в эфире — продолжаем ждать
-                StartupDiagnostics.Log("yt-chat", $"Reconnect attempt failed: {ex.Message}");
+                if (_reconnectCts == cts)
+                {
+                    _reconnectCts.Dispose();
+                    _reconnectCts = null;
+                }
             }
         }
     }
