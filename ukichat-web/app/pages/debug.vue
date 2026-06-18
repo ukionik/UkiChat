@@ -43,6 +43,10 @@ async function sendCheer() {
   await invokeUpdate("SendChatMessage", generateCheer())
 }
 
+async function sendLongMessage() {
+  await invokeUpdate("SendChatMessage", generateLongMessage())
+}
+
 function generateMessage1() {
   return {
     platform: "Twitch",
@@ -223,6 +227,23 @@ function generateCheer() {
   }
 }
 
+function generateLongMessage() {
+  // Заведомо огромное сообщение, чтобы проверить случай, когда оно одно
+  // не помещается в контейнер целиком (режим hideClipped).
+  const sentence = "Это очень длинное сообщение для проверки обрезания. "
+  return {
+    platform: "Twitch",
+    badges: [
+      "https://static-cdn.jtvnw.net/badges/v1/3158e758-3cb4-43c5-94b3-7639810451c5/3"
+    ],
+    displayName: "LongMessageGuy",
+    displayNameColor: "#E67E22",
+    messageParts: [
+      { type: "Text", content: sentence.repeat(60) }
+    ]
+  }
+}
+
 onMounted(async () => {
   await startSignalR()
 })
@@ -241,6 +262,7 @@ onMounted(async () => {
     <UButton @click="sendSubscription">Subscription</UButton>
     <UButton @click="sendRaid">Raid</UButton>
     <UButton @click="sendCheer">Cheer</UButton>
+    <UButton @click="sendLongMessage">Long Message</UButton>
   </div>
 </template>
 

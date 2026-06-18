@@ -75,6 +75,12 @@ function updateClippedVisibility() {
     total += h
     firstVisibleIdx = i
   }
+  // Крайний случай: самое новое сообщение одно выше контейнера — целиком не влезает
+  // ни одно сообщение. Всё равно показываем последнее (прижато к верху, низ обрежется
+  // overflow'ом), иначе экран остался бы пустым.
+  if (firstVisibleIdx === children.length && children.length > 0) {
+    firstVisibleIdx = children.length - 1
+  }
   for (let i = 0; i < firstVisibleIdx; i++) {
     (children[i] as HTMLElement).style.display = 'none'
   }
