@@ -603,6 +603,91 @@ const themes = [
         <div>${renderParts(m.parts)}</div>
       </div>`
   },
+  {
+    name:'Pink Soft (нежно-розовая)', num:21,
+    desc:'Для девушек: мягкие пастельно-розовые скруглённые плашки, сердечко у ника. Уютный «кавайный» стиль.',
+    css:`
+      .t-pinksoft .msg { padding:7px 11px; margin-bottom:6px; border-radius:14px; color:#5a2a45; background:linear-gradient(135deg,#ffe3f1,#ffd0e6); box-shadow:0 1px 5px rgba(255,150,200,.45); }
+      .t-pinksoft .msg.mention { background:linear-gradient(135deg,#ffd4dc,#ffc2da); }
+      .t-pinksoft .msg.donation { background:linear-gradient(135deg,#ffdcf3,#ffc9ec); }
+      .t-pinksoft .head { display:flex; align-items:center; gap:5px; margin-bottom:2px; }
+      .t-pinksoft .heart { color:#ff6fb0; }
+      .t-pinksoft .nm { font-weight:800; }
+      .t-pinksoft .reply,.t-pinksoft .dono { font-size:.8em; opacity:.85; }
+      .t-pinksoft .dono { color:#d6337a; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💖 ${m.donation}</div>`:''}
+        <div class="head">
+          <span class="heart">♥</span>
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+        </div>
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+  {
+    name:'Pink Neon (розовый неон)', num:22,
+    desc:'Для девушек, но ярче: горячий розовый неон со свечением на тёмном фоне, ник в розовом глоу. «Barbie»-вайб.',
+    css:`
+      .t-pinkneon .msg { padding:7px 10px; margin-bottom:7px; border-radius:8px; background:rgba(35,8,28,.7); border:1px solid #ff4dd2; box-shadow:0 0 9px rgba(255,77,210,.55),inset 0 0 6px rgba(255,77,210,.15); }
+      .t-pinkneon .msg.mention { border-color:#ff4d7a; box-shadow:0 0 9px rgba(255,77,122,.6); }
+      .t-pinkneon .msg.donation { border-color:#ff8adf; }
+      .t-pinkneon .nm { font-weight:800; color:#ff9ee0; text-shadow:0 0 7px #ff4dd2; }
+      .t-pinkneon .reply,.t-pinkneon .dono { font-size:.8em; opacity:.9; }
+      .t-pinkneon .dono { color:#ffb3ec; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">✦ ${m.donation} ✦</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Black Box (со скрина)', num:23,
+    desc:'По скрину: каждое сообщение — отдельная сплошная чёрная скруглённая плашка, иконка платформы + бейджи + жирный цветной ник + белый текст. Классика стримерских оверлеев.',
+    css:`
+      .t-blackbox .msg { padding:5px 11px; margin-bottom:6px; border-radius:11px; background:rgba(0,0,0,.86); border:1px solid rgba(255,255,255,.07); line-height:1.4; }
+      .t-blackbox .msg.mention { background:rgba(40,0,0,.86); }
+      .t-blackbox .msg.donation { background:rgba(0,30,12,.86); }
+      .t-blackbox .nm { font-weight:800; }
+      .t-blackbox .reply,.t-blackbox .dono { font-size:.8em; opacity:.85; }
+      .t-blackbox .dono { color:#3ad17a; font-weight:600; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Light Frost Inline (со скрина)', num:24,
+    desc:'По скрину: светлая полупрозрачная панель с градиентом, сообщения в одну строку (цветной жирный ник + тёмный текст), без плашек на каждом.',
+    css:`
+      .t-lightinline { background:linear-gradient(180deg, rgba(248,248,252,.5), rgba(222,222,236,.85)); border-radius:8px; padding:6px 2px; color:#1b1b24; backdrop-filter:blur(2px); }
+      .t-lightinline .msg { padding:3px 9px; line-height:1.4; }
+      .t-lightinline .nm { font-weight:800; }
+      .t-lightinline .reply,.t-lightinline .dono { font-size:.8em; opacity:.7; }
+      .t-lightinline .dono { color:#1b8a4b; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
 ];
 
 // ===== Рендер сетки =====
@@ -612,7 +697,8 @@ document.head.appendChild(styleEl);
 let allCss = '';
 
 const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','irc','accent','pastel','term',
-  'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower','big'];
+  'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower','big',
+  'pinksoft','pinkneon','blackbox','lightinline'];
 
 themes.forEach((th, idx)=>{
   allCss += th.css;
