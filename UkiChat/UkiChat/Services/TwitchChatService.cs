@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using TwitchLib.Client;
@@ -37,10 +38,24 @@ public class TwitchChatService : ITwitchChatService
     private readonly ITwitchChannelPointsRewardsRepository _channelPointsRewardsRepository;
     private readonly ILogger<TwitchChatService> _logger;
 
-    // ReconnectionPolicy(5000): бесконечные попытки, фиксированный интервал 5с.
-    // TwitchLib.Communication сам управляет переподключением — кастомный цикл не нужен.
-    private readonly TwitchClient _twitchClient = new(
-        new WebSocketClient(new ClientOptions(new ReconnectionPolicy(5_000))));
+    // maxAttempts=1 намеренно ОТКЛЮЧАЕТ внутренний авто-реконнект TwitchLib.Communication:
+    // при разрыве библиотека не создаёт второй клиент и второй listen-task. Это критично — иначе
+    // старый listen-task, не дождавшийся отмены, начинает читать НОВЫЙ сокет параллельно с новым,
+    // фреймы WebSocket делятся между двумя читателями → обрезанные UTF-8 (�) и склейка raw IRC
+    // в текст сообщений. Вместо этого библиотека сразу сдаётся (OnDisconnected/OnConnectionError),
+    // а мы переподключаемся сами, ПЕРЕСОЗДАВАЯ клиент целиком (см. ReconnectLoopAsync).
+    private volatile TwitchClient _twitchClient;
+
+    // Поколение текущего клиента. После пересоздания старое поколение становится неактуальным,
+    // и обработчики «мёртвого» клиента (сообщения, разрывы) игнорируются по этой метке.
+    private int _clientGeneration;
+
+    // Учётные данные чат-бота — нужны, чтобы инициализировать заново созданный клиент при реконнекте.
+    private string _chatbotUsername = "";
+    private string _chatbotAccessToken = "";
+
+    // Сериализует цикл реконнекта: одновременно выполняется не более одного пересоздания клиента.
+    private readonly SemaphoreSlim _reconnectGate = new(1, 1);
 
     private string _broadcasterId = "";
     private string _channelName = "";
@@ -81,125 +96,128 @@ public class TwitchChatService : ITwitchChatService
         _twitchApiService = twitchApiService;
         _logger = logger;
 
-        _twitchClient.OnMessageReceived += async (_, e) =>
+        _twitchClient = BuildClient();
+    }
+
+    // Создаёт новый TwitchClient с подпиской на все события. Каждый клиент получает своё «поколение»,
+    // чтобы обработчики предыдущего (уже мёртвого) экземпляра можно было отличить и игнорировать.
+    private TwitchClient BuildClient()
+    {
+        var generation = Interlocked.Increment(ref _clientGeneration);
+        var client = new TwitchClient(
+            new WebSocketClient(new ClientOptions(new ReconnectionPolicy(5_000, 1))));
+        WireClientEvents(client, generation);
+        return client;
+    }
+
+    private void WireClientEvents(TwitchClient client, int generation)
+    {
+        client.OnMessageReceived += async (_, e) =>
         {
+            // Сообщение от старого, уже заменённого клиента — игнорируем.
+            if (generation != _clientGeneration) return;
             var badgeUrls = ResolveBadgeUrls(e.ChatMessage);
             var thirdPartyEmotes = GetThirdPartyEmotes();
             var (rewardTitle, rewardCost) = ResolveReward(e.ChatMessage);
             _logger.LogDebug("Получено сообщение от {DisplayName}: {Message}",
                 e.ChatMessage.DisplayName, e.ChatMessage.Message);
             var mentionNicks = _databaseContext.AppSettingsRepository.GetActiveAppSettings().MentionNicknames;
-            await signalRService.SendChatMessageAsync(
+            await _signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchMessage(e.ChatMessage, badgeUrls, thirdPartyEmotes, rewardTitle, rewardCost)
                     .WithMentionCheck(mentionNicks));
         };
 
-        _twitchClient.OnError += (_, e) =>
+        client.OnError += (_, e) =>
         {
             _logger.LogError(e.Exception, "TwitchClient ошибка");
             return Task.CompletedTask;
         };
 
-        _twitchClient.OnJoinedChannel += async (_, e) =>
+        client.OnJoinedChannel += async (_, e) =>
         {
             StartupDiagnostics.Log("twitch-chat", $"OnJoinedChannel: {e.Channel}");
             _logger.LogInformation("Присоединились к каналу: {Channel}", e.Channel);
-            await SendChatMessageNotification(string.Format(localizationService.GetString("twitch.connectedToChannel"),
+            await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectedToChannel"),
                 e.Channel));
         };
 
-        _twitchClient.OnLeftChannel += async (_, e) =>
+        client.OnLeftChannel += async (_, e) =>
         {
             StartupDiagnostics.Log("twitch-chat", $"OnLeftChannel: {e.Channel}");
             _logger.LogInformation("Покинули канал: {Channel}", e.Channel);
             await SendChatMessageNotification(
-                string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), e.Channel));
+                string.Format(_localizationService.GetString("twitch.disconnectedFromChannel"), e.Channel));
         };
 
-        _twitchClient.OnConnected += (_, _) =>
+        client.OnConnected += (_, _) =>
         {
             StartupDiagnostics.Log("twitch-chat", "OnConnected (IRC handshake done)");
             _logger.LogInformation("Подключено (IRC handshake done)");
             return Task.CompletedTask;
         };
 
-        // TwitchLib.Communication автоматически переподключается согласно ReconnectionPolicy.
-        // OnDisconnected — только логирование; библиотека сама инициирует попытки.
-        _twitchClient.OnDisconnected += async (_, _) =>
+        // Внутренний авто-реконнект отключён (maxAttempts=1): при разрыве библиотека сдаётся и шлёт
+        // OnDisconnected. Запускаем собственный реконнект с пересозданием клиента.
+        client.OnDisconnected += async (_, _) =>
         {
+            // Событие от устаревшего клиента или намеренное отключение — реконнект не запускаем.
+            if (generation != _clientGeneration) return;
             StartupDiagnostics.Log("twitch-chat", "OnDisconnected");
             _logger.LogWarning("Отключено от канала: {Channel}", _channelName);
             await SendChatMessageNotification(
-                string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
+                string.Format(_localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
+            TriggerReconnect(generation);
         };
 
-        _twitchClient.OnConnectionError += async (_, e) =>
+        client.OnConnectionError += async (_, e) =>
         {
+            if (generation != _clientGeneration) return;
             StartupDiagnostics.LogError("twitch-chat", $"OnConnectionError: {e.Error?.Message}");
             _logger.LogError("Ошибка подключения: {Error}", e.Error?.Message);
             await SendChatMessageNotification(
-                string.Format(localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
+                string.Format(_localizationService.GetString("twitch.disconnectedFromChannel"), _channelName));
+            TriggerReconnect(generation);
         };
 
-        // Срабатывает когда TwitchLib успешно восстановил соединение (сокет).
-        // TwitchLib восстанавливает только транспорт; повторный заход в канал после реконнекта
-        // не гарантирован, поэтому перезаходим вручную (если отключение не было намеренным).
-        _twitchClient.OnReconnected += async (_, _) =>
-        {
-            StartupDiagnostics.Log("twitch-chat", "OnReconnected (TwitchLib auto-reconnect)");
-            _logger.LogInformation("Переподключено (TwitchLib auto-reconnect)");
-
-            if (_intentionalDisconnect || string.IsNullOrEmpty(_channelName))
-                return;
-
-            // Если TwitchLib уже перезашёл в канал — повторно не заходим.
-            if (_twitchClient.JoinedChannels.Any(c =>
-                    string.Equals(c.Channel, _channelName, StringComparison.OrdinalIgnoreCase)))
-                return;
-
-            _logger.LogInformation("Перезаходим в канал после реконнекта: {Channel}", _channelName);
-            await _twitchClient.JoinChannelAsync(_channelName);
-        };
-
-        _twitchClient.OnMessageCleared += async (_, e) =>
+        client.OnMessageCleared += async (_, e) =>
         {
             _logger.LogDebug("Сообщение удалено: {MessageId}", e.TargetMessageId);
-            await signalRService.SendMessageDeletedAsync(e.TargetMessageId);
+            await _signalRService.SendMessageDeletedAsync(e.TargetMessageId);
         };
 
-        _twitchClient.OnUserBanned += async (_, e) =>
+        client.OnUserBanned += async (_, e) =>
         {
             _logger.LogInformation("Пользователь забанен: {Username}", e.UserBan.Username);
-            await signalRService.SendUserMessagesDeletedAsync(e.UserBan.Username);
+            await _signalRService.SendUserMessagesDeletedAsync(e.UserBan.Username);
         };
 
-        _twitchClient.OnUserTimedout += async (_, e) =>
+        client.OnUserTimedout += async (_, e) =>
         {
             _logger.LogInformation("Таймаут пользователя: {Username} ({Duration}с)",
                 e.UserTimeout.Username, e.UserTimeout.TimeoutDuration);
-            await signalRService.SendUserMessagesDeletedAsync(e.UserTimeout.Username);
+            await _signalRService.SendUserMessagesDeletedAsync(e.UserTimeout.Username);
         };
 
-        _twitchClient.OnNewSubscriber += async (_, e) =>
+        client.OnNewSubscriber += async (_, e) =>
         {
             var s = e.Subscriber;
             _logger.LogInformation("Новая подписка: {DisplayName} ({Tier})", s.DisplayName, s.MsgParamSubPlan);
-            var text = string.Format(localizationService.GetString("twitch.sub"), TierLabel(s.MsgParamSubPlan));
-            await signalRService.SendChatMessageAsync(
+            var text = string.Format(_localizationService.GetString("twitch.sub"), TierLabel(s.MsgParamSubPlan));
+            await _signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchEvent(s.DisplayName, s.HexColor, text, UkiChatMessageType.Subscription));
         };
 
-        _twitchClient.OnReSubscriber += async (_, e) =>
+        client.OnReSubscriber += async (_, e) =>
         {
             var s = e.ReSubscriber;
             _logger.LogInformation("Ресаб: {DisplayName} ({Months} мес.)", s.DisplayName, s.MsgParamCumulativeMonths);
-            var text = string.Format(localizationService.GetString("twitch.resub"),
+            var text = string.Format(_localizationService.GetString("twitch.resub"),
                 TierLabel(s.MsgParamSubPlan), s.MsgParamCumulativeMonths);
-            await signalRService.SendChatMessageAsync(
+            await _signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchEvent(s.DisplayName, s.HexColor, text, UkiChatMessageType.Subscription));
         };
 
-        _twitchClient.OnGiftedSubscription += async (_, e) =>
+        client.OnGiftedSubscription += async (_, e) =>
         {
             var g = e.GiftedSubscription;
             // Массовый подарок шлёт сводку (OnCommunitySubscription) + по одному subgift на каждого
@@ -207,53 +225,113 @@ public class TwitchChatService : ITwitchChatService
             if (IsPartOfCommunityGift(g.MsgParamOriginId))
                 return;
 
-            var gifter = g.IsAnonymous ? localizationService.GetString("twitch.anonymousGifter") : g.DisplayName;
+            var gifter = g.IsAnonymous ? _localizationService.GetString("twitch.anonymousGifter") : g.DisplayName;
             _logger.LogInformation("Подарочная подписка: {Gifter} -> {Recipient}",
                 gifter, g.MsgParamRecipientDisplayName);
-            var text = string.Format(localizationService.GetString("twitch.subGift"),
+            var text = string.Format(_localizationService.GetString("twitch.subGift"),
                 TierLabel(g.MsgParamSubPlan), g.MsgParamRecipientDisplayName);
-            await signalRService.SendChatMessageAsync(
+            await _signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchEvent(gifter, g.HexColor, text, UkiChatMessageType.Subscription));
         };
 
-        _twitchClient.OnCommunitySubscription += async (_, e) =>
+        client.OnCommunitySubscription += async (_, e) =>
         {
             var g = e.GiftedSubscription;
             RegisterCommunityGift(g.MsgParamOriginId);
 
-            var gifter = g.IsAnonymous ? localizationService.GetString("twitch.anonymousGifter") : g.DisplayName;
+            var gifter = g.IsAnonymous ? _localizationService.GetString("twitch.anonymousGifter") : g.DisplayName;
             _logger.LogInformation("Массовый подарок: {Gifter} x{Count}", gifter, g.MsgParamMassGiftCount);
-            var text = string.Format(localizationService.GetString("twitch.subGiftCommunity"),
+            var text = string.Format(_localizationService.GetString("twitch.subGiftCommunity"),
                 g.MsgParamMassGiftCount, TierLabel(g.MsgParamSubPlan));
-            await signalRService.SendChatMessageAsync(
+            await _signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchEvent(gifter, g.HexColor, text, UkiChatMessageType.Subscription));
         };
 
-        _twitchClient.OnRaidNotification += async (_, e) =>
+        client.OnRaidNotification += async (_, e) =>
         {
             var r = e.RaidNotification;
             int.TryParse(r.MsgParamViewerCount, out var viewers);
             _logger.LogInformation("Рейд: {DisplayName} ({Viewers} зрителей)", r.MsgParamDisplayName, viewers);
-            var text = string.Format(localizationService.GetString("twitch.raid"), viewers);
-            await signalRService.SendChatMessageAsync(
+            var text = string.Format(_localizationService.GetString("twitch.raid"), viewers);
+            await _signalRService.SendChatMessageAsync(
                 UkiChatMessage.FromTwitchEvent(r.MsgParamDisplayName, r.HexColor, text, UkiChatMessageType.Raid));
         };
 
         // Watch streak — Twitch шлёт как USERNOTICE viewermilestone, TwitchLib не обрабатывает нативно
-        _twitchClient.OnUnaccountedFor += async (_, e) =>
+        client.OnUnaccountedFor += async (_, e) =>
         {
             var watchStreak = TwitchWatchStreak.ParseFromRawIrc(e.RawIRC);
             if (watchStreak == null) return;
             _logger.LogInformation("Watch streak: {DisplayName} x{StreakCount}",
                 watchStreak.DisplayName, watchStreak.StreakCount);
-            await signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchWatchStreak(watchStreak));
+            await _signalRService.SendChatMessageAsync(UkiChatMessage.FromTwitchWatchStreak(watchStreak));
         };
 
-        _twitchClient.OnSendReceiveData += (_, e) =>
+        client.OnSendReceiveData += (_, e) =>
         {
             _logger.LogDebug("IRC [{Direction}]: {Data}", e.Direction, e.Data);
             return Task.CompletedTask;
         };
+    }
+
+    // Запускает фоновый реконнект, если разрыв не намеренный и поколение клиента ещё актуально.
+    private void TriggerReconnect(int generation)
+    {
+        if (generation != _clientGeneration) return;
+        if (_intentionalDisconnect || string.IsNullOrEmpty(_channelName)) return;
+        _ = ReconnectLoopAsync();
+    }
+
+    // Переподключается, ПЕРЕСОЗДАВАЯ TwitchClient целиком: внутренний авто-реконнект библиотеки
+    // отключён (см. BuildClient), поэтому никаких параллельных listen-task и порчи сообщений.
+    private async Task ReconnectLoopAsync()
+    {
+        // Одновременно крутится только один цикл реконнекта.
+        if (!await _reconnectGate.WaitAsync(0))
+            return;
+        try
+        {
+            while (!_intentionalDisconnect && !string.IsNullOrEmpty(_channelName))
+            {
+                var channel = _channelName;
+                try
+                {
+                    _logger.LogInformation("Реконнект: пересоздаём TwitchClient и переподключаемся к {Channel}", channel);
+                    await RebuildClientAndConnectAsync(channel);
+                    _logger.LogInformation("Реконнект к {Channel} успешен", channel);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Реконнект к {Channel} не удался, повтор через 5с", channel);
+                    await Task.Delay(5_000);
+                }
+            }
+        }
+        finally
+        {
+            _reconnectGate.Release();
+        }
+    }
+
+    private async Task RebuildClientAndConnectAsync(string channel)
+    {
+        var old = _twitchClient;
+        // Новый клиент получает новое поколение — обработчики старого сразу становятся неактуальными.
+        var fresh = BuildClient();
+        _twitchClient = fresh;
+
+        // Старый сокет библиотека уже оборвала; гасим остатки В ФОНЕ, не блокируя новое подключение.
+        // DisconnectAsync внутри спит ~1.9с (DisconnectWait), ждать его перед реконнектом незачем.
+        _ = Task.Run(async () =>
+        {
+            try { await old.DisconnectAsync(); }
+            catch (Exception ex) { _logger.LogDebug(ex, "Ошибка при закрытии старого TwitchClient (игнорируем)"); }
+        });
+
+        fresh.Initialize(new ConnectionCredentials(_chatbotUsername, _chatbotAccessToken));
+        await fresh.ConnectAsync();
+        await fresh.JoinChannelAsync(channel, true);
     }
 
     // Человекочитаемая метка уровня подписки для текста события.
@@ -299,6 +377,9 @@ public class TwitchChatService : ITwitchChatService
         using var _ = StartupDiagnostics.Measure("twitch-chat",
             $"ConnectAsync(old={connectionParams.OldChannel}, new={connectionParams.NewChannel})");
         _broadcasterId = connectionParams.BroadcasterId;
+        // Запоминаем учётные данные — они понадобятся для пересоздания клиента при реконнекте.
+        _chatbotUsername = connectionParams.ChatbotUsername;
+        _chatbotAccessToken = connectionParams.ChatbotAccessToken;
         _logger.LogInformation("ConnectAsync: старый={OldChannel} новый={NewChannel} broadcasterId={BroadcasterId}",
             connectionParams.OldChannel, connectionParams.NewChannel, connectionParams.BroadcasterId);
 
