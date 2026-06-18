@@ -8,12 +8,14 @@ const props = withDefaults(defineProps<{
   allowRevealDeleted?: boolean
   theme?: 'default' | 'box'
   hideClipped?: boolean
+  fillHeight?: boolean
 }>(), {
   scale: 1,
   hideVerticalScrollbar: false,
   allowRevealDeleted: false,
   theme: 'default',
   hideClipped: false,
+  fillHeight: true,
 })
 
 const themeComponent = computed(() => {
@@ -44,7 +46,11 @@ const chatStyle = computed(() => ({
 }))
 
 const containerClass = computed(() => {
-  return props.hideVerticalScrollbar ? 'overflow-y-hidden' : 'overflow-y-auto'
+  // fillHeight=true — занять всё окно (h-dvh), как в основном окне/оверлее.
+  // fillHeight=false — подстроиться под высоту родителя (h-full), для превью в настройках.
+  const heightClass = props.fillHeight ? 'h-dvh' : 'h-full'
+  const overflowClass = props.hideVerticalScrollbar ? 'overflow-y-hidden' : 'overflow-y-auto'
+  return `${heightClass} ${overflowClass}`
 })
 
 // При hideClipped прячем самые старые сообщения, не помещающиеся целиком,
@@ -169,7 +175,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="chat-container h-dvh overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
+  <div class="chat-container overflow-x-hidden" :style="chatStyle" :class="containerClass" ref="chatContainer"
        @scroll="onScroll">
     <component
       :is="themeComponent"

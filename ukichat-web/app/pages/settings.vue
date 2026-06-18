@@ -85,6 +85,26 @@ async function logoutDonationAlerts() {
   await invokeUpdate('LogoutDonationAlerts')
 }
 
+// Рассылаем пачку случайных тестовых сообщений в реальные окна (index/chat)
+// через тот же канал, что и настоящий чат (хаб SendChatMessage → OnChatMessage).
+// Растягиваем во времени, чтобы выглядело как живой чат.
+let testSendTimers: ReturnType<typeof setTimeout>[] = []
+function sendTestMessages() {
+  const count = 12
+  const intervalMs = 650
+  for (let i = 0; i < count; i++) {
+    const timer = setTimeout(() => {
+      invokeUpdate('SendChatMessage', createSampleMessage())
+    }, i * intervalMs)
+    testSendTimers.push(timer)
+  }
+}
+
+onBeforeUnmount(() => {
+  testSendTimers.forEach(clearTimeout)
+  testSendTimers = []
+})
+
 let scaleSettingsLoaded = false
 let themeSettingsLoaded = false
 
@@ -195,7 +215,7 @@ onMounted(async () => {
           :active="activeRoot === 'appearance'"
           @click="selectRoot('appearance')"
         >
-          <AppearanceSettings />
+          <AppearanceSettings @send-test="sendTestMessages" />
         </MenuSettingsItem>
         <MenuSettingsItem
           :title="t('settings.platforms.title')"

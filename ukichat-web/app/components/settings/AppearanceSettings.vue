@@ -19,6 +19,23 @@ const themeOptions = computed(() => [
 ])
 
 const activeSub = ref('mainWindow')
+
+// Тема для превью — берём от активной вкладки (основное окно / оверлей).
+// Масштаб в превью фиксированный (1), чтобы оценивать стиль темы, а не размер.
+const previewTheme = computed(() => activeSub.value === 'mainWindow' ? mainWindowTheme.value : overlayTheme.value)
+
+// Кнопка «проверить тестовыми сообщениями»: просим родителя (settings.vue,
+// у которого есть SignalR-соединение) разослать пачку тестовых сообщений в
+// реальные окна. Блокируем кнопку на время показа, чтобы не спамить.
+const emit = defineEmits<{ sendTest: [] }>()
+const TEST_DURATION_MS = 8000
+const testRunning = ref(false)
+function runTest() {
+  if (testRunning.value) return
+  testRunning.value = true
+  emit('sendTest')
+  setTimeout(() => { testRunning.value = false }, TEST_DURATION_MS)
+}
 </script>
 
 <template>
@@ -35,7 +52,8 @@ const activeSub = ref('mainWindow')
         @click="activeSub = 'overlay'"
       />
     </div>
-    <div class="p-6 space-y-4 max-w-xl">
+    <div class="p-6 flex gap-6 items-start">
+      <div class="space-y-4 flex-1 max-w-xl min-w-0">
       <template v-if="activeSub === 'mainWindow'">
         <div class="flex items-center gap-3">
           <label class="w-44 text-sm text-gray-400 shrink-0">
@@ -49,6 +67,12 @@ const activeSub = ref('mainWindow')
             {{ t('settings.appearance.theme') }}
           </label>
           <USelect v-model="mainWindowTheme" :items="themeOptions" class="flex-1" />
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="w-44 shrink-0"></div>
+          <UButton color="neutral" variant="subtle" :loading="testRunning" :disabled="testRunning" class="flex-1 justify-center" @click="runTest">
+            {{ t('settings.appearance.testMessages') }}
+          </UButton>
         </div>
         <div class="flex items-center gap-3">
           <label class="w-44 text-sm text-gray-400 shrink-0">
@@ -73,6 +97,12 @@ const activeSub = ref('mainWindow')
           <USelect v-model="overlayTheme" :items="themeOptions" class="flex-1" />
         </div>
         <div class="flex items-center gap-3">
+          <div class="w-44 shrink-0"></div>
+          <UButton color="neutral" variant="subtle" :loading="testRunning" :disabled="testRunning" class="flex-1 justify-center" @click="runTest">
+            {{ t('settings.appearance.testMessages') }}
+          </UButton>
+        </div>
+        <div class="flex items-center gap-3">
           <label class="w-44 text-sm text-gray-400 shrink-0">
             {{ t('settings.appearance.messageHideDelay') }}
           </label>
@@ -86,6 +116,13 @@ const activeSub = ref('mainWindow')
           <USwitch v-model="overlayHideClippedMessages" />
         </div>
       </template>
+      </div>
+      <div class="w-80 shrink-0">
+        <div class="text-sm text-gray-400 mb-2">{{ t('settings.appearance.preview') }}</div>
+        <div class="h-[28rem] border border-gray-800 rounded-lg overflow-hidden">
+          <ThemePreview :theme="previewTheme" :scale="1" />
+        </div>
+      </div>
     </div>
   </div>
 </template>

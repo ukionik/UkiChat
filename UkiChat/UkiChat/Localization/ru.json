@@ -23,6 +23,8 @@
       "messageHideDelayNever": "Никогда",
       "messageHideDelaySec": "сек.",
       "hideClippedMessages": "Скрывать обрезанные сообщения",
+      "preview": "Превью",
+      "testMessages": "Проверить тестовыми сообщениями",
       "mainWindow": {
         "title": "Основное окно"
       },

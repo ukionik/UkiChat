@@ -23,6 +23,8 @@
       "messageHideDelayNever": "Never",
       "messageHideDelaySec": "sec.",
       "hideClippedMessages": "Hide clipped messages",
+      "preview": "Preview",
+      "testMessages": "Send test messages",
       "mainWindow": {
         "title": "Main Window"
       },
