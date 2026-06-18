@@ -79,9 +79,18 @@ public class DonationAlertsService : IDonationAlertsService
         _client.Disconnected += async (_, e) =>
         {
             StartupDiagnostics.Log("da", $"Disconnected: reason={e.Reason} reconnect={e.Reconnect}");
-            await SendNotification(_localizationService.GetString("donationalerts.disconnected"));
+            // Запускаем реконнект ДО любого await: это async void обработчик, и исключение
+            // в отправке уведомления иначе молча проглотится, а переподключение не стартует.
             if (!_intentionalDisconnect && e.Reconnect)
                 StartReconnectLoop();
+            try
+            {
+                await SendNotification(_localizationService.GetString("donationalerts.disconnected"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "DonationAlerts: не удалось отправить уведомление о разрыве");
+            }
         };
 
         _client.Error += (_, e) => StartupDiagnostics.LogError("da", $"Error: {e.Message}");
@@ -266,7 +275,7 @@ public class DonationAlertsService : IDonationAlertsService
                 {
                     await Task.Delay(delay, cancellationToken);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
@@ -283,7 +292,10 @@ public class DonationAlertsService : IDonationAlertsService
                     _logger.LogInformation("DonationAlerts переподключение успешно");
                     return;
                 }
-                catch (OperationCanceledException)
+                // Только НАШ токен (отмена реконнекта). Таймаут HttpClient тоже бросает
+                // TaskCanceledException : OperationCanceledException — его НЕ глотаем, а ретраим ниже,
+                // иначе при лежащей сети первая же попытка убивала цикл навсегда.
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }

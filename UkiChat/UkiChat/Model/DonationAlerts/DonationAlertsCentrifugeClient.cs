@@ -170,6 +170,8 @@ public class DonationAlertsCentrifugeClient : IDisposable
         {
             _logger.LogError(ex, "Ошибка получения сообщений");
             OnError($"Ошибка получения сообщений: {ex.Message}", ex);
+            // Неожиданный обрыв цикла приёма — сигналим о разрыве, чтобы сработал реконнект.
+            OnDisconnected($"Receive loop error: {ex.Message}");
         }
     }
 
