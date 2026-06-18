@@ -9,6 +9,15 @@ const { mainWindowScale, mainWindowScaleFactor } = useScaleSettings()
 const { mainWindowTheme } = useThemeSettings()
 const { mainWindowMessageHideDelay } = useMessageHideSettings()
 
+// Переопределение темы через ?theme=<тема> для тестирования.
+// Если параметр не указан или тема неизвестна — используется тема из настроек.
+const route = useRoute()
+const themeOverride = computed(() => {
+  const q = Array.isArray(route.query.theme) ? route.query.theme[0] : route.query.theme
+  return isValidTheme(q) ? q : null
+})
+const effectiveTheme = computed(() => themeOverride.value ?? mainWindowTheme.value)
+
 
 const appSettingsInfo = ref({
   profileName: "",
@@ -101,5 +110,5 @@ function openLink(url: string) {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="mainWindowScaleFactor" :theme="mainWindowTheme" :allow-reveal-deleted="true" @link-click="openLink" />
+  <ChatContainer :messages="chatMessages" :scale="mainWindowScaleFactor" :theme="effectiveTheme" :allow-reveal-deleted="true" @link-click="openLink" />
 </template>

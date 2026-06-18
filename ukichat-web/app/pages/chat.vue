@@ -10,6 +10,15 @@ const { overlayTheme } = useThemeSettings()
 const { overlayMessageHideDelay } = useMessageHideSettings()
 const { overlayHideClippedMessages } = useClipSettings()
 
+// Переопределение темы через ?theme=<тема> для тестирования.
+// Если параметр не указан или тема неизвестна — используется тема из настроек.
+const route = useRoute()
+const themeOverride = computed(() => {
+  const q = Array.isArray(route.query.theme) ? route.query.theme[0] : route.query.theme
+  return isValidTheme(q) ? q : null
+})
+const effectiveTheme = computed(() => themeOverride.value ?? overlayTheme.value)
+
 const appSettingsInfo = ref({
   profileName: "",
   language: "en",
@@ -102,5 +111,5 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ChatContainer :messages="chatMessages" :scale="overlayScaleFactor" :theme="overlayTheme" :hide-vertical-scrollbar="true" :hide-clipped="overlayHideClippedMessages" />
+  <ChatContainer :messages="chatMessages" :scale="overlayScaleFactor" :theme="effectiveTheme" :hide-vertical-scrollbar="true" :hide-clipped="overlayHideClippedMessages" />
 </template>
