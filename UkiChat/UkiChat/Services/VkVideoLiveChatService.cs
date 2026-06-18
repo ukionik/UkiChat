@@ -241,7 +241,10 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
                     Console.WriteLine("[VkVideoLive] Переподключение успешно");
                     return;
                 }
-                catch (OperationCanceledException)
+                // Только НАШ токен (отмена реконнекта). Таймаут HttpClient в GetWebSocketTokenAsync тоже
+                // бросает TaskCanceledException : OperationCanceledException — его НЕ глотаем, а ретраим,
+                // иначе при лежащей сети первая же попытка убивала цикл навсегда.
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }

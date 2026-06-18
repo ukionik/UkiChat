@@ -186,7 +186,10 @@ public class YouTubeChatService : IYouTubeChatService
                     StartupDiagnostics.Log("yt-chat", "Переподключение успешно");
                     return;
                 }
-                catch (OperationCanceledException)
+                // Только НАШ токен (отмена реконнекта). Таймаут HttpClient внутри ConnectByChannelAsync
+                // тоже бросает TaskCanceledException : OperationCanceledException — ловится по типу,
+                // поэтому фильтруем по токену, иначе таймаут убивал бы цикл навсегда.
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
