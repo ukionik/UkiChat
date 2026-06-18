@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UkiChat — наброски тем чата</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    color: #fff;
+  }
+  body {
+    /* Имитация стрима за оверлеем — градиент + «фото», чтобы оценить прозрачные темы */
+    background:
+      radial-gradient(circle at 20% 20%, rgba(120,80,200,.35), transparent 45%),
+      radial-gradient(circle at 80% 70%, rgba(40,140,160,.35), transparent 45%),
+      linear-gradient(135deg, #1b2735 0%, #090a0f 100%);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .topbar {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 20px; margin: 0; font-weight: 700; }
+  .hint { font-size: 13px; opacity: .7; }
+  .bg-toggle {
+    display: flex; gap: 8px; align-items: center; font-size: 13px;
+  }
+  .bg-toggle button {
+    background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.2);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px;
+  }
+  .bg-toggle button.active { background: rgba(255,255,255,.25); }
+
+  body.bg-light {
+    background: linear-gradient(135deg, #e8eef5 0%, #c8d4e0 100%);
+    color: #111;
+  }
+  body.bg-game {
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect width="60" height="60" fill="%23222"/><rect width="30" height="30" fill="%232c2c2c"/><rect x="30" y="30" width="30" height="30" fill="%232c2c2c"/></svg>');
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 18px;
+  }
+  .panel {
+    background: rgba(0,0,0,.25);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .panel-head {
+    padding: 10px 14px;
+    background: rgba(0,0,0,.35);
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  .panel-head .name { font-weight: 700; font-size: 14px; }
+  .panel-head .name .num { opacity: .5; margin-right: 6px; }
+  .panel-head .desc { font-size: 12px; opacity: .65; margin-top: 2px; line-height: 1.35; }
+  .panel-body {
+    padding: 12px;
+    min-height: 220px;
+    /* у каждого тела свой фон через тему, по умолчанию прозрачный */
+  }
+  /* Горизонтальные темы занимают всю ширину строки сетки */
+  .panel.panel-wide { grid-column: 1 / -1; }
+  .panel.panel-wide .panel-body { min-height: auto; }
+  body.bg-light .panel-head .desc { color: #333; }
+
+  /* ширина «колонки чата» внутри тела для реализма */
+  .chat { width: 100%; }
+
+  /* ===== общие мелочи ===== */
+  .plat { display:inline-flex; align-items:center; justify-content:center; width:1.05em; height:1.05em; border-radius:4px; font-size:.7em; font-weight:800; vertical-align:middle; color:#fff; }
+  .plat.tw { background:#9146ff; }
+  .plat.vk { background:#0077ff; }
+  .plat.yt { background:#ff0000; }
+  .plat.da { background:#f57d07; }
+  .badge { display:inline-flex; align-items:center; justify-content:center; width:1.05em; height:1.05em; border-radius:3px; font-size:.7em; vertical-align:middle; }
+  .badge.mod { background:#00ad03; }
+  .badge.sub { background:#9146ff; }
+  .emote { font-size:1.15em; vertical-align:middle; }
+  .avatar { width:2em; height:2em; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:800; color:#fff; flex-shrink:0; font-size:.8em; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>UkiChat — наброски тем чата</h1>
+    <span class="hint">Одни и те же сообщения в 12 вариантах. Фон имитирует стрим под оверлеем.</span>
+    <div class="bg-toggle">
+      <span>Фон:</span>
+      <button data-bg="" class="active">Тёмный</button>
+      <button data-bg="bg-game">«Игра»</button>
+      <button data-bg="bg-light">Светлый</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+<script>
+// ===== Тестовые сообщения (единые для всех тем) =====
+const messages = [
+  { platform:'tw', plat:'T', badges:[['mod','🛡']], name:'NightBot', color:'#2ecc71',
+    parts:[['t','Привет, стрим! '],['e','🎉'],['t',' как настроение?']] },
+  { platform:'vk', plat:'В', badges:[['sub','★']], name:'Аня_Котик', color:'#ff79c6',
+    parts:[['t','лучший контент на твиче ']], reply:{name:'NightBot', text:'как настроение?'} },
+  { platform:'da', plat:'$', badges:[], name:'Щедрый_Зритель', color:'#f1c40f',
+    donation:'500 ₽', parts:[['t','На развитие канала! Держи краба ']] },
+  { platform:'yt', plat:'Y', badges:[], name:'GamerPro2010', color:'#3498db',
+    parts:[['t','го рейд на соседний канал '],['e','🚀']] },
+  { platform:'tw', plat:'T', badges:[], name:'ToxicGuy', color:'#e74c3c',
+    mention:true, parts:[['t','@стример ну ты и нуб конечно ']] },
+];
+
+// рендер «частей» сообщения (текст/эмодзи) — общий
+function renderParts(parts){
+  return parts.map(p => p[0]==='e' ? `<span class="emote">${p[1]}</span>` : escapeHtml(p[1])).join('');
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+// ===== Темы: каждая возвращает HTML для одного сообщения =====
+const themes = [
+  {
+    name:'Default', num:'тек.', desc:'Текущая. Плоско, без фона; у спец-событий цветная полоса слева.',
+    css:`
+      .t-default .msg { padding:2px 4px; line-height:1.4; }
+      .t-default .msg.hl { border-left:3px solid; border-radius:0 4px 4px 0; padding-left:8px; }
+      .t-default .msg.mention { background:rgba(231,76,60,.12); border-color:#e74c3c; }
+      .t-default .msg.donation { background:rgba(46,204,113,.12); border-color:#2ecc71; }
+      .t-default .nm { font-weight:700; }
+      .t-default .reply,.t-default .dono { font-size:.8em; opacity:.8; }
+      .t-default .dono { color:#2ecc71; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'hl mention':''} ${m.donation?'hl donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>
+        ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Box', num:'тек.', desc:'Текущая. Скруглённые полупрозрачные карточки с градиентом по типу события.',
+    css:`
+      .t-box .msg { padding:8px 10px; border-radius:8px; margin-bottom:6px; box-shadow:0 0 4px rgba(0,0,0,.4); background:linear-gradient(rgba(70,70,70,.6),rgba(50,50,50,.7)); }
+      .t-box .msg.mention { background:linear-gradient(rgba(120,40,40,.7),rgba(90,20,20,.8)); }
+      .t-box .msg.donation { background:linear-gradient(rgba(34,120,70,.6),rgba(20,90,50,.7)); }
+      .t-box .head { display:flex; align-items:center; gap:5px; margin-bottom:4px; }
+      .t-box .nm { font-weight:700; }
+      .t-box .reply,.t-box .dono { font-size:.8em; opacity:.85; margin-bottom:3px; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <div class="head">
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+        </div>
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+  {
+    name:'Dark Glass (box на чёрной прозрачной рамке)', num:1,
+    desc:'То, что часто у стримеров: чёрная полупрозрачная плашка с тонкой светлой рамкой и блюром. Читается на любом фоне.',
+    css:`
+      .t-glass .msg { padding:7px 11px; border-radius:8px; margin-bottom:6px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.14); backdrop-filter:blur(3px); }
+      .t-glass .msg.mention { border-color:rgba(231,76,60,.7); box-shadow:0 0 0 1px rgba(231,76,60,.4) inset; }
+      .t-glass .msg.donation { border-color:rgba(46,204,113,.7); }
+      .t-glass .head { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+      .t-glass .nm { font-weight:700; }
+      .t-glass .reply,.t-glass .dono { font-size:.8em; opacity:.85; margin-bottom:3px; }
+      .t-glass .dono { color:#2ecc71; font-weight:600; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <div class="head">
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+        </div>
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+  {
+    name:'Twitch Native', num:2,
+    desc:'Как в нативном чате твича: компактно, имя и текст в одну строку, лёгкая подсветка спец-событий слева.',
+    css:`
+      .t-twitch { font-size:14px; }
+      .t-twitch .msg { padding:5px 8px; line-height:1.35; }
+      .t-twitch .msg.mention { background:rgba(231,76,60,.15); border-left:3px solid #e74c3c; padding-left:6px; }
+      .t-twitch .msg.donation { background:rgba(145,70,255,.18); border-left:3px solid #9146ff; padding-left:6px; }
+      .t-twitch .nm { font-weight:700; }
+      .t-twitch .reply,.t-twitch .dono { font-size:.85em; opacity:.7; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">Reply to @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">★ ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}</span><span style="opacity:.6">: </span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'YouTube Live', num:3,
+    desc:'Светлая/компактная как чат YouTube: серое имя, тонкие разделители, донат — цветная плашка (Super Chat).',
+    css:`
+      .t-yt { background:rgba(255,255,255,.96); color:#0f0f0f; border-radius:8px; padding:4px 0; }
+      .t-yt .msg { padding:5px 12px; line-height:1.3; display:flex; gap:8px; align-items:baseline; border-bottom:1px solid #00000008; }
+      .t-yt .nm { font-weight:600; color:#606060; white-space:nowrap; }
+      .t-yt .msg.donation { background:#1565c0; color:#fff; border-radius:8px; margin:3px 6px; padding:6px 10px; display:block; }
+      .t-yt .msg.donation .nm { color:#cfe0ff; }
+      .t-yt .msg.mention .nm { color:#c62828; }
+      .t-yt .reply { font-size:.8em; opacity:.6; }
+      .t-yt .dono { font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.donation?`<div class="dono">${m.name} · ${m.donation}</div><div>${renderParts(m.parts)}</div>`:
+        `<span class="plat ${m.platform}">${m.plat}</span><span class="nm">${m.name}</span><span>${renderParts(m.parts)}</span>`}
+      </div>`
+  },
+  {
+    name:'Minimal Outline (без фона, обводка текста)', num:4,
+    desc:'Полностью прозрачно, ни плашек, ни рамок — только текст с жирной обводкой/тенью. Максимально незаметно поверх игры.',
+    css:`
+      .t-outline { font-size:15px; }
+      .t-outline .msg { padding:2px 0; line-height:1.45; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000; }
+      .t-outline .nm { font-weight:800; }
+      .t-outline .msg.mention .txt { color:#ff8a80; }
+      .t-outline .reply,.t-outline .dono { font-size:.82em; opacity:.9; }
+      .t-outline .dono { color:#69f0ae; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>
+        <span class="txt">${renderParts(m.parts)}</span>
+      </div>`
+  },
+  {
+    name:'Neon / Cyberpunk', num:5,
+    desc:'Тёмные плашки со светящейся неоновой рамкой, моноширинный шрифт, кислотные акценты. Для «техно»-оформлений.',
+    css:`
+      .t-neon { font-family:"Consolas",monospace; }
+      .t-neon .msg { padding:7px 10px; margin-bottom:7px; background:rgba(10,5,25,.7); border:1px solid #0ff; border-radius:4px; box-shadow:0 0 8px rgba(0,255,255,.5),inset 0 0 6px rgba(0,255,255,.15); }
+      .t-neon .msg.mention { border-color:#f0f; box-shadow:0 0 8px rgba(255,0,255,.6),inset 0 0 6px rgba(255,0,255,.15); }
+      .t-neon .msg.donation { border-color:#0f8; box-shadow:0 0 8px rgba(0,255,136,.6),inset 0 0 6px rgba(0,255,136,.15); }
+      .t-neon .nm { font-weight:700; text-shadow:0 0 6px currentColor; }
+      .t-neon .reply,.t-neon .dono { font-size:.8em; opacity:.85; }
+      .t-neon .dono { color:#0f8; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">&gt; reply @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">[ ${m.donation} ]</div>`:''}
+        <span class="nm" style="color:${m.color}">[${m.name}]</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Bubble (мессенджер, с аватаром)', num:6,
+    desc:'Аватар-кружок слева + пузырь сообщения, как в Telegram/Discord DM. Дружелюбный и читаемый.',
+    css:`
+      .t-bubble .msg { display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; }
+      .t-bubble .bubble { background:rgba(255,255,255,.12); border-radius:4px 12px 12px 12px; padding:6px 10px; }
+      .t-bubble .msg.mention .bubble { background:rgba(231,76,60,.25); }
+      .t-bubble .msg.donation .bubble { background:rgba(46,204,113,.25); }
+      .t-bubble .nm { font-weight:700; font-size:.9em; }
+      .t-bubble .reply,.t-bubble .dono { font-size:.8em; opacity:.85; }
+      .t-bubble .dono { color:#2ecc71; font-weight:600; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        <span class="avatar" style="background:${m.color}">${m.name[0]}</span>
+        <div class="bubble">
+          <div><span class="nm" style="color:${m.color}">${m.name}</span>
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}</div>
+          ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+          ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+          <div>${renderParts(m.parts)}</div>
+        </div>
+      </div>`
+  },
+  {
+    name:'Compact IRC (моно, одной строкой)', num:7,
+    desc:'Максимальная плотность: моноширинный, тайм-штамп, одна строка на сообщение. Для тех, кто читает много сообщений.',
+    css:`
+      .t-irc { font-family:"Consolas",monospace; font-size:13px; }
+      .t-irc .msg { padding:1px 4px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .t-irc .msg:nth-child(odd) { background:rgba(255,255,255,.04); }
+      .t-irc .msg.mention { background:rgba(231,76,60,.18); }
+      .t-irc .msg.donation { background:rgba(46,204,113,.18); }
+      .t-irc .ts { opacity:.45; }
+      .t-irc .nm { font-weight:700; }
+    `,
+    render:(m,i)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        <span class="ts">12:0${i}</span>
+        <span class="plat ${m.platform}">${m.plat}</span>
+        <span class="nm" style="color:${m.color}">${m.name}</span><span style="opacity:.5">:</span>
+        ${m.donation?`<span style="color:#2ecc71">[${m.donation}] </span>`:''}${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Accent Bar (полоса платформы)', num:8,
+    desc:'Слева толстая цветная полоса в цвет платформы, лёгкий тёмный фон. Сразу видно, откуда сообщение.',
+    css:`
+      .t-accent .msg { padding:5px 10px; margin-bottom:5px; background:rgba(0,0,0,.4); border-left:4px solid #888; border-radius:0 6px 6px 0; }
+      .t-accent .msg.tw { border-color:#9146ff; }
+      .t-accent .msg.vk { border-color:#0077ff; }
+      .t-accent .msg.yt { border-color:#ff0000; }
+      .t-accent .msg.da { border-color:#f57d07; }
+      .t-accent .nm { font-weight:700; }
+      .t-accent .reply,.t-accent .dono { font-size:.8em; opacity:.85; }
+      .t-accent .dono { color:#2ecc71; font-weight:600; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.platform}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Pastel Soft', num:9,
+    desc:'Мягкие светлые скруглённые карточки с пастельной заливкой по платформе. Уютный «мягкий» стиль.',
+    css:`
+      .t-pastel .msg { padding:7px 11px; margin-bottom:6px; border-radius:14px; color:#2b2b3a; background:#eceffc; }
+      .t-pastel .msg.tw { background:#ece3ff; }
+      .t-pastel .msg.vk { background:#e3f0ff; }
+      .t-pastel .msg.yt { background:#ffe3e3; }
+      .t-pastel .msg.da { background:#fff0db; }
+      .t-pastel .nm { font-weight:700; }
+      .t-pastel .reply { font-size:.8em; opacity:.7; }
+      .t-pastel .dono { font-size:.85em; font-weight:700; color:#1b8a4b; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.platform}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}</span>
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+  {
+    name:'Terminal / Matrix', num:10,
+    desc:'Зелёный моноширинный текст на чёрном, в стиле терминала. Нишево, но эффектно для тех-стримов.',
+    css:`
+      .t-term { font-family:"Consolas",monospace; font-size:13px; background:rgba(0,0,0,.75); border:1px solid #0f02; border-radius:4px; padding:6px; }
+      .t-term .msg { padding:2px 4px; line-height:1.4; color:#3eff7e; }
+      .t-term .msg.mention { color:#ff5577; }
+      .t-term .msg.donation { color:#ffe14d; }
+      .t-term .nm { font-weight:700; }
+      .t-term .reply,.t-term .dono { opacity:.8; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">&gt;&gt; @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">$ donate ${m.donation}</div>`:''}
+        <span style="opacity:.5">${m.plat}:~$</span>
+        <span class="nm">${m.name}</span><span style="opacity:.5">&gt;</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Horizontal Ticker (бегущая строка)', num:11, horizontal:true,
+    desc:'ГОРИЗОНТАЛЬНАЯ. Сообщения летят в одну строку слева направо, как бегущая строка/тикер внизу экрана.',
+    css:`
+      .t-ticker { display:flex; flex-direction:row; flex-wrap:nowrap; gap:18px; overflow-x:auto; align-items:center; padding:6px 4px; white-space:nowrap; }
+      .t-ticker .msg { flex:0 0 auto; }
+      .t-ticker .sep { opacity:.3; }
+      .t-ticker .nm { font-weight:700; }
+      .t-ticker .msg.mention { color:#ff8a80; }
+      .t-ticker .dono { color:#69f0ae; font-weight:700; }
+    `,
+    render:(m,i)=>`
+      <div class="msg ${m.mention?'mention':''}" style="text-shadow:0 0 3px #000,0 0 3px #000;">
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>
+        ${m.donation?`<span class="dono">[${m.donation}] </span>`:''}${renderParts(m.parts)}
+      </div>${i<4?'<span class="sep">◆</span>':''}`
+  },
+  {
+    name:'Horizontal Cards (карточки в ряд)', num:12, horizontal:true,
+    desc:'ГОРИЗОНТАЛЬНАЯ. Каждое сообщение — отдельная карточка, новые появляются справа и уезжают влево. Хорошо для ленты внизу/сверху.',
+    css:`
+      .t-hcards { display:flex; flex-direction:row; flex-wrap:nowrap; gap:10px; overflow-x:auto; padding:6px 2px; align-items:flex-start; }
+      .t-hcards .msg { flex:0 0 200px; max-width:200px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:8px 10px; backdrop-filter:blur(3px); white-space:normal; }
+      .t-hcards .msg.mention { border-color:rgba(231,76,60,.7); }
+      .t-hcards .msg.donation { border-color:rgba(46,204,113,.7); }
+      .t-hcards .head { display:flex; align-items:center; gap:5px; margin-bottom:4px; }
+      .t-hcards .nm { font-weight:700; font-size:.9em; }
+      .t-hcards .dono { font-size:.8em; color:#2ecc71; font-weight:600; margin-bottom:3px; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        <div class="head">
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+        </div>
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+  {
+    name:'Discord', num:13,
+    desc:'Как в Discord: круглый аватар, имя + время, текст под ним, ховер-подсветка строки.',
+    css:`
+      .t-discord .msg { display:flex; gap:10px; padding:4px 8px; border-radius:6px; align-items:flex-start; }
+      .t-discord .msg:hover { background:rgba(255,255,255,.04); }
+      .t-discord .msg.mention { background:rgba(250,166,26,.12); border-left:2px solid #faa61a; }
+      .t-discord .body { min-width:0; }
+      .t-discord .nm { font-weight:600; }
+      .t-discord .ts { font-size:.72em; opacity:.5; margin-left:6px; }
+      .t-discord .reply,.t-discord .dono { font-size:.82em; opacity:.8; }
+      .t-discord .dono { color:#2ecc71; font-weight:600; }
+    `,
+    render:(m,i)=>`
+      <div class="msg ${m.mention?'mention':''}">
+        <span class="avatar" style="background:${m.color}">${m.name[0]}</span>
+        <div class="body">
+          <div><span class="nm" style="color:${m.color}">${m.name}</span>
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="ts">сегодня в 12:0${i}</span></div>
+          ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+          ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+          <div>${renderParts(m.parts)}</div>
+        </div>
+      </div>`
+  },
+  {
+    name:'Vaporwave / Retro', num:14,
+    desc:'Розово-фиолетовый градиент, ретро-вайб 80-х, мягкое свечение. Яркий стилизованный вариант.',
+    css:`
+      .t-vapor .msg { padding:7px 11px; margin-bottom:7px; border-radius:6px; background:linear-gradient(135deg,rgba(255,90,200,.35),rgba(120,90,255,.35)); border:1px solid rgba(255,150,230,.5); box-shadow:0 0 10px rgba(255,90,200,.3); }
+      .t-vapor .nm { font-weight:800; text-shadow:0 0 6px rgba(255,255,255,.6); letter-spacing:.5px; }
+      .t-vapor .reply,.t-vapor .dono { font-size:.8em; opacity:.9; }
+      .t-vapor .dono { color:#aaffea; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">✦ ${m.donation} ✦</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Material Card', num:15,
+    desc:'Светлые «материальные» карточки с тенью и цветной шапкой-полоской по платформе. Чисто и аккуратно.',
+    css:`
+      .t-material .msg { background:#fff; color:#1f1f1f; border-radius:8px; margin-bottom:8px; box-shadow:0 2px 6px rgba(0,0,0,.4); overflow:hidden; }
+      .t-material .strip { height:4px; background:#888; }
+      .t-material .msg.tw .strip { background:#9146ff; }
+      .t-material .msg.vk .strip { background:#0077ff; }
+      .t-material .msg.yt .strip { background:#ff0000; }
+      .t-material .msg.da .strip { background:#f57d07; }
+      .t-material .inner { padding:7px 11px; }
+      .t-material .nm { font-weight:700; }
+      .t-material .reply { font-size:.8em; opacity:.6; }
+      .t-material .dono { font-size:.85em; font-weight:700; color:#1b8a4b; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.platform}">
+        <div class="strip"></div>
+        <div class="inner">
+          ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+          ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+          <div>${renderParts(m.parts)}</div>
+        </div>
+      </div>`
+  },
+  {
+    name:'Comic / Cartoon', num:16,
+    desc:'Жирная чёрная обводка, скруглённые «комиксные» плашки. Игривый мультяшный стиль.',
+    css:`
+      .t-comic .msg { background:#fffbe6; color:#1a1a1a; border:3px solid #1a1a1a; border-radius:14px; padding:6px 11px; margin-bottom:8px; box-shadow:3px 3px 0 #1a1a1a; }
+      .t-comic .msg.mention { background:#ffd9d9; }
+      .t-comic .msg.donation { background:#d9ffe1; }
+      .t-comic .nm { font-weight:800; }
+      .t-comic .reply { font-size:.8em; opacity:.7; }
+      .t-comic .dono { font-size:.85em; font-weight:800; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Frosted Light Glass', num:17,
+    desc:'Светлое матовое стекло (белая полупрозрачная плашка + блюр). Контраст к тёмному Dark Glass.',
+    css:`
+      .t-frost .msg { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); border-radius:10px; padding:7px 11px; margin-bottom:6px; backdrop-filter:blur(6px); box-shadow:0 2px 8px rgba(0,0,0,.2); }
+      .t-frost .head { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+      .t-frost .nm { font-weight:700; }
+      .t-frost .reply,.t-frost .dono { font-size:.8em; opacity:.9; }
+      .t-frost .dono { color:#c6ffd9; font-weight:600; }
+    `,
+    render:(m)=>`
+      <div class="msg">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <div class="head">
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+        </div>
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+  {
+    name:'Gradient Border', num:18,
+    desc:'Тёмная плашка с ярким градиентным контуром. Минимум фона, акцент на светящейся рамке.',
+    css:`
+      .t-gborder .msg { position:relative; padding:7px 11px; margin-bottom:7px; border-radius:8px; background:rgba(10,12,20,.7); }
+      .t-gborder .msg::before { content:''; position:absolute; inset:0; border-radius:8px; padding:1.5px; background:linear-gradient(135deg,#00eaff,#ff00d4); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
+      .t-gborder .nm { font-weight:700; }
+      .t-gborder .reply,.t-gborder .dono { font-size:.8em; opacity:.85; }
+      .t-gborder .dono { color:#69f0ae; font-weight:600; }
+    `,
+    render:(m)=>`
+      <div class="msg">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Lower-Third Banner', num:19,
+    desc:'Широкая «телевизионная» плашка во всю ширину с цветным торцом платформы. Подходит для показа 1–2 сообщений как баннер.',
+    css:`
+      .t-lower .msg { display:flex; align-items:stretch; margin-bottom:7px; background:linear-gradient(90deg,rgba(0,0,0,.8),rgba(0,0,0,.55)); border-radius:4px; overflow:hidden; }
+      .t-lower .tab { width:6px; background:#888; flex-shrink:0; }
+      .t-lower .msg.tw .tab { background:#9146ff; }
+      .t-lower .msg.vk .tab { background:#0077ff; }
+      .t-lower .msg.yt .tab { background:#ff0000; }
+      .t-lower .msg.da .tab { background:#f57d07; }
+      .t-lower .inner { padding:7px 12px; }
+      .t-lower .nm { font-weight:800; text-transform:uppercase; letter-spacing:.5px; font-size:.85em; }
+      .t-lower .dono { font-size:.8em; color:#69f0ae; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${m.platform}">
+        <div class="tab"></div>
+        <div class="inner">
+          ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <div>${renderParts(m.parts)}</div>
+        </div>
+      </div>`
+  },
+  {
+    name:'Big Casual (крупный, без рамок)', num:20,
+    desc:'Крупный шрифт, лёгкая тень, без плашек, имя на отдельной строке. Расслабленный «болталка»-стиль для IRL.',
+    css:`
+      .t-big { font-size:17px; }
+      .t-big .msg { padding:4px 2px; margin-bottom:6px; text-shadow:0 1px 3px rgba(0,0,0,.7); line-height:1.35; }
+      .t-big .head { display:flex; align-items:center; gap:6px; }
+      .t-big .nm { font-weight:800; font-size:.85em; }
+      .t-big .reply,.t-big .dono { font-size:.72em; opacity:.85; }
+      .t-big .dono { color:#69f0ae; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg">
+        <div class="head">
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm" style="color:${m.color}">${m.name}</span>
+        </div>
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <div>${renderParts(m.parts)}</div>
+      </div>`
+  },
+];
+
+// ===== Рендер сетки =====
+const grid = document.getElementById('grid');
+const styleEl = document.createElement('style');
+document.head.appendChild(styleEl);
+let allCss = '';
+
+const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','irc','accent','pastel','term',
+  'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower','big'];
+
+themes.forEach((th, idx)=>{
+  allCss += th.css;
+  const body = messages.map((m,i)=>th.render(m,i)).join('');
+  const panel = document.createElement('div');
+  panel.className = 'panel' + (th.horizontal ? ' panel-wide' : '');
+  panel.innerHTML = `
+    <div class="panel-head">
+      <div class="name"><span class="num">#${th.num}</span>${th.name}</div>
+      <div class="desc">${th.desc}</div>
+    </div>
+    <div class="panel-body"><div class="chat t-${slugs[idx]}">${body}</div></div>`;
+  grid.appendChild(panel);
+});
+styleEl.textContent = allCss;
+
+// ===== Переключатель фона =====
+document.querySelectorAll('.bg-toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.body.className = btn.dataset.bg;
+    document.querySelectorAll('.bg-toggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
