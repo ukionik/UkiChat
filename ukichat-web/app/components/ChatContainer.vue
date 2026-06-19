@@ -1,12 +1,68 @@
 <script setup lang="ts">
 import type {ChatMessage} from "~/types/ChatMessage";
+// Компоненты тем выбираются по имени из реестра (useThemeSettings), поэтому
+// resolveComponent() не подходит (он регистрирует компонент только при статичном
+// строковом литерале). Импортируем их явно по имени из #components и строим карту.
+import {
+  ThemesDefaultChatMessage,
+  ThemesBoxChatMessage,
+  ThemesDarkGlassChatMessage,
+  ThemesTwitchNativeChatMessage,
+  ThemesYouTubeLiveChatMessage,
+  ThemesMinimalOutlineChatMessage,
+  ThemesNeonChatMessage,
+  ThemesBubbleChatMessage,
+  ThemesCompactIrcChatMessage,
+  ThemesAccentBarChatMessage,
+  ThemesPastelSoftChatMessage,
+  ThemesTerminalChatMessage,
+  ThemesDiscordChatMessage,
+  ThemesVaporwaveChatMessage,
+  ThemesMaterialCardChatMessage,
+  ThemesComicChatMessage,
+  ThemesFrostedGlassChatMessage,
+  ThemesGradientBorderChatMessage,
+  ThemesLowerThirdChatMessage,
+  ThemesBigCasualChatMessage,
+  ThemesPinkSoftChatMessage,
+  ThemesPinkNeonChatMessage,
+  ThemesBlackBoxChatMessage,
+  ThemesLightFrostInlineChatMessage,
+} from '#components'
+
+const THEME_COMPONENTS: Record<string, unknown> = {
+  ThemesDefaultChatMessage,
+  ThemesBoxChatMessage,
+  ThemesDarkGlassChatMessage,
+  ThemesTwitchNativeChatMessage,
+  ThemesYouTubeLiveChatMessage,
+  ThemesMinimalOutlineChatMessage,
+  ThemesNeonChatMessage,
+  ThemesBubbleChatMessage,
+  ThemesCompactIrcChatMessage,
+  ThemesAccentBarChatMessage,
+  ThemesPastelSoftChatMessage,
+  ThemesTerminalChatMessage,
+  ThemesDiscordChatMessage,
+  ThemesVaporwaveChatMessage,
+  ThemesMaterialCardChatMessage,
+  ThemesComicChatMessage,
+  ThemesFrostedGlassChatMessage,
+  ThemesGradientBorderChatMessage,
+  ThemesLowerThirdChatMessage,
+  ThemesBigCasualChatMessage,
+  ThemesPinkSoftChatMessage,
+  ThemesPinkNeonChatMessage,
+  ThemesBlackBoxChatMessage,
+  ThemesLightFrostInlineChatMessage,
+}
 
 const props = withDefaults(defineProps<{
   messages: ChatMessage[]
   scale?: number
   hideVerticalScrollbar?: boolean
   allowRevealDeleted?: boolean
-  theme?: 'default' | 'box'
+  theme?: ChatTheme
   hideClipped?: boolean
   fillHeight?: boolean
 }>(), {
@@ -18,9 +74,9 @@ const props = withDefaults(defineProps<{
   fillHeight: true,
 })
 
-const themeComponent = computed(() => {
-  return props.theme === 'box' ? resolveComponent('ThemesBoxChatMessage') : resolveComponent('ThemesDefaultChatMessage')
-})
+const themeComponent = computed(() =>
+  THEME_COMPONENTS[getThemeComponent(props.theme)] ?? ThemesDefaultChatMessage
+)
 
 const emit = defineEmits<{
   linkClick: [url: string]

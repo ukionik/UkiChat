@@ -70,7 +70,7 @@ onMounted(async () => {
   })
 
   connection.on("OnThemeSettingsChanged", (main: string, _overlay: string) => {
-    mainWindowTheme.value = main as 'default' | 'box'
+    mainWindowTheme.value = main
   })
 
   connection.on("OnMessageHideSettingsChanged", (main: number, _overlay: number) => {

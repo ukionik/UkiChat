@@ -68,7 +68,7 @@ onMounted(async () => {
     console.log(`[chat.vue] all settings loaded (+${(performance.now() - tMount).toFixed(0)}ms)`)
 
   connection.on("OnThemeSettingsChanged", (_main: string, overlay: string) => {
-    overlayTheme.value = overlay as 'default' | 'box'
+    overlayTheme.value = overlay
   })
 
   connection.on("OnMessageHideSettingsChanged", (_main: number, overlay: number) => {

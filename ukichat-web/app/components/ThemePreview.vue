@@ -2,7 +2,7 @@
 import type { ChatMessage } from "~/types/ChatMessage";
 
 const props = withDefaults(defineProps<{
-  theme?: 'default' | 'box'
+  theme?: ChatTheme
   scale?: number
   // Интервал появления новых сообщений, мс
   interval?: number

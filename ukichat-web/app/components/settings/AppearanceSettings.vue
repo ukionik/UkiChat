@@ -13,10 +13,9 @@ function hideDelayLabel(val: number) {
     : `${val} ${t('settings.appearance.messageHideDelaySec')}`
 }
 
-const themeOptions = computed(() => [
-  { label: t('settings.appearance.themeDefault'), value: 'default' as const },
-  { label: t('settings.appearance.themeBox'), value: 'box' as const },
-])
+// Список тем строится из реестра (app/composables/useThemeSettings.ts).
+// Имена тем — бренд-стиль, не переводятся.
+const themeOptions = CHAT_THEME_LIST.map(th => ({ label: th.label, value: th.slug }))
 
 const activeSub = ref('mainWindow')
 

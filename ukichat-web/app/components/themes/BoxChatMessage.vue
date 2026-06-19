@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import type { ChatMessage, ReplyInfo } from "~/types/ChatMessage";
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
+import type { ChatMessage } from "~/types/ChatMessage";
 
 const props = defineProps<{
   message: ChatMessage
@@ -14,35 +11,9 @@ const emit = defineEmits<{
   linkClick: [url: string]
 }>()
 
-const revealed = ref(false)
-
-function toggleRevealDeleted() {
-  if (!props.allowRevealDeleted || props.message.messageType !== 'Deleted') return
-  revealed.value = !revealed.value
-}
-
-function handleLinkClick(url: string) {
-  emit('linkClick', url)
-}
-
-function getPlatformImage(platform: string) {
-  switch (platform) {
-    case "Twitch": return "/images/twitch.svg"
-    case "VkVideoLive": return "/images/vk-video-live.svg"
-    case "YouTube": return "/images/youtube.svg"
-    case "DonationAlerts": return "/images/donation-alerts.svg"
-    default: return ""
-  }
-}
-
-function getReplyPreview(replyTo: ReplyInfo) {
-  return replyTo.messageParts.filter(p => p.type === 'Text').map(p => p.content).join('').trim()
-}
+const { revealed, toggleRevealDeleted } = useThemeMessage(props, emit)
 
 const s = computed(() => props.scale)
-const iconSize = computed(() => `${1.1 * s.value}rem`)
-const emoteSize = computed(() => `${1.5 * s.value}rem`)
-const replyFontSize = computed(() => `${0.8 * s.value}rem`)
 const nameFontSize = computed(() => `${0.9 * s.value}rem`)
 const gap = computed(() => `${0.35 * s.value}rem`)
 
@@ -88,84 +59,19 @@ const boxStyle = computed(() => {
     :style="boxStyle"
     @click="toggleRevealDeleted"
   >
-    <!-- Название награды за баллы -->
-    <div v-if="message.rewardTitle" class="flex items-center gap-1 text-purple-400 truncate mb-1"
-         :style="{ fontSize: replyFontSize }">
-      <img src="/images/channel-points.svg" alt="channel points" class="shrink-0" :style="{ height: '1em', width: '1em' }">
-      <span class="truncate font-medium">{{ message.rewardTitle }}</span>
-      <span v-if="message.rewardCost != null" class="shrink-0 opacity-75">· {{ message.rewardCost }}</span>
-    </div>
-
-    <!-- Сумма доната -->
-    <div v-if="message.donationAmount" class="flex items-center gap-1 text-green-400 truncate mb-1"
-         :style="{ fontSize: replyFontSize }">
-      <img src="/images/money.svg" alt="donation" class="shrink-0" :style="{ height: '1em', width: '1em' }">
-      <span class="truncate font-semibold">{{ message.donationAmount }}</span>
-    </div>
-
-    <!-- Количество бит -->
-    <div v-if="message.bits != null" class="flex items-center gap-1 text-cyan-400 truncate mb-1"
-         :style="{ fontSize: replyFontSize }">
-      <img src="/images/bits.svg" alt="bits" class="shrink-0" :style="{ height: '1em', width: '1em' }">
-      <span class="truncate font-semibold">{{ t('chat.bits', [message.bits]) }}</span>
-    </div>
-
-    <!-- Ответ на сообщение -->
-    <div v-if="message.replyTo" class="flex items-center gap-1 text-gray-400 truncate mb-1"
-         :style="{ fontSize: replyFontSize }">
-      <span>↩</span>
-      <span class="font-semibold shrink-0">@{{ message.replyTo.displayName }}:</span>
-      <span class="truncate opacity-75">{{ getReplyPreview(message.replyTo) }}</span>
-    </div>
+    <ChatMessageMeta :message="message" :scale="scale" with-margin />
 
     <!-- Шапка: иконка платформы + бейджи + имя -->
     <div class="flex items-center" :style="{ gap, marginBottom: gap }">
-      <img
-        :src="getPlatformImage(message.platform)"
-        :alt="message.platform"
-        :style="{ height: iconSize, width: iconSize, display: 'block', flexShrink: '0' }"
-      >
-      <img
-        v-for="badge in message.badges"
-        :key="badge"
-        :src="badge"
-        alt="badge"
-        :style="{ height: iconSize, display: 'block', flexShrink: '0' }"
-      >
-      <span
-        class="font-bold leading-none"
-        :style="{ color: message.displayNameColor, fontSize: nameFontSize }"
-      >{{ message.displayName }}</span>
+      <ChatPlatformBadges :message="message" :scale="scale" :icon-scale="1.1" />
+      <span class="font-bold leading-none"
+            :style="{ color: message.displayNameColor, fontSize: nameFontSize }">{{ message.displayName }}</span>
     </div>
 
     <!-- Текст сообщения -->
     <div class="leading-snug break-words">
-      <template v-if="message.messageType === 'Deleted'">
-        <template v-if="allowRevealDeleted && revealed">
-          <template v-for="(part, index) in message.messageParts" :key="index">
-            <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
-            <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline"
-                 :style="{ height: emoteSize }">
-            <span v-else-if="part.type === 'Link'"
-                  class="inline align-middle text-blue-400 cursor-pointer hover:underline"
-                  @click.stop="handleLinkClick(part.content)">{{ part.content }}</span>
-          </template>
-        </template>
-        <span v-else class="inline align-middle italic"
-              :class="allowRevealDeleted ? 'text-purple-400 cursor-pointer hover:underline' : 'text-gray-300 opacity-90'">
-          {{ t('chat.messageDeleted') }}
-        </span>
-      </template>
-      <template v-else>
-        <template v-for="(part, index) in message.messageParts" :key="index">
-          <span v-if="part.type === 'Text'" class="inline align-middle">{{ part.content }}</span>
-          <img v-else-if="part.type === 'Emote'" :src="part.content" alt="emote" class="inline"
-               :style="{ height: emoteSize }">
-          <span v-else-if="part.type === 'Link'"
-                class="inline align-middle text-blue-400 cursor-pointer hover:underline"
-                @click="handleLinkClick(part.content)">{{ part.content }}</span>
-        </template>
-      </template>
+      <ChatMessageContent :message="message" :scale="scale" :allow-reveal-deleted="allowRevealDeleted"
+                          :revealed="revealed" @link-click="emit('linkClick', $event)" />
     </div>
   </div>
 </template>
@@ -185,5 +91,4 @@ const boxStyle = computed(() => {
     transform: translateX(0);
   }
 }
-
 </style>
