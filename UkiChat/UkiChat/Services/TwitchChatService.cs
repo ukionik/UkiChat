@@ -395,45 +395,60 @@ public class TwitchChatService : ITwitchChatService
         _logger.LogInformation("ConnectAsync: старый={OldChannel} новый={NewChannel} broadcasterId={BroadcasterId}",
             connectionParams.OldChannel, connectionParams.NewChannel, connectionParams.BroadcasterId);
 
-        if (!_twitchClient.IsConnected)
+        // Запоминаем целевой канал ДО попытки подключения: при неудачном ПЕРВОМ коннекте
+        // (например, DNS ещё не поднялся после старта ПК) TriggerReconnect иначе отсеет
+        // реконнект по пустому _channelName.
+        if (connectionParams.NewChannel != "")
         {
-            _logger.LogInformation("TwitchClient не подключён — инициализируем и подключаемся (WebSocket)");
-            var credentials =
-                new ConnectionCredentials(connectionParams.ChatbotUsername, connectionParams.ChatbotAccessToken);
-            _twitchClient.Initialize(credentials);
-            using (StartupDiagnostics.Measure("twitch-chat", "  TwitchClient.ConnectAsync (WebSocket)"))
+            _channelName = connectionParams.NewChannel;
+            _intentionalDisconnect = false;
+        }
+
+        try
+        {
+            if (!_twitchClient.IsConnected)
             {
-                await _twitchClient.ConnectAsync();
+                _logger.LogInformation("TwitchClient не подключён — инициализируем и подключаемся (WebSocket)");
+                var credentials =
+                    new ConnectionCredentials(connectionParams.ChatbotUsername, connectionParams.ChatbotAccessToken);
+                _twitchClient.Initialize(credentials);
+                using (StartupDiagnostics.Measure("twitch-chat", "  TwitchClient.ConnectAsync (WebSocket)"))
+                {
+                    await _twitchClient.ConnectAsync();
+                }
+            }
+
+            if (_twitchClient.JoinedChannels.Any(x => x.Channel == connectionParams.OldChannel))
+            {
+                _logger.LogInformation("Покидаем старый канал: {OldChannel}", connectionParams.OldChannel);
+                using (StartupDiagnostics.Measure("twitch-chat", $"  LeaveChannelAsync({connectionParams.OldChannel})"))
+                {
+                    await _twitchClient.LeaveChannelAsync(connectionParams.OldChannel);
+                }
+            }
+
+            if (connectionParams.NewChannel == "")
+            {
+                // Намеренное отключение от канала — после авто-реконнекта перезаходить не нужно.
+                _intentionalDisconnect = true;
+                _channelName = "";
+                _logger.LogInformation("Новый канал пустой — завершаем ConnectAsync");
+                return;
+            }
+
+            await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"), connectionParams.NewChannel));
+            _logger.LogInformation("Входим в канал: {NewChannel}", connectionParams.NewChannel);
+            using (StartupDiagnostics.Measure("twitch-chat", $"  JoinChannelAsync({connectionParams.NewChannel})"))
+            {
+                await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
             }
         }
-
-        if (_twitchClient.JoinedChannels.Any(x => x.Channel == connectionParams.OldChannel))
+        catch (Exception ex)
         {
-            _logger.LogInformation("Покидаем старый канал: {OldChannel}", connectionParams.OldChannel);
-            using (StartupDiagnostics.Measure("twitch-chat", $"  LeaveChannelAsync({connectionParams.OldChannel})"))
-            {
-                await _twitchClient.LeaveChannelAsync(connectionParams.OldChannel);
-            }
-        }
-
-        if (connectionParams.NewChannel == "")
-        {
-            // Намеренное отключение от канала — после авто-реконнекта перезаходить не нужно.
-            _intentionalDisconnect = true;
-            _channelName = "";
-            _logger.LogInformation("Новый канал пустой — завершаем ConnectAsync");
-            return;
-        }
-
-        // Запоминаем активный канал для перезахода после авто-реконнекта.
-        _channelName = connectionParams.NewChannel;
-        _intentionalDisconnect = false;
-
-        await SendChatMessageNotification(string.Format(_localizationService.GetString("twitch.connectingToChannel"), connectionParams.NewChannel));
-        _logger.LogInformation("Входим в канал: {NewChannel}", connectionParams.NewChannel);
-        using (StartupDiagnostics.Measure("twitch-chat", $"  JoinChannelAsync({connectionParams.NewChannel})"))
-        {
-            await _twitchClient.JoinChannelAsync(connectionParams.NewChannel, true);
+            _logger.LogError(ex, "Ошибка подключения к Twitch чату (канал {Channel})", connectionParams.NewChannel);
+            // При исключении события OnDisconnected/OnConnectionError могут не прийти —
+            // запускаем реконнект сами. Параллельный запуск исключён (_reconnectGate).
+            TriggerReconnect(_clientGeneration);
         }
     }
 

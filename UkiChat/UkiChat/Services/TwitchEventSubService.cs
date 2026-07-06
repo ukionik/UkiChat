@@ -58,7 +58,16 @@ public class TwitchEventSubService : ITwitchEventSubService
         _client.ErrorOccurred += OnErrorOccurred;
         _client.ChannelPointsCustomRewardRedemptionAdd += OnRedemptionAdd;
 
-        await _client.ConnectAsync();
+        if (!await _client.ConnectAsync())
+        {
+            // Первое подключение не удалось (например, DNS ещё не поднялся после старта ПК) —
+            // повторяем в фоне, иначе EventSub молча остаётся мёртвым на всю сессию.
+            _logger.LogWarning("EventSub: подключение не удалось — повторяем в фоне");
+            var client = _client;
+            _ = Task.Run(() => ReconnectLoopAsync(client));
+            return;
+        }
+
         _logger.LogInformation("EventSub: подключение инициировано для {BroadcasterId}", _broadcasterId);
     }
 
@@ -110,9 +119,25 @@ public class TwitchEventSubService : ITwitchEventSubService
             return;
 
         _logger.LogWarning("EventSub: соединение потеряно, переподключаемся");
-        while (_client != null && !_stopping && !await _client.ReconnectAsync())
+        await ReconnectLoopAsync(_client);
+    }
+
+    /// <summary>
+    ///     Повторяет ReconnectAsync (клиент пересоздаёт WebSocket внутри) до успеха.
+    ///     Прекращается при остановке сервиса или замене клиента (RestartAsync).
+    /// </summary>
+    private async Task ReconnectLoopAsync(EventSubWebsocketClient client)
+    {
+        try
         {
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            while (!_stopping && ReferenceEquals(_client, client) && !await client.ReconnectAsync())
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "EventSub: цикл переподключения прерван ошибкой");
         }
     }
 
