@@ -121,6 +121,10 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         catch (Exception ex)
         {
             StartupDiagnostics.LogError("vk-chat", $"Connection error: {ex.Message}", ex);
+            // Событие Disconnected при неудачном ПЕРВОМ подключении не срабатывает,
+            // поэтому запускаем цикл переподключения отсюда (например, DNS ещё не поднялся после старта ПК).
+            _intentionalDisconnect = false;
+            StartReconnectLoop();
             await SendChatMessageNotification(string.Format(
                 _localizationService.GetString("vkvideolive.connectingToChannelError"),
                 connectionParams.ChannelName));

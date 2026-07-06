@@ -14,4 +14,5 @@ public interface IDatabaseContext
     ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
     IFfzEmoteRepository FfzEmoteRepository { get; }
     IBttvEmoteRepository BttvEmoteRepository { get; }
+    ITwitchBadgeRepository TwitchBadgeRepository { get; }
 }

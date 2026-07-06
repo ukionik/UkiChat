@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using TwitchLib.Api.Helix.Models.Chat.Badges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetChannelChatBadges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetGlobalChatBadges;
+using UkiChat.Entities;
 
 namespace UkiChat.Repositories.Memory;
 
@@ -11,22 +11,14 @@ namespace UkiChat.Repositories.Memory;
 public interface ITwitchBadgesRepository
 {
     /// <summary>
-    /// Получить глобальные бейджи
-    /// </summary>
-    /// <returns>Dictionary где ключ - SetId (например "subscriber"), значение - массив версий бейджа</returns>
-    Dictionary<string, BadgeVersion[]> GetGlobalBadges();
-
-    /// <summary>
-    /// Получить бейджи канала
-    /// </summary>
-    /// <param name="broadcasterId">ID канала</param>
-    /// <returns>Dictionary где ключ - SetId, значение - массив версий бейджа</returns>
-    Dictionary<string, BadgeVersion[]> GetChannelBadges(string broadcasterId);
-
-    /// <summary>
     /// Сохранить глобальные бейджи из ответа API
     /// </summary>
     void SetGlobalBadges(GetGlobalChatBadgesResponse badges);
+
+    /// <summary>
+    /// Сохранить глобальные бейджи из кэша в БД
+    /// </summary>
+    void SetGlobalBadges(IEnumerable<TwitchBadgeEntity> badges);
 
     /// <summary>
     /// Сохранить бейджи канала из ответа API
@@ -34,6 +26,13 @@ public interface ITwitchBadgesRepository
     /// <param name="broadcasterId">ID канала</param>
     /// <param name="badges">Ответ с бейджами</param>
     void SetChannelBadges(string broadcasterId, GetChannelChatBadgesResponse badges);
+
+    /// <summary>
+    /// Сохранить бейджи канала из кэша в БД
+    /// </summary>
+    /// <param name="broadcasterId">ID канала</param>
+    /// <param name="badges">Кэшированные бейджи</param>
+    void SetChannelBadges(string broadcasterId, IEnumerable<TwitchBadgeEntity> badges);
 
     /// <summary>
     /// Получить URL бейджей из коллекции badges

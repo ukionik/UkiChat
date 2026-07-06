@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using TwitchLib.Api.Helix.Models.Chat.Badges;
 using TwitchLib.Client;
 using TwitchLib.Client.Enums;
 using TwitchLib.Client.Models;
@@ -66,6 +67,17 @@ public class TwitchChatService : ITwitchChatService
 
     // Origin-id недавних массовых подарков — чтобы не дублировать отдельными subgift-событиями.
     private readonly Dictionary<string, DateTime> _communityGiftOrigins = new();
+
+    // Бейджи, в отличие от эмотов 7TV/FFZ/BTTV, обязательны для отображения чата, поэтому при
+    // неудачной первой загрузке (например, DNS ещё не поднялся после старта ПК) повторяем в фоне
+    // с нарастающей задержкой. Циклы (глобальный и канальный) хранятся по ключу, новый запуск
+    // загрузки отменяет предыдущий цикл своего вида.
+    private const int BadgesRetryMaxAttempts = 10;
+    private static readonly TimeSpan BadgesInitialRetryDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan BadgesMaxRetryDelay = TimeSpan.FromSeconds(30);
+
+    private readonly Lock _badgesRetryLock = new();
+    private readonly Dictionary<string, CancellationTokenSource> _badgesRetryLoops = new();
 
     public TwitchChatService(IDatabaseContext databaseContext
         , ISignalRService signalRService
@@ -505,15 +517,35 @@ public class TwitchChatService : ITwitchChatService
 
     private async Task LoadTwitchGlobalBadgesAsync()
     {
+        CancelBadgesRetryLoop("global");
+
+        // Сначала загружаем из базы — как fallback если API недоступен
+        var dbBadges = _databaseContext.TwitchBadgeRepository.GetGlobalBadges();
+        if (dbBadges.Count > 0)
+        {
+            _twitchBadgesRepository.SetGlobalBadges(dbBadges);
+            _logger.LogInformation("Загружено {Count} глобальных значков Twitch из БД", dbBadges.Count);
+        }
+
+        if (!await TryLoadTwitchGlobalBadgesFromApiAsync())
+            StartBadgesRetryLoop("global", TryLoadTwitchGlobalBadgesFromApiAsync);
+    }
+
+    private async Task<bool> TryLoadTwitchGlobalBadgesFromApiAsync()
+    {
         try
         {
             var twitchGlobalBadges = await _twitchApiService.GetGlobalChatBadgesAsync();
             _twitchBadgesRepository.SetGlobalBadges(twitchGlobalBadges);
+            _databaseContext.TwitchBadgeRepository.SaveGlobalBadges(
+                ToBadgeEntities(twitchGlobalBadges.EmoteSet, null));
             _logger.LogInformation("Загружено {Count} глобальных наборов значков Twitch", twitchGlobalBadges.EmoteSet.Length);
+            return true;
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Ошибка загрузки глобальных значков Twitch");
+            return false;
         }
     }
 
@@ -543,20 +575,145 @@ public class TwitchChatService : ITwitchChatService
 
     private async Task LoadTwitchChannelBadgesAsync(TwitchSettings twitchSettings)
     {
+        if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
+            return;
+
+        CancelBadgesRetryLoop("channel");
+
+        // Сначала загружаем из базы — как fallback если API недоступен
+        var dbBadges = _databaseContext.TwitchBadgeRepository.GetChannelBadges(twitchSettings.ApiBroadcasterId);
+        if (dbBadges.Count > 0)
+        {
+            _twitchBadgesRepository.SetChannelBadges(twitchSettings.ApiBroadcasterId, dbBadges);
+            _logger.LogInformation("Загружено {Count} значков канала {Channel} из БД",
+                dbBadges.Count, twitchSettings.Channel);
+        }
+
+        if (!await TryLoadTwitchChannelBadgesFromApiAsync(twitchSettings))
+        {
+            var broadcasterId = twitchSettings.ApiBroadcasterId;
+            StartBadgesRetryLoop("channel", async () =>
+            {
+                // Перечитываем настройки: за время ожидания канал мог смениться —
+                // тогда этот цикл устарел и завершается (новый запустит LoadChannelDataAsync).
+                var settings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+                if (settings.ApiBroadcasterId != broadcasterId)
+                    return true;
+                return await TryLoadTwitchChannelBadgesFromApiAsync(settings);
+            });
+        }
+    }
+
+    private async Task<bool> TryLoadTwitchChannelBadgesFromApiAsync(TwitchSettings twitchSettings)
+    {
         try
         {
-            if (string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
-                return;
-
             var channelBadges = await _twitchApiService.GetChannelChatBadgesAsync(twitchSettings.ApiBroadcasterId);
             _twitchBadgesRepository.SetChannelBadges(twitchSettings.ApiBroadcasterId, channelBadges);
+            _databaseContext.TwitchBadgeRepository.SaveChannelBadges(twitchSettings.ApiBroadcasterId,
+                ToBadgeEntities(channelBadges.EmoteSet, twitchSettings.ApiBroadcasterId));
             _logger.LogInformation("Загружено {Count} наборов значков канала {Channel}",
                 channelBadges.EmoteSet.Length, twitchSettings.Channel);
+            return true;
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Ошибка загрузки значков канала {Channel}", twitchSettings.Channel);
+            return false;
         }
+    }
+
+    /// <summary>
+    ///     Запускает фоновый цикл повторной загрузки бейджей: до <see cref="BadgesRetryMaxAttempts"/>
+    ///     попыток с нарастающей задержкой. Уже идущий цикл того же вида отменяется.
+    /// </summary>
+    /// <param name="kind">Вид цикла ("global"/"channel") — ключ для отмены и логов</param>
+    /// <param name="attempt">Попытка загрузки; true — успех (или цикл устарел), цикл завершается</param>
+    private void StartBadgesRetryLoop(string kind, Func<Task<bool>> attempt)
+    {
+        lock (_badgesRetryLock)
+        {
+            if (_badgesRetryLoops.Remove(kind, out var existing))
+            {
+                existing.Cancel();
+                existing.Dispose();
+            }
+
+            var cts = new CancellationTokenSource();
+            _badgesRetryLoops[kind] = cts;
+            _ = Task.Run(() => BadgesRetryLoopAsync(kind, attempt, cts));
+        }
+    }
+
+    private void CancelBadgesRetryLoop(string kind)
+    {
+        lock (_badgesRetryLock)
+        {
+            if (_badgesRetryLoops.Remove(kind, out var cts))
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+        }
+    }
+
+    private async Task BadgesRetryLoopAsync(string kind, Func<Task<bool>> attempt, CancellationTokenSource cts)
+    {
+        var cancellationToken = cts.Token;
+        var delay = BadgesInitialRetryDelay;
+        try
+        {
+            for (var i = 1; i <= BadgesRetryMaxAttempts; i++)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                if (cancellationToken.IsCancellationRequested) return;
+
+                if (await attempt())
+                    return;
+
+                _logger.LogWarning("Повторная загрузка значков Twitch ({Kind}) не удалась: попытка {Attempt}/{Max}",
+                    kind, i, BadgesRetryMaxAttempts);
+                // Удваиваем задержку до потолка BadgesMaxRetryDelay.
+                delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, BadgesMaxRetryDelay.Ticks));
+            }
+
+            _logger.LogWarning("Загрузка значков Twitch ({Kind}) не удалась после {Max} попыток", kind, BadgesRetryMaxAttempts);
+        }
+        finally
+        {
+            // Освобождаем CTS при выходе из цикла, чтобы следующая загрузка могла запустить новый.
+            lock (_badgesRetryLock)
+            {
+                if (_badgesRetryLoops.TryGetValue(kind, out var current) && current == cts)
+                {
+                    _badgesRetryLoops.Remove(kind);
+                    current.Dispose();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Разворачивает наборы бейджей из ответа API в плоский список сущностей для кэша в БД.
+    /// </summary>
+    private static IEnumerable<TwitchBadgeEntity> ToBadgeEntities(
+        IEnumerable<BadgeEmoteSet> emoteSets, string? channel)
+    {
+        return emoteSets.SelectMany(set => set.Versions.Select(version => new TwitchBadgeEntity
+        {
+            SetId = set.SetId,
+            VersionId = version.Id,
+            ImageUrl = version.ImageUrl4x,
+            Channel = channel
+        }));
     }
 
     private async Task LoadSevenTvChannelEmotesAsync(TwitchSettings twitchSettings)

@@ -22,6 +22,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
         SevenTvEmoteRepository = new SevenTvEmoteRepository(db);
         FfzEmoteRepository = new FfzEmoteRepository(db);
         BttvEmoteRepository = new BttvEmoteRepository(db);
+        TwitchBadgeRepository = new TwitchBadgeRepository(db);
         InitDefaultData(defaultAppSettings);
     }
 
@@ -34,6 +35,7 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     public ISevenTvEmoteRepository SevenTvEmoteRepository { get; }
     public IFfzEmoteRepository FfzEmoteRepository { get; }
     public IBttvEmoteRepository BttvEmoteRepository { get; }
+    public ITwitchBadgeRepository TwitchBadgeRepository { get; }
 
     public void Dispose()
     {

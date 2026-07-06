@@ -188,6 +188,9 @@ public class DonationAlertsService : IDonationAlertsService
         catch (Exception ex)
         {
             StartupDiagnostics.LogError("da", $"Connection error: {ex.Message}", ex);
+            // Событие Disconnected при неудачном ПЕРВОМ подключении не срабатывает,
+            // поэтому запускаем цикл переподключения отсюда (например, DNS ещё не поднялся после старта ПК).
+            StartReconnectLoop();
             await SendNotification(_localizationService.GetString("donationalerts.connectingError"));
         }
     }

@@ -3,6 +3,7 @@ using System.Linq;
 using TwitchLib.Api.Helix.Models.Chat.Badges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetChannelChatBadges;
 using TwitchLib.Api.Helix.Models.Chat.Badges.GetGlobalChatBadges;
+using UkiChat.Entities;
 
 namespace UkiChat.Repositories.Memory;
 
@@ -11,40 +12,30 @@ namespace UkiChat.Repositories.Memory;
 /// </summary>
 public class TwitchBadgesRepository : ITwitchBadgesRepository
 {
-    // Dictionary<SetId, BadgeVersion[]>
-    private Dictionary<string, BadgeVersion[]> _globalBadges = new();
+    // Dictionary<SetId, Dictionary<VersionId, ImageUrl>>
+    private Dictionary<string, Dictionary<string, string>> _globalBadges = new();
 
-    // Dictionary<BroadcasterId, Dictionary<SetId, BadgeVersion[]>>
-    private readonly Dictionary<string, Dictionary<string, BadgeVersion[]>> _channelBadges = new();
-
-    public Dictionary<string, BadgeVersion[]> GetGlobalBadges()
-    {
-        return _globalBadges;
-    }
-
-    public Dictionary<string, BadgeVersion[]> GetChannelBadges(string broadcasterId)
-    {
-        return _channelBadges.TryGetValue(broadcasterId, out var badges)
-            ? badges
-            : new Dictionary<string, BadgeVersion[]>();
-    }
+    // Dictionary<BroadcasterId, Dictionary<SetId, Dictionary<VersionId, ImageUrl>>>
+    private readonly Dictionary<string, Dictionary<string, Dictionary<string, string>>> _channelBadges = new();
 
     public void SetGlobalBadges(GetGlobalChatBadgesResponse badges)
     {
-        _globalBadges = badges.EmoteSet
-            .ToDictionary(
-                emoteSet => emoteSet.SetId,
-                emoteSet => emoteSet.Versions
-            );
+        _globalBadges = ToBadgeMap(badges.EmoteSet);
+    }
+
+    public void SetGlobalBadges(IEnumerable<TwitchBadgeEntity> badges)
+    {
+        _globalBadges = ToBadgeMap(badges);
     }
 
     public void SetChannelBadges(string broadcasterId, GetChannelChatBadgesResponse badges)
     {
-        _channelBadges[broadcasterId] = badges.EmoteSet
-            .ToDictionary(
-                emoteSet => emoteSet.SetId,
-                emoteSet => emoteSet.Versions
-            );
+        _channelBadges[broadcasterId] = ToBadgeMap(badges.EmoteSet);
+    }
+
+    public void SetChannelBadges(string broadcasterId, IEnumerable<TwitchBadgeEntity> badges)
+    {
+        _channelBadges[broadcasterId] = ToBadgeMap(badges);
     }
 
     public List<string> GetBadgeUrls(ICollection<KeyValuePair<string, string>> badges, string broadcasterId)
@@ -60,7 +51,7 @@ public class TwitchBadgesRepository : ITwitchBadgesRepository
 
         foreach (var (setId, versionId) in badges)
         {
-            BadgeVersion[]? badgeVersions = null;
+            Dictionary<string, string>? badgeVersions = null;
 
             // Сначала ищем в бейджах канала, затем в глобальных
             if (channelBadges != null && channelBadges.TryGetValue(setId, out var channelBadgeVersions))
@@ -73,13 +64,9 @@ public class TwitchBadgesRepository : ITwitchBadgesRepository
             }
 
             // Ищем конкретную версию по badge.Value
-            if (badgeVersions is { Length: > 0 })
+            if (badgeVersions != null && badgeVersions.TryGetValue(versionId, out var imageUrl))
             {
-                var badgeVersion = badgeVersions.FirstOrDefault(v => v.Id == versionId);
-                if (badgeVersion != null)
-                {
-                    badgeUrls.Add(badgeVersion.ImageUrl4x);
-                }
+                badgeUrls.Add(imageUrl);
             }
         }
 
@@ -90,5 +77,23 @@ public class TwitchBadgesRepository : ITwitchBadgesRepository
     {
         _globalBadges.Clear();
         _channelBadges.Clear();
+    }
+
+    private static Dictionary<string, Dictionary<string, string>> ToBadgeMap(IEnumerable<BadgeEmoteSet> emoteSets)
+    {
+        return emoteSets.ToDictionary(
+            emoteSet => emoteSet.SetId,
+            emoteSet => emoteSet.Versions.ToDictionary(v => v.Id, v => v.ImageUrl4x)
+        );
+    }
+
+    private static Dictionary<string, Dictionary<string, string>> ToBadgeMap(IEnumerable<TwitchBadgeEntity> badges)
+    {
+        return badges
+            .GroupBy(b => b.SetId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToDictionary(b => b.VersionId, b => b.ImageUrl)
+            );
     }
 }
