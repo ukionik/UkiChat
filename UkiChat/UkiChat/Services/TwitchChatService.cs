@@ -20,6 +20,7 @@ using UkiChat.Model.SevenTv;
 using UkiChat.Model.Twitch;
 using UkiChat.Repositories.Database;
 using UkiChat.Repositories.Memory;
+using UkiChat.Twitch;
 
 namespace UkiChat.Services;
 
@@ -79,6 +80,17 @@ public class TwitchChatService : ITwitchChatService
     private readonly Lock _badgesRetryLock = new();
     private readonly Dictionary<string, CancellationTokenSource> _badgesRetryLoops = new();
 
+    // Сторож простоя: клиент может умереть молча, без OnDisconnected (см. IdleWatchdogLoopAsync).
+    // Тишина до ~5 минут штатна (Twitch пингует примерно раз в 5 минут), поэтому после двух минут
+    // без данных не гадаем, а сами шлём PING и ждём ответ — разрыв виден примерно за 2.5 минуты.
+    private static readonly TimeSpan IdleCheckInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan IdleProbeAfter = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan IdleProbeTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan IdleHardLimit = TimeSpan.FromMinutes(7);
+
+    // Момент последних данных от Twitch (тики UTC): любая входящая строка, включая PING/PONG.
+    private long _lastInboundTicks = DateTime.UtcNow.Ticks;
+
     public TwitchChatService(IDatabaseContext databaseContext
         , ISignalRService signalRService
         , ILocalizationService localizationService
@@ -116,8 +128,10 @@ public class TwitchChatService : ITwitchChatService
     private TwitchClient BuildClient()
     {
         var generation = Interlocked.Increment(ref _clientGeneration);
+        // Транспорт обёрнут нормализатором: он чинит индексы эмоутов в сырой IRC-строке до разбора,
+        // иначе сообщение с комбинирующим символом роняет парсер и молча убивает клиент.
         var client = new TwitchClient(
-            new WebSocketClient(new ClientOptions(new ReconnectionPolicy(5_000, 1))));
+            new EmoteIndexNormalizingClient(new WebSocketClient(new ClientOptions(new ReconnectionPolicy(5_000, 1)))));
         WireClientEvents(client, generation);
         return client;
     }
@@ -165,6 +179,7 @@ public class TwitchChatService : ITwitchChatService
         {
             StartupDiagnostics.Log("twitch-chat", "OnConnected (IRC handshake done)");
             _logger.LogInformation("Подключено (IRC handshake done)");
+            StartIdleWatchdog(client, generation);
             return Task.CompletedTask;
         };
 
@@ -281,9 +296,73 @@ public class TwitchChatService : ITwitchChatService
 
         client.OnSendReceiveData += (_, e) =>
         {
+            if (e.Direction == SendReceiveDirection.Received)
+                Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
             _logger.LogDebug("IRC [{Direction}]: {Data}", e.Direction, e.Data);
             return Task.CompletedTask;
         };
+    }
+
+    /// <summary>
+    ///     Запускает сторож простоя для текущего клиента. Клиент может умереть молча — без
+    ///     OnDisconnected и OnConnectionError (например, если исключение убило цикл чтения сокета),
+    ///     и тогда чат просто замирает до перезапуска приложения.
+    /// </summary>
+    private void StartIdleWatchdog(TwitchClient client, int generation)
+    {
+        Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
+        _ = Task.Run(() => IdleWatchdogLoopAsync(client, generation));
+    }
+
+    private async Task IdleWatchdogLoopAsync(TwitchClient client, int generation)
+    {
+        // Момент отправки контрольного PING; MinValue — пинг не отправлен.
+        var probeSentAt = DateTime.MinValue;
+
+        while (generation == _clientGeneration)
+        {
+            await Task.Delay(IdleCheckInterval);
+
+            if (generation != _clientGeneration) return;
+            if (_intentionalDisconnect || string.IsNullOrEmpty(_channelName)) continue;
+
+            var silence = DateTime.UtcNow - new DateTime(Volatile.Read(ref _lastInboundTicks), DateTimeKind.Utc);
+
+            // Пришли данные — соединение живо, счётчик пинга сбрасываем.
+            if (silence < IdleProbeAfter)
+            {
+                probeSentAt = DateTime.MinValue;
+                continue;
+            }
+
+            // Сама по себе тишина в пару минут — норма: Twitch шлёт PING примерно раз в 5 минут,
+            // поэтому не гадаем, а спрашиваем сервер сами и ждём ответ.
+            if (probeSentAt == DateTime.MinValue)
+            {
+                probeSentAt = DateTime.UtcNow;
+                _logger.LogWarning("Сторож: от Twitch нет данных {Seconds:F0}с — отправляем PING", silence.TotalSeconds);
+                try
+                {
+                    await client.SendRawAsync("PING :tmi.twitch.tv");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Сторож: не удалось отправить PING");
+                }
+
+                continue;
+            }
+
+            // Ответа ждём ограниченное время; IdleHardLimit — страховка на случай, если PING не ушёл.
+            if (DateTime.UtcNow - probeSentAt < IdleProbeTimeout && silence < IdleHardLimit)
+                continue;
+
+            StartupDiagnostics.LogError("twitch-chat", $"Idle watchdog: нет данных {silence.TotalSeconds:F0}с, реконнект");
+            _logger.LogWarning("Сторож: ответа на PING нет, тишина {Seconds:F0}с — пересоздаём подключение",
+                silence.TotalSeconds);
+            TriggerReconnect(generation);
+            return;
+        }
     }
 
     // Запускает фоновый реконнект, если разрыв не намеренный и поколение клиента ещё актуально.
