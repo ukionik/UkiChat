@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useLocalization } from '~/composables/useLocalization'
+import { useSignalR } from '~/composables/useSignalR'
 
-const { startSignalR, changeLanguage } = useLocalization()
+const { startSignalR } = useSignalR()
 const { t } = useI18n()
 
-// Запуск SignalR при монтировании компонента
 onMounted(() => {
-  startSignalR()
+  void startSignalR()
 })
 </script>
 

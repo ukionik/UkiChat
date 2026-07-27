@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { HubConnection } from '@microsoft/signalr'
 import type { TwitchAuthStatus } from '~/types/TwitchAuth'
 import type { DonationAlertsAuthStatus } from '~/types/DonationAlertsAuth'
 import { useSignalR } from '~/composables/useSignalR'
@@ -9,7 +8,7 @@ import AppearanceSettings from '~/components/settings/AppearanceSettings.vue'
 import PlatformSettings from '~/components/settings/PlatformSettings.vue'
 import IntegrationsSettings from '~/components/settings/IntegrationsSettings.vue'
 
-const { startSignalR, invokeGet, invokeUpdate } = useSignalR()
+const { startSignalR, invokeGet, invokeUpdate, on, onConnected } = useSignalR()
 const { getLanguage } = useLocalization()
 const { t } = useI18n()
 const { mainWindowScale, overlayScale } = useScaleSettings()
@@ -21,7 +20,6 @@ const { mentionNicknames } = useMentionSettings()
 const appSettingsInfo = ref({ profileName: '', language: 'en' })
 const activeRoot = ref('general')
 const currentLanguage = ref('ru')
-const connection = ref<HubConnection | null>(null)
 
 const languages = [
   { code: 'ru', flag: '🇷🇺', label: 'Русский' },
@@ -33,8 +31,8 @@ function selectRoot(key: string) {
 }
 
 async function changeLanguage(lang: string) {
-  if (!connection.value || currentLanguage.value === lang) return
-  await getLanguage(lang, connection.value)
+  if (currentLanguage.value === lang) return
+  await getLanguage(lang)
   currentLanguage.value = lang
 }
 
@@ -154,48 +152,68 @@ watch(mentionNicknames, (val) => {
   invokeUpdate('BroadcastMentionSettings', val)
 }, { deep: true })
 
-onMounted(async () => {
-  connection.value = await startSignalR()
-  appSettingsInfo.value = await invokeGet('GetActiveAppSettingsInfo')
-  currentLanguage.value = appSettingsInfo.value.language
-  await getLanguage(appSettingsInfo.value.language, connection.value)
-  state.settings = await invokeGet('GetActiveAppSettingsData')
+// Загрузка состояния с бэкенда. Вызывается при каждом (пере)подключении,
+// чтобы после перезапуска приложения окно настроек показывало актуальные значения.
+async function loadState() {
+  // На время загрузки глушим watch'и, иначе прочитанные значения уедут обратно на бэкенд.
+  scaleSettingsLoaded = false
+  themeSettingsLoaded = false
+  messageHideSettingsLoaded = false
+  clipSettingsLoaded = false
+  mentionSettingsLoaded = false
 
-  twitchAuth.value = await invokeGet('GetTwitchAuthStatus')
-  connection.value?.on('OnTwitchAuthChanged', (status: TwitchAuthStatus) => {
-    twitchAuth.value = status
-  })
+  try {
+    appSettingsInfo.value = await invokeGet('GetActiveAppSettingsInfo')
+    currentLanguage.value = appSettingsInfo.value.language
+    await getLanguage(appSettingsInfo.value.language)
+    state.settings = await invokeGet('GetActiveAppSettingsData')
 
-  donationAlertsAuth.value = await invokeGet('GetDonationAlertsAuthStatus')
-  connection.value?.on('OnDonationAlertsAuthChanged', (status: DonationAlertsAuthStatus) => {
-    donationAlertsAuth.value = status
-  })
+    twitchAuth.value = await invokeGet('GetTwitchAuthStatus')
+    donationAlertsAuth.value = await invokeGet('GetDonationAlertsAuthStatus')
 
-  const scaleSettings = await invokeGet('GetScaleSettings')
-  mainWindowScale.value = scaleSettings.mainWindowScale
-  overlayScale.value = scaleSettings.overlayScale
+    const scaleSettings = await invokeGet('GetScaleSettings')
+    mainWindowScale.value = scaleSettings.mainWindowScale
+    overlayScale.value = scaleSettings.overlayScale
 
-  const themeSettings = await invokeGet('GetThemeSettings')
-  mainWindowTheme.value = themeSettings.mainWindowTheme
-  overlayTheme.value = themeSettings.overlayTheme
+    const themeSettings = await invokeGet('GetThemeSettings')
+    mainWindowTheme.value = themeSettings.mainWindowTheme
+    overlayTheme.value = themeSettings.overlayTheme
 
-  const messageHideSettings = await invokeGet('GetMessageHideSettings')
-  mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
-  overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
+    const messageHideSettings = await invokeGet('GetMessageHideSettings')
+    mainWindowMessageHideDelay.value = messageHideSettings.mainWindowMessageHideDelay
+    overlayMessageHideDelay.value = messageHideSettings.overlayMessageHideDelay
 
-  const clipSettings = await invokeGet('GetClipSettings')
-  overlayHideClippedMessages.value = clipSettings.overlayHideClippedMessages
+    const clipSettings = await invokeGet('GetClipSettings')
+    overlayHideClippedMessages.value = clipSettings.overlayHideClippedMessages
 
-  const mentionSettings = await invokeGet('GetMentionSettings')
-  mentionNicknames.value = mentionSettings.nicknames ?? []
+    const mentionSettings = await invokeGet('GetMentionSettings')
+    mentionNicknames.value = mentionSettings.nicknames ?? []
 
-  await nextTick()
-  scaleSettingsLoaded = true
-  themeSettingsLoaded = true
-  messageHideSettingsLoaded = true
-  clipSettingsLoaded = true
-  mentionSettingsLoaded = true
+    await nextTick()
+    scaleSettingsLoaded = true
+    themeSettingsLoaded = true
+    messageHideSettingsLoaded = true
+    clipSettingsLoaded = true
+    mentionSettingsLoaded = true
+  } catch (err) {
+    console.error('[settings.vue] loadState FAILED', err)
+  }
+}
+
+// Подписки регистрируются один раз, переживают переподключения
+// и снимаются автоматически при размонтировании страницы.
+on('OnTwitchAuthChanged', (status: TwitchAuthStatus) => {
+  twitchAuth.value = status
 })
+
+on('OnDonationAlertsAuthChanged', (status: DonationAlertsAuthStatus) => {
+  donationAlertsAuth.value = status
+})
+
+onConnected(loadState)
+
+// Соединение поднимается в фоне и бесконечно повторяет попытки, ждать его не нужно.
+void startSignalR()
 </script>
 
 <template>
