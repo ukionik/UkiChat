@@ -17,7 +17,6 @@ export const CHAT_THEME_LIST: ChatThemeMeta[] = [
   { slug: 'box',         label: 'Box',               component: 'ThemesBoxChatMessage' },
   { slug: 'glass',       label: 'Dark Glass',        component: 'ThemesDarkGlassChatMessage' },
   { slug: 'twitch',      label: 'Twitch Native',     component: 'ThemesTwitchNativeChatMessage' },
-  { slug: 'youtube',     label: 'YouTube Live',      component: 'ThemesYouTubeLiveChatMessage' },
   { slug: 'outline',     label: 'Minimal Outline',   component: 'ThemesMinimalOutlineChatMessage' },
   { slug: 'neon',        label: 'Neon',              component: 'ThemesNeonChatMessage' },
   { slug: 'bubble',      label: 'Bubble',            component: 'ThemesBubbleChatMessage' },
