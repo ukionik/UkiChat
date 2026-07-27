@@ -15,6 +15,8 @@ const { revealed, toggleRevealDeleted } = useThemeMessage(props, emit)
 
 const s = computed(() => props.scale)
 const isMention = computed(() => props.message.messageType === 'Mention')
+// Отступ между ником с двоеточием и текстом сообщения
+const marginRight = computed(() => `${0.25 * s.value}rem`)
 
 const boxStyle = computed(() => ({
   padding: `${0.15 * s.value}rem 0`,
@@ -34,8 +36,7 @@ const boxStyle = computed(() => ({
     <ChatMessageMeta :message="message" :scale="scale" dono-class="text-[#69f0ae] font-bold" />
     <div>
       <ChatPlatformBadges :message="message" :scale="scale" :icon-scale="1.15" inline />
-      <span class="font-extrabold align-middle" :style="{ color: message.displayNameColor }">{{ message.displayName }}:</span>
-      <span class="align-middle" :class="isMention ? 'text-[#ff8a80]' : ''"> </span>
+      <span class="font-extrabold align-middle" :style="{ marginRight, color: message.displayNameColor }">{{ message.displayName }}:</span>
       <span class="align-middle" :class="isMention ? 'text-[#ff8a80]' : ''">
         <ChatMessageContent :message="message" :scale="scale" :allow-reveal-deleted="allowRevealDeleted"
                             :revealed="revealed" @link-click="emit('linkClick', $event)" />
