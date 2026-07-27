@@ -296,9 +296,11 @@ public class TwitchChatService : ITwitchChatService
 
         client.OnSendReceiveData += (_, e) =>
         {
-            if (e.Direction == SendReceiveDirection.Received)
+            // Только данные АКТУАЛЬНОГО клиента считаются признаком живого соединения: старый,
+            // уже заменённый клиент может дочитывать свой буфер и маскировать смерть текущего.
+            if (e.Direction == SendReceiveDirection.Received && generation == _clientGeneration)
                 Volatile.Write(ref _lastInboundTicks, DateTime.UtcNow.Ticks);
-            _logger.LogDebug("IRC [{Direction}]: {Data}", e.Direction, e.Data);
+            _logger.LogDebug("IRC [{Direction}] (gen={Generation}): {Data}", e.Direction, generation, e.Data);
             return Task.CompletedTask;
         };
     }

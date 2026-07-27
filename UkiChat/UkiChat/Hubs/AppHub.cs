@@ -32,6 +32,7 @@ public class AppHub : Hub
         var remote = ctx?.Connection.RemoteIpAddress?.ToString() ?? "?";
         var userAgent = ctx?.Request.Headers["User-Agent"].ToString() ?? "?";
         StartupDiagnostics.Log("hub", $"OnConnectedAsync: connId={Context.ConnectionId} remote={remote} ua=\"{userAgent}\"");
+        _signalRService.RegisterConnection(Context.ConnectionId);
         _frontendReadyService.NotifyReady();
         return base.OnConnectedAsync();
     }
@@ -42,6 +43,7 @@ public class AppHub : Hub
             StartupDiagnostics.LogError("hub", $"OnDisconnectedAsync: connId={Context.ConnectionId}", exception);
         else
             StartupDiagnostics.Log("hub", $"OnDisconnectedAsync: connId={Context.ConnectionId}");
+        _signalRService.UnregisterConnection(Context.ConnectionId);
         return base.OnDisconnectedAsync(exception);
     }
 

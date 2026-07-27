@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using UkiChat.Configuration;
 using UkiChat.Diagnostics;
@@ -23,6 +24,9 @@ public class AppInitializationService(
     IDonationAlertsService donationAlertsService
 ) : IAppInitializationService
 {
+    // Сколько ждём фронтенд, прежде чем записать в лог, что он так и не подключился.
+    private static readonly TimeSpan FrontendReadyLogTimeout = TimeSpan.FromSeconds(30);
+
     public async Task InitializeAsync()
     {
         StartupDiagnostics.Log("app-init", "InitializeAsync: BEGIN");
@@ -31,19 +35,53 @@ public class AppInitializationService(
             localizationService.SetCulture("ru");
         }
 
-        using (StartupDiagnostics.Measure("app-init", "WaitForFrontendAsync"))
-        {
-            await frontendReadyService.WaitAsync().WaitAsync(TimeSpan.FromSeconds(30));
-        }
+        // Готовность фронтенда БОЛЬШЕ НЕ БЛОКИРУЕТ подъём чатов. Раньше здесь стояло ожидание с
+        // таймаутом 30с, и если фронт не подключался (например, WebView2 получил 404 на wwwroot
+        // без index.html), TimeoutException рвал инициализацию целиком: Twitch, VK, YouTube и
+        // DonationAlerts не стартовали вовсе, а исключение молча гасилось в App.OnInitialized.
+        // Чатам фронт не нужен — подключившись, он сам забирает у хаба всё, что ему требуется.
+        // Ждём его только ради записи в лог.
+        _ = LogFrontendReadinessAsync();
 
         using (StartupDiagnostics.Measure("app-init", "LoadTwitchData + LoadVkVideoLiveData (parallel)"))
         {
-            await Task.WhenAll(LoadTwitchDataAsync(),
-                LoadVkVideoLiveDataAsync(),
-                LoadYouTubeDataAsync(),
-                LoadDonationAlertsDataAsync());
+            await Task.WhenAll(
+                RunIsolatedAsync("Twitch", LoadTwitchDataAsync),
+                RunIsolatedAsync("VkVideoLive", LoadVkVideoLiveDataAsync),
+                RunIsolatedAsync("YouTube", LoadYouTubeDataAsync),
+                RunIsolatedAsync("DonationAlerts", LoadDonationAlertsDataAsync));
         }
         StartupDiagnostics.Log("app-init", "InitializeAsync: END");
+    }
+
+    // Диагностика: видно, дождались мы фронтенд или нет, но на подъём чатов это уже не влияет.
+    private async Task LogFrontendReadinessAsync()
+    {
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            await frontendReadyService.WaitAsync().WaitAsync(FrontendReadyLogTimeout);
+            StartupDiagnostics.Log("app-init", $"Фронтенд подключился за {sw.ElapsedMilliseconds} мс");
+        }
+        catch (TimeoutException)
+        {
+            StartupDiagnostics.Log("app-init",
+                $"Фронтенд не подключился за {FrontendReadyLogTimeout.TotalSeconds:F0}с (на работу чатов не влияет)");
+        }
+    }
+
+    // Каждая площадка поднимается независимо: сломанные настройки или недоступный API одной
+    // не должны мешать остальным — раньше исключение из Task.WhenAll обрывало InitializeAsync.
+    private static async Task RunIsolatedAsync(string name, Func<Task> load)
+    {
+        try
+        {
+            await load();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogError("app-init", $"Инициализация {name} не удалась", ex);
+        }
     }
 
     private async Task LoadTwitchDataAsync()

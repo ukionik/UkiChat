@@ -6,6 +6,12 @@ namespace UkiChat.Services;
 
 public interface ISignalRService
 {
+    /// <summary>Заводит очередь отправки для подключившегося клиента (вызывается из AppHub).</summary>
+    void RegisterConnection(string connectionId);
+
+    /// <summary>Закрывает очередь отключившегося клиента (вызывается из AppHub).</summary>
+    void UnregisterConnection(string connectionId);
+
     Task SendChatMessageAsync(UkiChatMessage message);
     Task SendMessageDeletedAsync(string messageId);
     Task SendUserMessagesDeletedAsync(string username);
