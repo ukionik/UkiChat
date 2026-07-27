@@ -27,6 +27,12 @@ public class AppInitializationService(
     // Сколько ждём фронтенд, прежде чем записать в лог, что он так и не подключился.
     private static readonly TimeSpan FrontendReadyLogTimeout = TimeSpan.FromSeconds(30);
 
+    // Повторы инициализации Twitch API: типичная причина осечки — приложение стартовало раньше,
+    // чем поднялась сеть после включения ПК, и через несколько секунд всё уже работает.
+    private const int TwitchApiRetryMaxAttempts = 10;
+    private static readonly TimeSpan TwitchApiInitialRetryDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan TwitchApiMaxRetryDelay = TimeSpan.FromSeconds(60);
+
     public async Task InitializeAsync()
     {
         StartupDiagnostics.Log("app-init", "InitializeAsync: BEGIN");
@@ -95,10 +101,11 @@ public class AppInitializationService(
         StartupDiagnostics.Log("app-init",
             $"  Twitch channel={twitchSettings.Channel ?? "<none>"} hasApi={!string.IsNullOrEmpty(twitchSettings.ApiClientId)}");
 
-        using (StartupDiagnostics.Measure("app-init", "  InitializeTwitchApi"))
-        {
-            await InitializeTwitchApiAsync(twitchSettings);
-        }
+        // Инициализация Helix API НЕ должна мешать чату: чат авторизуется отдельным токеном
+        // чат-бота и прекрасно работает без API. Раньше исключение отсюда (SocketException,
+        // когда DNS ещё не поднялся после включения ПК) обрывало LoadTwitchDataAsync до
+        // ConnectAsync — чат не подключался вовсе и не пытался снова до перезапуска.
+        var apiReady = await TryInitializeTwitchApiAsync(twitchSettings);
 
         using (StartupDiagnostics.Measure("app-init", "  Twitch parallel: LoadGlobalData + LoadChannelData + ConnectAsync"))
         {
@@ -110,11 +117,75 @@ public class AppInitializationService(
             );
         }
 
+        if (!apiReady)
+        {
+            // API догоняем в фоне; вместе с ним доедут значки, награды и EventSub.
+            StartTwitchApiRetryLoop();
+            return;
+        }
+
         // Поднимаем EventSub для наград без текста (если пользователь авторизован)
         using (StartupDiagnostics.Measure("app-init", "  Twitch EventSub StartAsync"))
         {
             await twitchEventSubService.StartAsync();
         }
+    }
+
+    private async Task<bool> TryInitializeTwitchApiAsync(TwitchSettings twitchSettings)
+    {
+        using var _ = StartupDiagnostics.Measure("app-init", "  InitializeTwitchApi");
+        try
+        {
+            await InitializeTwitchApiAsync(twitchSettings);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogError("app-init", "[Twitch] Инициализация API не удалась", ex);
+            return false;
+        }
+    }
+
+    private void StartTwitchApiRetryLoop() => _ = TwitchApiRetryLoopAsync();
+
+    /// <summary>
+    ///     Догоняет инициализацию Twitch API в фоне с нарастающей задержкой. После успеха
+    ///     перезагружает всё, чему API нужен: значки, награды канала и EventSub.
+    /// </summary>
+    private async Task TwitchApiRetryLoopAsync()
+    {
+        var delay = TwitchApiInitialRetryDelay;
+        for (var attempt = 1; attempt <= TwitchApiRetryMaxAttempts; attempt++)
+        {
+            await Task.Delay(delay);
+
+            // Настройки перечитываем: за время ожидания токены мог обновить кто-то ещё.
+            var settings = databaseContext.TwitchSettingsRepository.GetActiveSettings();
+            if (!await TryInitializeTwitchApiAsync(settings))
+            {
+                StartupDiagnostics.Log("app-init",
+                    $"[Twitch] Повтор инициализации API: попытка {attempt}/{TwitchApiRetryMaxAttempts} не удалась");
+                delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, TwitchApiMaxRetryDelay.Ticks));
+                continue;
+            }
+
+            StartupDiagnostics.Log("app-init", $"[Twitch] API поднялся с попытки {attempt}, догружаем данные");
+            try
+            {
+                await twitchChatService.LoadGlobalDataAsync();
+                await twitchChatService.LoadChannelDataAsync();
+                await twitchEventSubService.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                StartupDiagnostics.LogError("app-init", "[Twitch] Догрузка данных после подъёма API не удалась", ex);
+            }
+
+            return;
+        }
+
+        StartupDiagnostics.LogError("app-init",
+            $"[Twitch] API не поднялся после {TwitchApiRetryMaxAttempts} попыток");
     }
 
     private async Task InitializeTwitchApiAsync(TwitchSettings twitchSettings)
