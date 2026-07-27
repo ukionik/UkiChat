@@ -40,9 +40,10 @@
     </ItemGroup>
 
     <ItemGroup>
-       <None Update="wwwroot\**\*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
+       <!-- wwwroot генерируется во время сборки (см. таргет BuildNuxtFrontend), поэтому
+            стандартное копирование по глобу здесь не годится: список файлов вычисляется
+            до генерации. Копируем отдельным таргетом CopyNuxtWwwroot. -->
+       <None Remove="wwwroot\**\*" />
        <None Update="Localization\en.json">
          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
        </None>
@@ -65,4 +66,76 @@
       <Resource Include="Assets\icon.ico" />
       <None Remove="Assets\icon.png" />
     </ItemGroup>
+
+    <!-- ============================================================
+         Автосборка фронтенда (nuxt generate) перед сборкой проекта.
+         - Пересобирается только если изменились исходники фронта (Inputs/Outputs).
+         - Пропускается, если запущен dev-сервер Nuxt на :3000 — чтобы не мешать
+           работе с фронтом через http://localhost:3000 и не тратить время на билд.
+         - Можно отключить вручную: dotnet build -p:SkipWebBuild=true
+         ============================================================ -->
+    <PropertyGroup>
+        <WebProjectDir>$(MSBuildProjectDirectory)\..\..\ukichat-web</WebProjectDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <NuxtSource Include="$(WebProjectDir)\app\**\*" />
+        <NuxtSource Include="$(WebProjectDir)\public\**\*" />
+    </ItemGroup>
+
+    <Target Name="BuildNuxtFrontend"
+            BeforeTargets="BeforeBuild"
+            Condition="'$(SkipWebBuild)' != 'true'"
+            Inputs="@(NuxtSource);$(WebProjectDir)\nuxt.config.ts;$(WebProjectDir)\package.json;$(WebProjectDir)\pnpm-lock.yaml"
+            Outputs="wwwroot\index.html">
+        <!-- Ищем LISTENING на порту 3000. ExitCode 0 = dev-сервер запущен.
+             Без -p TCP: Vite слушает IPv6 (::1), а -p TCP показывает только IPv4. -->
+        <Exec Command="netstat -an | findstr /R /C:&quot;:3000 .*LISTENING&quot;"
+              IgnoreExitCode="true"
+              StandardOutputImportance="low"
+              StandardErrorImportance="low">
+            <Output TaskParameter="ExitCode" PropertyName="NuxtDevServerCheckExitCode" />
+        </Exec>
+        <PropertyGroup>
+            <NuxtDevServerRunning Condition="'$(NuxtDevServerCheckExitCode)' == '0'">true</NuxtDevServerRunning>
+        </PropertyGroup>
+
+        <Message Condition="'$(NuxtDevServerRunning)' == 'true'" Importance="high"
+                 Text="Nuxt dev-сервер слушает :3000 — 'pnpm generate' пропущен, wwwroot не тронут." />
+
+        <Exec Command="pnpm install" WorkingDirectory="$(WebProjectDir)"
+              Condition="'$(NuxtDevServerRunning)' != 'true' And !Exists('$(WebProjectDir)\node_modules')" />
+        <Message Condition="'$(NuxtDevServerRunning)' != 'true'" Importance="high"
+                 Text="Собираем фронтенд: pnpm generate -> wwwroot" />
+        <Exec Command="pnpm generate" WorkingDirectory="$(WebProjectDir)"
+              Condition="'$(NuxtDevServerRunning)' != 'true'" />
+        <PropertyGroup>
+            <NuxtWasRegenerated Condition="'$(NuxtDevServerRunning)' != 'true'">true</NuxtWasRegenerated>
+        </PropertyGroup>
+    </Target>
+
+    <!-- Копируем wwwroot в каталог сборки. Список файлов вычисляется в момент
+         выполнения таргета, т.е. уже после nuxt generate. -->
+    <Target Name="CopyNuxtWwwroot" BeforeTargets="BeforeBuild" DependsOnTargets="BuildNuxtFrontend">
+        <!-- После пересборки фронта имена хэшированных файлов меняются — чистим старые -->
+        <RemoveDir Directories="$(OutDir)wwwroot" Condition="'$(NuxtWasRegenerated)' == 'true'" />
+        <ItemGroup>
+            <NuxtWwwrootFiles Include="wwwroot\**\*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(NuxtWwwrootFiles)"
+              DestinationFiles="@(NuxtWwwrootFiles->'$(OutDir)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true" />
+    </Target>
+
+    <!-- То же самое для dotnet publish: wwwroot исключён из None, поэтому
+         добавляем файлы в список публикации вручную. -->
+    <Target Name="AddNuxtWwwrootToPublish" AfterTargets="ComputeResolvedFilesToPublishList"
+            DependsOnTargets="BuildNuxtFrontend">
+        <ItemGroup>
+            <NuxtWwwrootToPublish Include="wwwroot\**\*" />
+            <ResolvedFileToPublish Include="@(NuxtWwwrootToPublish)"
+                                   RelativePath="wwwroot\%(RecursiveDir)%(Filename)%(Extension)"
+                                   CopyToPublishDirectory="PreserveNewest" />
+        </ItemGroup>
+    </Target>
 </Project>

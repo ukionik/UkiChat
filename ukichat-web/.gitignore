@@ -23,3 +23,5 @@ logs
 .env.*
 !.env.example
 .claude/
+# Отдельная папка сборки для production ($production в nuxt.config.ts)
+.nuxt-prod

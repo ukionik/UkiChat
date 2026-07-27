@@ -15,10 +15,17 @@ export default defineNuxtConfig({
             }
         }
     },
-    nitro: {
-        // Меняем папку, куда будут складываться публичные файлы
-        output: {
-            publicDir: resolve(__dirname, '../UkiChat/UkiChat/wwwroot')
+    // Только для production-сборки (nuxt build/generate).
+    // В dev-режиме этого блока быть не должно: nitro чистит output-папку при старте
+    // и затирает wwwroot WPF-приложения.
+    $production: {
+        // Отдельная папка сборки, чтобы generate не ломал .nuxt запущенного dev-сервера
+        buildDir: '.nuxt-prod',
+        nitro: {
+            // Меняем папку, куда будут складываться публичные файлы
+            output: {
+                publicDir: resolve(__dirname, '../UkiChat/UkiChat/wwwroot')
+            }
         }
     },
 
