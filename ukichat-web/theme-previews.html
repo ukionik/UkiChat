@@ -298,26 +298,6 @@ const themes = [
       </div>`
   },
   {
-    name:'Compact IRC (моно, одной строкой)', num:7,
-    desc:'Максимальная плотность: моноширинный, тайм-штамп, одна строка на сообщение. Для тех, кто читает много сообщений.',
-    css:`
-      .t-irc { font-family:"Consolas",monospace; font-size:13px; }
-      .t-irc .msg { padding:1px 4px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .t-irc .msg:nth-child(odd) { background:rgba(255,255,255,.04); }
-      .t-irc .msg.mention { background:rgba(231,76,60,.18); }
-      .t-irc .msg.donation { background:rgba(46,204,113,.18); }
-      .t-irc .ts { opacity:.45; }
-      .t-irc .nm { font-weight:700; }
-    `,
-    render:(m,i)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
-        <span class="ts">12:0${i}</span>
-        <span class="plat ${m.platform}">${m.plat}</span>
-        <span class="nm" style="color:${m.color}">${m.name}</span><span style="opacity:.5">:</span>
-        ${m.donation?`<span style="color:#2ecc71">[${m.donation}] </span>`:''}${renderParts(m.parts)}
-      </div>`
-  },
-  {
     name:'Accent Bar (полоса платформы)', num:8,
     desc:'Слева толстая цветная полоса в цвет платформы, лёгкий тёмный фон. Сразу видно, откуда сообщение.',
     css:`
@@ -696,7 +676,7 @@ const styleEl = document.createElement('style');
 document.head.appendChild(styleEl);
 let allCss = '';
 
-const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','irc','accent','pastel','term',
+const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','accent','pastel','term',
   'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower','big',
   'pinksoft','pinkneon','blackbox','lightinline'];
 

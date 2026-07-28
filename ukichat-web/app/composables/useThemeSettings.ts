@@ -20,7 +20,6 @@ export const CHAT_THEME_LIST: ChatThemeMeta[] = [
   { slug: 'outline',     label: 'Minimal Outline',   component: 'ThemesMinimalOutlineChatMessage' },
   { slug: 'neon',        label: 'Neon',              component: 'ThemesNeonChatMessage' },
   { slug: 'bubble',      label: 'Bubble',            component: 'ThemesBubbleChatMessage' },
-  { slug: 'irc',         label: 'Compact IRC',       component: 'ThemesCompactIrcChatMessage' },
   { slug: 'accent',      label: 'Accent Bar',        component: 'ThemesAccentBarChatMessage' },
   { slug: 'pastel',      label: 'Pastel Soft',       component: 'ThemesPastelSoftChatMessage' },
   { slug: 'terminal',    label: 'Terminal',          component: 'ThemesTerminalChatMessage' },
