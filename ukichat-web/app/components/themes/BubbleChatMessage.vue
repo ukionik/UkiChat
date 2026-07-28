@@ -26,11 +26,14 @@ const bubbleStyle = computed(() => {
     padding: `${0.4 * s.value}rem ${0.65 * s.value}rem`,
     borderRadius: `${0.25 * s.value}rem ${0.75 * s.value}rem ${0.75 * s.value}rem ${0.75 * s.value}rem`,
     fontSize: `${s.value}rem`,
-    background: 'rgba(255, 255, 255, 0.12)',
+    background: 'rgba(64, 64, 64, 0.9)',
   }
-  const variant = messageVariant(props.message.messageType)
-  if (variant === 'mention') base.background = 'rgba(231, 76, 60, 0.25)'
-  else if (variant === 'event') base.background = 'rgba(46, 204, 113, 0.25)'
+  const type = props.message.messageType
+  const variant = messageVariant(type)
+  if (variant === 'mention') base.background = 'rgb(113 11 5 / 0.9)'
+  else if (type === 'Notification' || type === 'Raid') base.background = 'rgba(94, 62, 0, 0.9)'
+  else if (type === 'ChannelPointsRedemption' || type === 'Subscription' || type === 'Cheer') base.background = 'rgb(66 13 89 / 0.9)'
+  else if (variant === 'event') base.background = 'rgb(0 81 35 / 0.9)'
   return base
 })
 </script>
