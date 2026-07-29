@@ -1,7 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -17,7 +20,21 @@ namespace UkiChat.Configuration;
 
 public static class HttpServerConfiguration
 {
-    public static IWebHost CreateHost(int port = 5000)
+    /// <summary>
+    ///     Порт зашит намеренно: на него зарегистрированы redirect_uri OAuth у Twitch и
+    ///     Donation Alerts, поэтому подобрать свободный на лету нельзя.
+    /// </summary>
+    public const int Port = 5000;
+
+    /// <summary>
+    ///     Сколько Kestrel ждёт закрытия живых соединений при остановке. По умолчанию 5 секунд,
+    ///     и всё это время процесс держит порт: закрыв окно, пользователь не мог сразу запустить
+    ///     приложение снова — новый экземпляр упирался в "address already in use". Ждать здесь
+    ///     нечего: единственный клиент — наш же WebView2, который к этому моменту уже закрыт.
+    /// </summary>
+    private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(1);
+
+    public static IWebHost CreateHost(int port = Port)
     {
         var staticFilesPath = AppPaths.WwwRoot;
         StartupDiagnostics.Log("kestrel", $"CreateHost(port={port}) staticFilesPath={staticFilesPath}");
@@ -25,6 +42,7 @@ public static class HttpServerConfiguration
 
         return new WebHostBuilder()
             .UseKestrel()
+            .UseShutdownTimeout(ShutdownTimeout)
             .UseUrls($"http://localhost:{port}")
             .ConfigureServices(services =>
             {
@@ -143,6 +161,62 @@ public static class HttpServerConfiguration
                 });
             })
             .Build();
+    }
+
+    /// <summary>
+    ///     Ждёт, пока порт освободится, и возвращает false, если этого так и не произошло.
+    ///     Нужно на старте: предыдущий экземпляр приложения мог ещё не закрыть свой Kestrel,
+    ///     и тогда Kestrel нового падает с "address already in use" — приложение поднимает окно,
+    ///     но без бэкенда. Пары секунд ожидания хватает, чтобы старый процесс успел уйти.
+    /// </summary>
+    public static async Task<bool> WaitForFreePortAsync(TimeSpan timeout, int port = Port)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        var reported = false;
+
+        while (true)
+        {
+            if (IsPortFree(port))
+                return true;
+
+            if (DateTime.UtcNow >= deadline)
+            {
+                StartupDiagnostics.Log("kestrel",
+                    $"Порт {port} не освободился за {timeout.TotalSeconds:F0} с");
+                return false;
+            }
+
+            if (!reported)
+            {
+                StartupDiagnostics.Log("kestrel", $"Порт {port} занят — ждём освобождения");
+                reported = true;
+            }
+
+            await Task.Delay(200);
+        }
+    }
+
+    /// <summary>Kestrel слушает localhost и по IPv4, и по IPv6 — свободными нужны оба адреса.</summary>
+    private static bool IsPortFree(int port)
+    {
+        if (!CanBind(IPAddress.Loopback, port))
+            return false;
+
+        return !Socket.OSSupportsIPv6 || CanBind(IPAddress.IPv6Loopback, port);
+    }
+
+    private static bool CanBind(IPAddress address, int port)
+    {
+        try
+        {
+            using var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            socket.Bind(new IPEndPoint(address, port));
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
     }
 
     private static string BuildCallbackHtml(bool success)

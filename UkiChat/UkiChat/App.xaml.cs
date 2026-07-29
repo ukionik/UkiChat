@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using DryIoc;
 using DryIoc.Microsoft.DependencyInjection;
 using ControlzEx.Theming;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,8 +28,27 @@ namespace UkiChat;
 /// </summary>
 public partial class App
 {
+    /// <summary>
+    ///     Сколько ждём освобождения порта предыдущим экземпляром приложения.
+    ///     Штатно тот уходит меньше чем за секунду, запас — на медленные машины.
+    /// </summary>
+    private static readonly TimeSpan PortWaitTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>Сколько ждём остановку Kestrel при выходе, прежде чем убить процесс принудительно.</summary>
+    private static readonly TimeSpan WebHostStopTimeout = TimeSpan.FromSeconds(3);
+
+    private readonly TaskCompletionSource<bool> _serverReady =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     private readonly IWebHost _webHost;
     private IAppInitializationService? _appInitializationService;
+
+    /// <summary>
+    ///     Завершается, когда Kestrel занял порт (true) или окончательно не смог (false).
+    ///     Окна ждут этого перед навигацией: WebView2, ушедший на localhost:5000 раньше времени,
+    ///     получает ERR_CONNECTION_REFUSED и сам страницу не перезагружает.
+    /// </summary>
+    public Task<bool> ServerReady => _serverReady.Task;
 
     public App()
     {
@@ -55,10 +75,9 @@ public partial class App
             base.OnInitialized();
             StartupDiagnostics.Log("app", "OnInitialized: base.OnInitialized() returned");
 
-            using (StartupDiagnostics.Measure("app", "_webHost.StartAsync()"))
-            {
-                await _webHost.StartAsync();
-            }
+            if (!await StartWebHostAsync())
+                return;
+
             StartupDiagnostics.Log("app", "OnInitialized: Kestrel started, addresses listed below");
 
             try
@@ -87,7 +106,82 @@ public partial class App
         catch (Exception ex)
         {
             StartupDiagnostics.LogError("app", "OnInitialized FAILED", ex);
+            // Окна не должны остаться в ожидании сервера, который уже не поднимется.
+            _serverReady.TrySetResult(false);
         }
+    }
+
+    /// <summary>
+    ///     Поднимает Kestrel, дав предыдущему экземпляру приложения время отпустить порт.
+    ///     Раньше исключение отсюда просто писалось в лог: окно открывалось, WebView2 грузил
+    ///     страницу с ЧУЖОГО, ещё живого экземпляра, а собственный бэкенд не работал вовсе —
+    ///     со стороны это выглядело как "приложение не запускается".
+    /// </summary>
+    private async Task<bool> StartWebHostAsync()
+    {
+        using (StartupDiagnostics.Measure("app", "wait for free port"))
+        {
+            if (!await HttpServerConfiguration.WaitForFreePortAsync(PortWaitTimeout))
+            {
+                // Всё равно пробуем стартовать: точную причину лучше получить от Kestrel.
+                StartupDiagnostics.Log("app", "Порт занят и не освободился — пробуем стартовать");
+            }
+        }
+
+        try
+        {
+            using (StartupDiagnostics.Measure("app", "_webHost.StartAsync()"))
+            {
+                await _webHost.StartAsync();
+            }
+
+            _serverReady.TrySetResult(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogError("app", "Kestrel не запустился", ex);
+            _serverReady.TrySetResult(false);
+            ShowStartupErrorAndShutdown(IsAddressInUse(ex) ? "app.portBusy" : "app.serverStartFailed");
+            return false;
+        }
+    }
+
+    private static bool IsAddressInUse(Exception exception)
+    {
+        for (var current = exception; current != null; current = current.InnerException)
+        {
+            if (current is AddressInUseException)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Без бэкенда приложение бесполезно: показываем причину и закрываемся, а не оставляем
+    ///     пустое окно, из которого непонятно, что произошло.
+    /// </summary>
+    private void ShowStartupErrorAndShutdown(string messageKey)
+    {
+        try
+        {
+            var localizationService = Container.Resolve<ILocalizationService>();
+            // Сюда попадаем раньше AppInitializationService, который обычно грузит строки.
+            localizationService.SetCulture("ru");
+
+            MessageBox.Show(
+                localizationService.GetString(messageKey),
+                localizationService.GetString("app.startupErrorTitle"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogError("app", "Не удалось показать сообщение об ошибке старта", ex);
+        }
+
+        Shutdown();
     }
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
@@ -154,20 +248,58 @@ public partial class App
         }
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    /// <summary>
+    ///     Выход должен быть быстрым и полным: пока процесс жив, он держит порт 5000 и файл базы,
+    ///     а значит повторный запуск приложения не сработает. Раньше метод был async void — WPF
+    ///     не ждал его вовсе, всё после первого await выполнялось "как получится", и остановка
+    ///     Kestrel растягивалась на секунды. Теперь ждём синхронно и с потолком по времени.
+    /// </summary>
+    protected override void OnExit(ExitEventArgs e)
     {
         StartupDiagnostics.Log("app", "OnExit: BEGIN");
+
+        StopWebHost();
+        CloseDatabase();
+
+        base.OnExit(e);
+        StartupDiagnostics.Log("app", "OnExit: END");
+
+        // Логи пишутся асинхронно — сбрасываем на диск до принудительного выхода.
+        DIConfiguration.CloseLoggers();
+
+        // Страховка от зависших фоновых потоков (websocket-циклы площадок, насосы SignalR):
+        // без неё процесс мог пережить закрытие окна и не отдать порт следующему запуску.
+        Environment.Exit(e.ApplicationExitCode);
+    }
+
+    private void StopWebHost()
+    {
         try
         {
-            await _webHost.StopAsync();
+            // Task.Run, чтобы остановка не зависела от диспетчера UI, который уже завершается.
+            if (!Task.Run(() => _webHost.StopAsync()).Wait(WebHostStopTimeout))
+                StartupDiagnostics.Log("app",
+                    $"OnExit: Kestrel не остановился за {WebHostStopTimeout.TotalSeconds:F0} с");
+
             _webHost.Dispose();
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogError("app", "OnExit FAILED", ex);
+            StartupDiagnostics.LogError("app", "OnExit: остановка Kestrel не удалась", ex);
         }
-        base.OnExit(e);
-        StartupDiagnostics.Log("app", "OnExit: END");
+    }
+
+    private void CloseDatabase()
+    {
+        try
+        {
+            // LiteDB на Dispose сливает -log в основной файл; без этого он растёт от запуска к запуску.
+            (Container.Resolve<IDatabaseContext>() as IDisposable)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogError("app", "OnExit: закрытие БД не удалось", ex);
+        }
     }
 
     private void InstallGlobalExceptionHandlers()

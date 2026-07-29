@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using UkiChat.Configuration;
@@ -19,6 +20,7 @@ namespace UkiChat
             StartupDiagnostics.Log("mainwin", "MainWindow.ctor: InitializeComponent done");
 
             Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
             Closed += MainWindow_Closed;
             ContentRendered += (_, _) => StartupDiagnostics.Log("mainwin", "ContentRendered");
             Activated += (_, _) => StartupDiagnostics.Log("mainwin", "Activated");
@@ -32,6 +34,25 @@ namespace UkiChat
         {
             StartupDiagnostics.Log("mainwin", "MainWindow Loaded");
             _ = EnsureWebView2Async();
+        }
+
+        /// <summary>
+        ///     WebView2 переживает закрытие окна: страница остаётся живой и успевает переподключиться
+        ///     к SignalR уже во время остановки Kestrel. Тот в ответ честно ждёт закрытия websocket'а,
+        ///     и всё это время процесс держит порт 5000 — из-за чего запуск приложения сразу после
+        ///     закрытия падал с "address already in use". Гасим браузер до остановки сервера.
+        /// </summary>
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            StartupDiagnostics.Log("mainwin", "MainWindow Closing: освобождаем WebView2");
+            try
+            {
+                WebView.Dispose();
+            }
+            catch (Exception ex)
+            {
+                StartupDiagnostics.LogError("mainwin", "WebView2 Dispose FAILED", ex);
+            }
         }
 
         private void MainWindow_Closed(object? sender, EventArgs e)
@@ -52,6 +73,14 @@ namespace UkiChat
 
                 StartupDiagnostics.Log("webview2",
                     $"Runtime version: {env.BrowserVersionString}; UserDataFolder: {env.UserDataFolder}");
+
+                // Ждём Kestrel: ушедший на localhost:5000 раньше времени WebView2 получает
+                // ERR_CONNECTION_REFUSED и остаётся на странице ошибки — сам он не перезагрузится.
+                if (Application.Current is App app && !await app.ServerReady)
+                {
+                    StartupDiagnostics.Log("webview2", "Сервер не поднялся — навигация отменена");
+                    return;
+                }
 
                 // Source ставим вручную после Ensure, чтобы XAML-биндинг не успел
                 // инициализировать WebView2 с дефолтным Environment

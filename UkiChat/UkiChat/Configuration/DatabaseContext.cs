@@ -12,10 +12,12 @@ namespace UkiChat.Configuration;
 
 public class DatabaseContext : IDatabaseContext, IDisposable
 {
+    private readonly LiteDatabase _db;
+
     public DatabaseContext(ConnectionString connectionString
         , DefaultAppSettings defaultAppSettings)
     {
-        var db = OpenOrRecreate(connectionString);
+        var db = _db = OpenOrRecreate(connectionString);
         ProfileRepository = new ProfileRepository(db);
         AppSettingsRepository = new AppSettingsRepository(db);
         TwitchSettingsRepository = new TwitchSettingsRepository(db);
@@ -40,8 +42,14 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     public IBttvEmoteRepository BttvEmoteRepository { get; }
     public ITwitchBadgeRepository TwitchBadgeRepository { get; }
 
+    /// <summary>
+    ///     Закрывает базу. Раньше метод не делал ничего, и LiteDatabase жила до конца процесса:
+    ///     файл оставался залоченным, а служебный "-log" не сливался в основной и рос от запуска
+    ///     к запуску. Вызывается при выходе из приложения (App.OnExit).
+    /// </summary>
     public void Dispose()
     {
+        _db.Dispose();
         GC.SuppressFinalize(this);
     }
 

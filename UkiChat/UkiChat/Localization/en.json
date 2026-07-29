@@ -1,4 +1,9 @@
 ﻿{
+  "app": {
+    "startupErrorTitle": "UkiChat failed to start",
+    "portBusy": "Port 5000 is in use by another process — UkiChat is most likely already running. Close it and try again.",
+    "serverStartFailed": "Could not start the application's internal server. See the log file in the logs folder next to the program for details."
+  },
   "profile": {
     "title": "Profile"
   },

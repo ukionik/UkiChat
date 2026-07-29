@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using Serilog.Extensions.Logging;
 using UkiChat.Data.DefaultAppSettingsData;
 using UkiChat.Diagnostics;
@@ -16,6 +19,10 @@ namespace UkiChat.Configuration;
 
 public static class DIConfiguration
 {
+    // Все созданные Serilog-логгеры: пишут асинхронно, поэтому при выходе их нужно закрыть,
+    // иначе последние записи (в том числе о самом завершении) остаются в буфере.
+    private static readonly List<Logger> Loggers = [];
+
     public static IServiceCollection CreateServices()
     {
         var services = new ServiceCollection();
@@ -47,12 +54,30 @@ public static class DIConfiguration
         return services;
     }
 
+    /// <summary>
+    ///     Сбрасывает на диск и закрывает все логгеры. Вызывается при выходе — процесс завершается
+    ///     принудительно (см. App.OnExit), и асинхронные синки иначе теряют хвост записей.
+    /// </summary>
+    public static void CloseLoggers()
+    {
+        foreach (var logger in Loggers)
+        {
+            try
+            {
+                logger.Dispose();
+            }
+            catch
+            {
+                // Выход не должен падать из-за логов
+            }
+        }
+
+        Loggers.Clear();
+    }
+
     private static void ConfigureLogging(IServiceCollection services)
     {
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .WriteTo.Async(a => a.File(AppPaths.LogFile("log-.txt"), rollingInterval: RollingInterval.Day))
-            .CreateLogger();
+        var logger = CreateLogger(LogEventLevel.Information, "log-.txt", RollingInterval.Day);
 
         services.AddLogging(builder =>
         {
@@ -62,40 +87,40 @@ public static class DIConfiguration
 
         var sessionTimestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
 
-        var vkChatLogger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File(AppPaths.LogFile($"vk-video-live-chat-{sessionTimestamp}.txt")))
-            .CreateLogger();
+        var vkChatLogger = CreateLogger(LogEventLevel.Debug, $"vk-video-live-chat-{sessionTimestamp}.txt");
 
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(vkChatLogger, dispose: true))
                 .CreateLogger<VkVideoLiveChatClient>());
 
-        var youTubeChatLogger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File(AppPaths.LogFile($"youtube-chat-{sessionTimestamp}.txt")))
-            .CreateLogger();
+        var youTubeChatLogger = CreateLogger(LogEventLevel.Debug, $"youtube-chat-{sessionTimestamp}.txt");
 
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(youTubeChatLogger, dispose: true))
                 .CreateLogger<YouTubeChatClient>());
 
-        var twitchChatLogger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File(AppPaths.LogFile($"twitch-chat-log-{sessionTimestamp}.txt")))
-            .CreateLogger();
+        var twitchChatLogger = CreateLogger(LogEventLevel.Debug, $"twitch-chat-log-{sessionTimestamp}.txt");
 
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(twitchChatLogger, dispose: true))
                 .CreateLogger<TwitchChatService>());
 
-        var donationAlertsLogger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File(AppPaths.LogFile($"donation-alerts-{sessionTimestamp}.txt")))
-            .CreateLogger();
+        var donationAlertsLogger = CreateLogger(LogEventLevel.Debug, $"donation-alerts-{sessionTimestamp}.txt");
 
         services.AddSingleton(
             LoggerFactory.Create(b => b.AddSerilog(donationAlertsLogger, dispose: true))
                 .CreateLogger<DonationAlertsCentrifugeClient>());
+    }
+
+    private static Logger CreateLogger(LogEventLevel level, string fileName,
+        RollingInterval rollingInterval = RollingInterval.Infinite)
+    {
+        var logger = new LoggerConfiguration()
+            .MinimumLevel.Is(level)
+            .WriteTo.Async(a => a.File(AppPaths.LogFile(fileName), rollingInterval: rollingInterval))
+            .CreateLogger();
+
+        Loggers.Add(logger);
+        return logger;
     }
 }

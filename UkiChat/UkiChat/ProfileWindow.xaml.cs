@@ -11,6 +11,23 @@ public partial class ProfileWindow
     {
         InitializeComponent();
         Loaded += ProfileWindow_Loaded;
+        Closing += (_, _) => DisposeWebView();
+    }
+
+    /// <summary>
+    ///     Закрытое окно не должно оставлять за собой живой WebView2: его страница держит
+    ///     websocket к нашему же Kestrel и задерживает остановку сервера при выходе (см. MainWindow).
+    /// </summary>
+    private void DisposeWebView()
+    {
+        try
+        {
+            WebView.Dispose();
+        }
+        catch
+        {
+            // Окно всё равно закрывается — падать здесь незачем
+        }
     }
 
     private async void ProfileWindow_Loaded(object sender, RoutedEventArgs e)
