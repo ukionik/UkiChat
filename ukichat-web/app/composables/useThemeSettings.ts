@@ -33,7 +33,6 @@ export const CHAT_THEME_LIST: ChatThemeMeta[] = [
   { slug: 'pinksoft',    label: 'Pink Soft',         component: 'ThemesPinkSoftChatMessage' },
   { slug: 'pinkneon',    label: 'Pink Neon',         component: 'ThemesPinkNeonChatMessage' },
   { slug: 'blackbox',    label: 'Black Box',         component: 'ThemesBlackBoxChatMessage' },
-  { slug: 'lightinline', label: 'Light Frost Inline', component: 'ThemesLightFrostInlineChatMessage' },
 ]
 
 export type ChatTheme = string

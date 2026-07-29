@@ -24,7 +24,6 @@ import {
   ThemesPinkSoftChatMessage,
   ThemesPinkNeonChatMessage,
   ThemesBlackBoxChatMessage,
-  ThemesLightFrostInlineChatMessage,
 } from '#components'
 
 const THEME_COMPONENTS: Record<string, unknown> = {
@@ -48,7 +47,6 @@ const THEME_COMPONENTS: Record<string, unknown> = {
   ThemesPinkSoftChatMessage,
   ThemesPinkNeonChatMessage,
   ThemesBlackBoxChatMessage,
-  ThemesLightFrostInlineChatMessage,
 }
 
 const props = withDefaults(defineProps<{

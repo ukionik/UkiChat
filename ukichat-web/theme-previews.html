@@ -627,25 +627,6 @@ const themes = [
         <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
       </div>`
   },
-  {
-    name:'Light Frost Inline (со скрина)', num:24,
-    desc:'По скрину: светлая полупрозрачная панель с градиентом, сообщения в одну строку (цветной жирный ник + тёмный текст), без плашек на каждом.',
-    css:`
-      .t-lightinline { background:linear-gradient(180deg, rgba(248,248,252,.5), rgba(222,222,236,.85)); border-radius:8px; padding:6px 2px; color:#1b1b24; backdrop-filter:blur(2px); }
-      .t-lightinline .msg { padding:3px 9px; line-height:1.4; }
-      .t-lightinline .nm { font-weight:800; }
-      .t-lightinline .reply,.t-lightinline .dono { font-size:.8em; opacity:.7; }
-      .t-lightinline .dono { color:#1b8a4b; font-weight:700; }
-    `,
-    render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
-        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
-        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
-        <span class="plat ${m.platform}">${m.plat}</span>
-        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
-        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
-      </div>`
-  },
 ];
 
 // ===== Рендер сетки =====
@@ -656,7 +637,7 @@ let allCss = '';
 
 const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','accent','pastel','term',
   'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower',
-  'pinksoft','pinkneon','blackbox','lightinline'];
+  'pinksoft','pinkneon','blackbox'];
 
 themes.forEach((th, idx)=>{
   allCss += th.css;
