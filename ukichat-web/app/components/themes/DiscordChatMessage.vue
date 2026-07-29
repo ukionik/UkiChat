@@ -20,15 +20,28 @@ const gap = computed(() => `${0.4 * s.value}rem`)
 const headGap = computed(() => `${0.3 * s.value}rem`)
 const initial = computed(() => props.message.displayName.charAt(0))
 
+// Подсветка типовых сообщений в стиле Discord: полупрозрачная заливка строки
+// плюс цветная полоса слева. Оттенки — из палитры Discord.
+function accentColor(message: ChatMessage): string {
+  const type = message.messageType
+  const variant = messageVariant(type)
+  if (type === 'Notification' || type === 'Raid') return '250, 166, 26'
+  if (variant === 'mention') return '237, 66, 69'
+  if (type === 'ChannelPointsRedemption' || type === 'Subscription' || type === 'Cheer') return '169, 112, 255'
+  if (variant === 'event') return '35, 165, 90'
+  return ''
+}
+
 const rowStyle = computed(() => {
   const base: Record<string, string> = {
     padding: `${0.25 * s.value}rem ${0.5 * s.value}rem`,
     borderRadius: `${0.4 * s.value}rem`,
     fontSize: `${s.value}rem`,
   }
-  if (messageVariant(props.message.messageType) === 'mention') {
-    base.background = 'rgba(250, 166, 26, 0.12)'
-    base.borderLeft = `${0.13 * s.value}rem solid #faa61a`
+  const accent = accentColor(props.message)
+  if (accent) {
+    base.background = `rgba(${accent}, 0.12)`
+    base.borderLeft = `${0.13 * s.value}rem solid rgb(${accent})`
   }
   return base
 })
