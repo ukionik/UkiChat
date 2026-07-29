@@ -14,6 +14,8 @@ const emit = defineEmits<{
 const { revealed, toggleRevealDeleted } = useThemeMessage(props, emit)
 
 const s = computed(() => props.scale)
+// Отступ между ником с двоеточием и текстом сообщения
+const marginRight = computed(() => `${0.25 * s.value}rem`)
 
 const boxStyle = computed(() => {
   const base: Record<string, string> = {
@@ -26,8 +28,13 @@ const boxStyle = computed(() => {
     boxShadow: `${0.2 * s.value}rem ${0.2 * s.value}rem 0 #1a1a1a`,
     background: '#fffbe6',
   }
-  const variant = messageVariant(props.message.messageType)
-  if (variant === 'mention') base.background = '#ffd9d9'
+  // Подсветка типовых сообщений заливкой пузыря: текст здесь всегда чёрный,
+  // поэтому оттенки пастельные.
+  const type = props.message.messageType
+  const variant = messageVariant(type)
+  if (type === 'Notification' || type === 'Raid') base.background = '#ffe6c2'
+  else if (variant === 'mention') base.background = '#ffd9d9'
+  else if (type === 'ChannelPointsRedemption' || type === 'Subscription' || type === 'Cheer') base.background = '#eddcff'
   else if (variant === 'event') base.background = '#d9ffe1'
   return base
 })
@@ -44,8 +51,7 @@ const boxStyle = computed(() => {
                      reward-class="text-purple-700" bits-class="text-cyan-700" />
     <div>
       <ChatPlatformBadges :message="message" :scale="scale" :icon-scale="1.15" inline />
-      <span class="font-extrabold align-middle" :style="{ color: message.displayNameColor }">{{ message.displayName }}:</span>
-      <span class="align-middle"> </span>
+      <span class="font-extrabold align-middle" :style="{ marginRight, color: message.displayNameColor }">{{ message.displayName }}:</span>
       <ChatMessageContent :message="message" :scale="scale" :allow-reveal-deleted="allowRevealDeleted"
                           :revealed="revealed" @link-click="emit('linkClick', $event)" />
     </div>
