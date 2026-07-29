@@ -28,7 +28,16 @@ public class SevenTvEmoteRepository(LiteDatabase db) : ISevenTvEmoteRepository
 
     public void SaveChannelEmotes(string broadcasterId, IEnumerable<SevenTvEmoteEntity> emotes)
     {
+        // Channel проставляем здесь: вызывающий код передаёт broadcasterId отдельным аргументом и
+        // пометку не ставил, поэтому эмоты канала уезжали в базу как глобальные (Channel == null).
+        // Последствий было три: кэш канала в базе всегда пустой (fallback при недоступном API не
+        // работал), эмоты канала подмешивались в глобальные, а DeleteMany ниже ничего не удалял —
+        // записи копились от запуска к запуску.
+        var channelEmotes = emotes.ToList();
+        foreach (var emote in channelEmotes)
+            emote.Channel = broadcasterId;
+
         _emotes.DeleteMany(x => x.Channel == broadcasterId);
-        _emotes.InsertBulk(emotes);
+        _emotes.InsertBulk(channelEmotes);
     }
 }

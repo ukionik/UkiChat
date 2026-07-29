@@ -28,7 +28,12 @@ public class FfzEmoteRepository(LiteDatabase db) : IFfzEmoteRepository
 
     public void SaveChannelEmotes(string broadcasterId, IEnumerable<FfzEmoteEntity> emotes)
     {
+        // Пометку канала ставим здесь — см. SevenTvEmoteRepository.SaveChannelEmotes
+        var channelEmotes = emotes.ToList();
+        foreach (var emote in channelEmotes)
+            emote.Channel = broadcasterId;
+
         _emotes.DeleteMany(x => x.Channel == broadcasterId);
-        _emotes.InsertBulk(emotes);
+        _emotes.InsertBulk(channelEmotes);
     }
 }

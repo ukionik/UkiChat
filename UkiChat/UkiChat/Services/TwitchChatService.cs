@@ -471,7 +471,12 @@ public class TwitchChatService : ITwitchChatService
     {
         using var _ = StartupDiagnostics.Measure("twitch-chat",
             $"ConnectAsync(old={connectionParams.OldChannel}, new={connectionParams.NewChannel})");
-        _broadcasterId = connectionParams.BroadcasterId;
+        // Пустым значением не затираем: на старте ConnectAsync идёт параллельно с
+        // LoadChannelDataAsync, который мог уже выяснить id через Helix (EnsureBroadcasterIdAsync),
+        // а в connectionParams лежит то, что было в базе на момент запуска.
+        if (!string.IsNullOrEmpty(connectionParams.BroadcasterId))
+            _broadcasterId = connectionParams.BroadcasterId;
+
         // Запоминаем учётные данные — они понадобятся для пересоздания клиента при реконнекте.
         _chatUsername = connectionParams.ChatUsername;
         _chatAccessToken = connectionParams.ChatAccessToken;
@@ -667,6 +672,8 @@ public class TwitchChatService : ITwitchChatService
             StartupDiagnostics.Log("twitch-chat", "  no channel configured, skipping channel data");
             return;
         }
+
+        await EnsureBroadcasterIdAsync(twitchSettings);
 
         await LoadTwitchChannelBadgesAsync(twitchSettings);
         try
@@ -973,6 +980,36 @@ public class TwitchChatService : ITwitchChatService
     {
         twitchSettings.Channel = _channelName;
         twitchSettings.ApiBroadcasterId = _broadcasterId;
+        _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
+    }
+
+    /// <summary>
+    ///     Добивается известного broadcasterId для текущего канала: без него не грузятся ни значки
+    ///     канала, ни эмоты 7TV/BTTV/FFZ канала — все загрузчики выходят по раннему return.
+    ///     Раньше id вычислялся ТОЛЬКО в <see cref="ChangeChannelAsync" />, и если Helix в тот момент
+    ///     был недоступен (типичный случай — канал задали до авторизации в Twitch), в базу уходила
+    ///     пустая строка. Дальше она уже не исправлялась: при запуске id читается из базы, а повторный
+    ///     ввод того же канала отбрасывается как "не изменился" — канальные эмоты пропадали навсегда.
+    ///     Теперь пустой id перепроверяется при каждой загрузке данных канала: на старте и после OAuth.
+    /// </summary>
+    private async Task EnsureBroadcasterIdAsync(TwitchSettings twitchSettings)
+    {
+        if (!string.IsNullOrEmpty(twitchSettings.ApiBroadcasterId))
+        {
+            _broadcasterId = twitchSettings.ApiBroadcasterId;
+            return;
+        }
+
+        var broadcasterId = await LoadBroadcasterIdAsync(twitchSettings.Channel!);
+        if (string.IsNullOrEmpty(broadcasterId))
+        {
+            StartupDiagnostics.Log("twitch-chat",
+                "  broadcasterId неизвестен — значки и эмоты канала будут пропущены");
+            return;
+        }
+
+        _broadcasterId = broadcasterId;
+        twitchSettings.ApiBroadcasterId = broadcasterId;
         _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
     }
 

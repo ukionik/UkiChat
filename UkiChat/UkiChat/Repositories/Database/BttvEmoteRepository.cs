@@ -28,7 +28,12 @@ public class BttvEmoteRepository(LiteDatabase db) : IBttvEmoteRepository
 
     public void SaveChannelEmotes(string broadcasterId, IEnumerable<BttvEmoteEntity> emotes)
     {
+        // Пометку канала ставим здесь — см. SevenTvEmoteRepository.SaveChannelEmotes
+        var channelEmotes = emotes.ToList();
+        foreach (var emote in channelEmotes)
+            emote.Channel = broadcasterId;
+
         _emotes.DeleteMany(x => x.Channel == broadcasterId);
-        _emotes.InsertBulk(emotes);
+        _emotes.InsertBulk(channelEmotes);
     }
 }
