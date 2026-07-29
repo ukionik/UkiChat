@@ -27,9 +27,14 @@ const eventTag = computed(() => {
   return ''
 })
 
+// Подсветка типовых сообщений цветом текста — те же четыре группы, что
+// в остальных темах, но в яркой ANSI-палитре под чёрный фон.
 const textColor = computed(() => {
+  const type = props.message.messageType
+  if (type === 'Notification' || type === 'Raid') return '#ffa733'
   if (variant.value === 'mention') return '#ff5577'
-  if (variant.value === 'event') return '#ffe14d'
+  if (type === 'ChannelPointsRedemption' || type === 'Subscription' || type === 'Cheer') return '#c07cff'
+  if (variant.value === 'event') return '#a8ff3e'
   return '#3eff7e'
 })
 
@@ -38,7 +43,7 @@ const boxStyle = computed(() => ({
   fontSize: `${s.value}rem`,
   lineHeight: '1.4',
   color: textColor.value,
-  background: 'rgba(0, 0, 0, 0.75)',
+  background: 'rgba(0, 0, 0, 0.9)',
 }))
 </script>
 
@@ -49,7 +54,7 @@ const boxStyle = computed(() => ({
     :style="boxStyle"
     @click="toggleRevealDeleted"
   >
-    <div v-if="message.replyTo" class="opacity-80">&gt;&gt; @{{ message.replyTo.displayName }}</div>
+    <div v-if="message.replyTo" class="opacity-80 text-gray-400">&gt;&gt; @{{ message.replyTo.displayName }}</div>
     <div v-if="eventTag" class="opacity-80">$ donate {{ eventTag }}</div>
     <ChatPlatformBadges :message="message" :scale="scale" :icon-scale="1" inline /><span class="opacity-50">:~$</span>
     <span class="font-bold"> {{ message.displayName }}</span><span class="opacity-50">&gt;</span>
