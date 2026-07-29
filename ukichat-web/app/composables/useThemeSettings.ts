@@ -30,7 +30,6 @@ export const CHAT_THEME_LIST: ChatThemeMeta[] = [
   { slug: 'frost',       label: 'Frosted Glass',     component: 'ThemesFrostedGlassChatMessage' },
   { slug: 'gborder',     label: 'Gradient Border',   component: 'ThemesGradientBorderChatMessage' },
   { slug: 'lower',       label: 'Lower-Third',       component: 'ThemesLowerThirdChatMessage' },
-  { slug: 'big',         label: 'Big Casual',        component: 'ThemesBigCasualChatMessage' },
   { slug: 'pinksoft',    label: 'Pink Soft',         component: 'ThemesPinkSoftChatMessage' },
   { slug: 'pinkneon',    label: 'Pink Neon',         component: 'ThemesPinkNeonChatMessage' },
   { slug: 'blackbox',    label: 'Black Box',         component: 'ThemesBlackBoxChatMessage' },

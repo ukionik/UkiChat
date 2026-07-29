@@ -562,28 +562,6 @@ const themes = [
       </div>`
   },
   {
-    name:'Big Casual (крупный, без рамок)', num:20,
-    desc:'Крупный шрифт, лёгкая тень, без плашек, имя на отдельной строке. Расслабленный «болталка»-стиль для IRL.',
-    css:`
-      .t-big { font-size:17px; }
-      .t-big .msg { padding:4px 2px; margin-bottom:6px; text-shadow:0 1px 3px rgba(0,0,0,.7); line-height:1.35; }
-      .t-big .head { display:flex; align-items:center; gap:6px; }
-      .t-big .nm { font-weight:800; font-size:.85em; }
-      .t-big .reply,.t-big .dono { font-size:.72em; opacity:.85; }
-      .t-big .dono { color:#69f0ae; font-weight:700; }
-    `,
-    render:(m)=>`
-      <div class="msg">
-        <div class="head">
-          <span class="plat ${m.platform}">${m.plat}</span>
-          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
-          <span class="nm" style="color:${m.color}">${m.name}</span>
-        </div>
-        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
-        <div>${renderParts(m.parts)}</div>
-      </div>`
-  },
-  {
     name:'Pink Soft (нежно-розовая)', num:21,
     desc:'Для девушек: мягкие пастельно-розовые скруглённые плашки, сердечко у ника. Уютный «кавайный» стиль.',
     css:`
@@ -677,7 +655,7 @@ document.head.appendChild(styleEl);
 let allCss = '';
 
 const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','accent','pastel','term',
-  'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower','big',
+  'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower',
   'pinksoft','pinkneon','blackbox','lightinline'];
 
 themes.forEach((th, idx)=>{
