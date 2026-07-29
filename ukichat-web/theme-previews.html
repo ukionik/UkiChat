@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UkiChat — наброски тем чата</title>
+<!-- Pixel 8-bit использует Press Start 2P. В приложении шрифт стоит локально
+     (@fontsource/press-start-2p), здесь тянем с CDN — это стенд для браузера. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
   * { box-sizing: border-box; }
   html, body {
@@ -826,6 +829,161 @@ const themes = [
         <span class="nm">${m.name}</span>${renderParts(m.parts)}
       </div>`
   },
+  {
+    name:'Pixel 8-bit', num:30,
+    desc:'Ретро-консоль: ступенчатая пиксельная рамка (четыре тени вместо border), моношрифт, ограниченная палитра чистых цветов.',
+    css:`
+      .t-pixel .msg { padding:7px 11px; margin:0 3px 10px; font-family:"Press Start 2P","Consolas",monospace; font-size:.68em; line-height:1.85;
+        color:#e8e8f0; background:#171728;
+        box-shadow:0 -3px 0 0 #29adff,0 3px 0 0 #29adff,-3px 0 0 0 #29adff,3px 0 0 0 #29adff; }
+      .t-pixel .msg.notify { box-shadow:0 -3px 0 0 #ffa300,0 3px 0 0 #ffa300,-3px 0 0 0 #ffa300,3px 0 0 0 #ffa300; }
+      .t-pixel .msg.mention { box-shadow:0 -3px 0 0 #ff004d,0 3px 0 0 #ff004d,-3px 0 0 0 #ff004d,3px 0 0 0 #ff004d; }
+      .t-pixel .msg.points { box-shadow:0 -3px 0 0 #a86bff,0 3px 0 0 #a86bff,-3px 0 0 0 #a86bff,3px 0 0 0 #a86bff; }
+      .t-pixel .msg.donation { box-shadow:0 -3px 0 0 #00e436,0 3px 0 0 #00e436,-3px 0 0 0 #00e436,3px 0 0 0 #00e436; }
+      /* без font-weight: у шрифта одно начертание, синтетический жирный мажет пиксели */
+      .t-pixel .nm { text-transform:uppercase; margin-right:5px; color:#29adff; }
+      .t-pixel .msg.notify .nm { color:#ffa300; }
+      .t-pixel .msg.mention .nm { color:#ff004d; }
+      .t-pixel .msg.points .nm { color:#a86bff; }
+      .t-pixel .msg.donation .nm { color:#00e436; }
+      .t-pixel .reply,.t-pixel .dono { font-size:.8em; }
+      .t-pixel .reply { color:#8b93b8; }
+      .t-pixel .dono { color:#00e436; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm">${m.name}</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Receipt (кассовый чек)', num:31,
+    desc:'Чековая лента: белая бумага с зубчатым отрывным низом, моношрифт, реквизиты через пунктир. Тип события — цвет пунктира и ника.',
+    css:`
+      .t-receipt .msg { padding:7px 12px 11px; margin-bottom:6px; font-family:"Consolas","Courier New",monospace; font-size:.95em; line-height:1.45;
+        color:#22201c; background:#fbfaf5; box-shadow:0 2px 6px rgba(0,0,0,.35);
+        -webkit-mask:radial-gradient(circle at 50% 100%,transparent 0 4px,#000 4px) 0 0/9px 100% repeat-x;
+        mask:radial-gradient(circle at 50% 100%,transparent 0 4px,#000 4px) 0 0/9px 100% repeat-x; }
+      .t-receipt .head { display:flex; align-items:center; gap:5px; margin-bottom:5px; padding-bottom:4px; border-bottom:1px dashed #22201c; }
+      .t-receipt .msg.notify .head { border-bottom-color:#b45309; }
+      .t-receipt .msg.mention .head { border-bottom-color:#b91c1c; }
+      .t-receipt .msg.points .head { border-bottom-color:#7e22ce; }
+      .t-receipt .msg.donation .head { border-bottom-color:#15803d; }
+      .t-receipt .nm { font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:.85em; color:#22201c; }
+      .t-receipt .msg.notify .nm { color:#b45309; }
+      .t-receipt .msg.mention .nm { color:#b91c1c; }
+      .t-receipt .msg.points .nm { color:#7e22ce; }
+      .t-receipt .msg.donation .nm { color:#15803d; }
+      .t-receipt .reply,.t-receipt .dono { font-size:.8em; }
+      .t-receipt .reply { color:#8a857a; }
+      .t-receipt .dono { color:#15803d; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        <div class="head">
+          <span class="plat ${m.platform}">${m.plat}</span>
+          ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+          <span class="nm">${m.name}</span>
+        </div>
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        ${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Notebook (тетрадный лист)', num:32,
+    desc:'Линованный лист с красным полем слева, записи синей ручкой. Шаг линовки совпадает с line-height, поэтому текст сидит на линейках.',
+    css:`
+      .t-notebook .msg { padding:5px 11px 5px 18px; line-height:23px; color:#1b3a8a;
+        background:linear-gradient(90deg,transparent 0 13px,rgba(216,96,96,.55) 13px 14px,transparent 14px),
+                   repeating-linear-gradient(#fdfdf6 0 22px,#c9d6e8 22px 23px); }
+      .t-notebook .msg.notify { color:#b45309; }
+      .t-notebook .msg.mention { color:#b91c1c; }
+      .t-notebook .msg.points { color:#6d28d9; }
+      .t-notebook .msg.donation { color:#15803d; }
+      .t-notebook .nm { font-weight:700; margin-right:5px; text-shadow:0 0 .8px rgba(27,58,138,.5); }
+      .t-notebook .reply,.t-notebook .dono { font-size:.8em; }
+      .t-notebook .reply { color:#6b7a93; font-style:italic; }
+      .t-notebook .dono { color:#15803d; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Blueprint (чертёж)', num:33,
+    desc:'Синька: густой синий фон с миллиметровкой, моношрифт, ник капсом. Тип события — цвет рамки и подписи, как пометка другим карандашом.',
+    css:`
+      .t-blueprint .msg { padding:7px 11px; margin-bottom:6px; font-family:"Consolas","Cascadia Mono",monospace; font-size:.95em; line-height:1.45;
+        color:#dceeff; border:1px solid #a8d8ff; box-shadow:inset 0 0 10px rgba(0,0,0,.35);
+        background:repeating-linear-gradient(90deg,rgba(168,216,255,.13) 0 1px,transparent 1px 11px),
+                   repeating-linear-gradient(rgba(168,216,255,.13) 0 1px,transparent 1px 11px),
+                   rgba(11,52,92,.92); }
+      .t-blueprint .msg.notify { border-color:#ffc46b; }
+      .t-blueprint .msg.mention { border-color:#ff8a8a; }
+      .t-blueprint .msg.points { border-color:#c9a3ff; }
+      .t-blueprint .msg.donation { border-color:#7dffc0; }
+      .t-blueprint .nm { font-weight:700; text-transform:uppercase; letter-spacing:.05em; font-size:.9em; margin-right:5px; color:#a8d8ff; }
+      .t-blueprint .msg.notify .nm { color:#ffc46b; }
+      .t-blueprint .msg.mention .nm { color:#ff8a8a; }
+      .t-blueprint .msg.points .nm { color:#c9a3ff; }
+      .t-blueprint .msg.donation .nm { color:#7dffc0; }
+      .t-blueprint .reply,.t-blueprint .dono { font-size:.8em; }
+      .t-blueprint .reply { color:#8fb6d9; }
+      .t-blueprint .dono { color:#7dffc0; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm">${m.name}</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Holographic (перламутр)', num:34,
+    desc:'Голографическая карточка: диагональный блик и радужная плёнка поверх плотной тёмной подложки. Тип события меняет тройку оттенков перелива.',
+    css:`
+      .t-holo .msg { padding:7px 12px; margin-bottom:7px; border-radius:9px; line-height:1.45; color:#f2f0ff;
+        background:linear-gradient(115deg,rgba(255,255,255,.18) 0%,transparent 32%,transparent 68%,rgba(255,255,255,.1) 100%),
+                   linear-gradient(115deg,rgba(255,120,200,.3) 0%,rgba(120,200,255,.28) 45%,rgba(160,255,220,.3) 100%),
+                   rgba(14,11,24,.92);
+        border:1px solid rgba(120,200,255,.55); box-shadow:0 0 10px rgba(255,120,200,.3),inset 0 0 11px rgba(255,255,255,.08); }
+      .t-holo .msg.notify { background:linear-gradient(115deg,rgba(255,255,255,.18) 0%,transparent 32%,transparent 68%,rgba(255,255,255,.1) 100%),
+        linear-gradient(115deg,rgba(255,190,90,.3) 0%,rgba(255,130,160,.28) 45%,rgba(255,225,140,.3) 100%),rgba(14,11,24,.92);
+        border-color:rgba(255,130,160,.55); box-shadow:0 0 10px rgba(255,190,90,.3),inset 0 0 11px rgba(255,255,255,.08); }
+      .t-holo .msg.mention { background:linear-gradient(115deg,rgba(255,255,255,.18) 0%,transparent 32%,transparent 68%,rgba(255,255,255,.1) 100%),
+        linear-gradient(115deg,rgba(255,90,120,.3) 0%,rgba(255,140,190,.28) 45%,rgba(255,180,120,.3) 100%),rgba(14,11,24,.92);
+        border-color:rgba(255,140,190,.55); box-shadow:0 0 10px rgba(255,90,120,.3),inset 0 0 11px rgba(255,255,255,.08); }
+      .t-holo .msg.points { background:linear-gradient(115deg,rgba(255,255,255,.18) 0%,transparent 32%,transparent 68%,rgba(255,255,255,.1) 100%),
+        linear-gradient(115deg,rgba(190,120,255,.3) 0%,rgba(140,170,255,.28) 45%,rgba(235,150,255,.3) 100%),rgba(14,11,24,.92);
+        border-color:rgba(140,170,255,.55); box-shadow:0 0 10px rgba(190,120,255,.3),inset 0 0 11px rgba(255,255,255,.08); }
+      .t-holo .msg.donation { background:linear-gradient(115deg,rgba(255,255,255,.18) 0%,transparent 32%,transparent 68%,rgba(255,255,255,.1) 100%),
+        linear-gradient(115deg,rgba(110,255,190,.3) 0%,rgba(140,230,255,.28) 45%,rgba(190,255,150,.3) 100%),rgba(14,11,24,.92);
+        border-color:rgba(140,230,255,.55); box-shadow:0 0 10px rgba(110,255,190,.3),inset 0 0 11px rgba(255,255,255,.08); }
+      .t-holo .nm { font-weight:800; margin-right:5px; text-shadow:0 0 1px rgba(14,11,24,.9),0 0 8px rgba(255,255,255,.4); }
+      .t-holo .reply,.t-holo .dono { font-size:.8em; }
+      .t-holo .reply { color:#c3bede; }
+      .t-holo .dono { color:#8effd0; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>${renderParts(m.parts)}
+      </div>`
+  },
 ];
 
 // ===== Рендер сетки =====
@@ -836,7 +994,8 @@ let allCss = '';
 
 const slugs = ['default','box','glass','twitch','outline','neon','bubble','accent','pastel','term',
   'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower',
-  'pinksoft','pinkneon','blackbox','sticky','paper','hud','chalk','luxe'];
+  'pinksoft','pinkneon','blackbox','sticky','paper','hud','chalk','luxe',
+  'pixel','receipt','notebook','blueprint','holo'];
 
 themes.forEach((th, idx)=>{
   allCss += th.css;

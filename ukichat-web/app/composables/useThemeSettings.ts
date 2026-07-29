@@ -38,6 +38,11 @@ export const CHAT_THEME_LIST: ChatThemeMeta[] = [
   { slug: 'hud',         label: 'Cyber HUD',         component: 'ThemesCyberHudChatMessage' },
   { slug: 'chalk',       label: 'Chalkboard',        component: 'ThemesChalkboardChatMessage' },
   { slug: 'luxe',        label: 'Gold Luxe',         component: 'ThemesGoldLuxeChatMessage' },
+  { slug: 'pixel',       label: 'Pixel 8-bit',       component: 'ThemesPixelChatMessage' },
+  { slug: 'receipt',     label: 'Receipt',           component: 'ThemesReceiptChatMessage' },
+  { slug: 'notebook',    label: 'Notebook',          component: 'ThemesNotebookChatMessage' },
+  { slug: 'blueprint',   label: 'Blueprint',         component: 'ThemesBlueprintChatMessage' },
+  { slug: 'holo',        label: 'Holographic',       component: 'ThemesHoloChatMessage' },
 ]
 
 export type ChatTheme = string

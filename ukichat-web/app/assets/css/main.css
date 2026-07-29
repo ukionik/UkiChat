@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 @import '@fontsource/inter';
+/* Пиксельный шрифт темы Pixel 8-bit. Ставится локально (как Inter), чтобы
+   оверлей не зависел от интернета. У шрифта единственное начертание — 400. */
+@import '@fontsource/press-start-2p/400.css';
 
 body{
     background: #000;
