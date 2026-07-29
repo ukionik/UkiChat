@@ -4,7 +4,6 @@ client_id = "your_client_id"
 client_secret = "your_client_secret"
 code = "your_code"
 access_token="your_access_token"
-refresh_token="your_refresh_token"
 #https://twitchtokengenerator.com/
 [twitch.chat]
 username = "your_twitch_username"

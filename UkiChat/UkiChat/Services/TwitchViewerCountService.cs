@@ -43,12 +43,13 @@ public class TwitchViewerCountService : ITwitchViewerCountService
         try
         {
             var settings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+            // Helix ходит токеном авторизованного пользователя; без авторизации счётчик молчит.
             if (string.IsNullOrEmpty(settings.ApiClientId)
-                || string.IsNullOrEmpty(settings.ApiAccessToken)
+                || string.IsNullOrEmpty(settings.UserAccessToken)
                 || string.IsNullOrEmpty(settings.Channel))
                 return;
 
-            await _twitchApiService.InitializeAsync(settings.ApiClientId, settings.ApiAccessToken);
+            await _twitchApiService.InitializeAsync(settings.ApiClientId, settings.UserAccessToken);
             var viewerCount = await _twitchApiService.GetViewerCountAsync(settings.Channel);
             _eventAggregator.GetEvent<TwitchViewerCountUpdatedEvent>().Publish(viewerCount);
 

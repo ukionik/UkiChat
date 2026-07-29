@@ -48,14 +48,6 @@ public class DatabaseService : IDatabaseService
         _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
     }
 
-    public void UpdateTwitchApiTokens(string accessToken, string refreshToken)
-    {
-        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
-        twitchSettings.ApiAccessToken = accessToken;
-        twitchSettings.ApiRefreshToken = refreshToken;
-        _databaseContext.TwitchSettingsRepository.Save(twitchSettings);
-    }
-
     public void UpdateTwitchUserTokens(string accessToken, string refreshToken, string userId, string login)
     {
         var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();

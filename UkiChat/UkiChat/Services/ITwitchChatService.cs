@@ -11,4 +11,10 @@ public interface ITwitchChatService : IChatService<TwitchConnectionParams>
     /// Вызывается после (раз)авторизации.
     /// </summary>
     Task ReloadCustomRewardsAsync();
+
+    /// <summary>
+    /// Перечитывает учётные данные IRC из настроек и переподключает чат под ними.
+    /// Вызывается после (раз)авторизации: чат подключается токеном пользователя.
+    /// </summary>
+    Task ReapplyCredentialsAsync();
 }

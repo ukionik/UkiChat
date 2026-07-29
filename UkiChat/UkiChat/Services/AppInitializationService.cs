@@ -101,11 +101,15 @@ public class AppInitializationService(
         StartupDiagnostics.Log("app-init",
             $"  Twitch channel={twitchSettings.Channel ?? "<none>"} hasApi={!string.IsNullOrEmpty(twitchSettings.ApiClientId)}");
 
-        // Инициализация Helix API НЕ должна мешать чату: чат авторизуется отдельным токеном
-        // чат-бота и прекрасно работает без API. Раньше исключение отсюда (SocketException,
-        // когда DNS ещё не поднялся после включения ПК) обрывало LoadTwitchDataAsync до
-        // ConnectAsync — чат не подключался вовсе и не пытался снова до перезапуска.
+        // Инициализация Helix API НЕ должна мешать чату: чат живёт на своём IRC-подключении и
+        // работает без API (без значков). Раньше исключение отсюда (SocketException, когда DNS
+        // ещё не поднялся после включения ПК) обрывало LoadTwitchDataAsync до ConnectAsync —
+        // чат не подключался вовсе и не пытался снова до перезапуска.
         var apiReady = await TryInitializeTwitchApiAsync(twitchSettings);
+
+        // Перечитываем настройки: внутри могли обновиться токены пользователя, а чат теперь
+        // подключается именно ими — со старым объектом он ушёл бы в IRC с просроченным токеном.
+        twitchSettings = databaseContext.TwitchSettingsRepository.GetActiveSettings();
 
         using (StartupDiagnostics.Measure("app-init", "  Twitch parallel: LoadGlobalData + LoadChannelData + ConnectAsync"))
         {
@@ -202,13 +206,25 @@ public class AppInitializationService(
             return;
         }
 
-        await twitchApiService.InitializeAsync(twitchSettings.ApiClientId, twitchSettings.ApiAccessToken ?? "");
-
-        // Проверяем валидность токена приложения и обновляем при необходимости
-        await RefreshTwitchApiTokensAsync(twitchSettings);
-
-        // Обновляем токен авторизованного пользователя (если есть)
+        // Отдельного токена приложения (client_credentials) больше нет: Helix ходит токеном
+        // авторизованного пользователя — он принимается всеми вызовами, которые нам нужны
+        // (бейджи, users, streams, награды, EventSub). Поэтому сначала приводим в порядок
+        // пользовательский токен, и только потом инициализируем API уже свежим значением.
         await RefreshTwitchUserTokenAsync(twitchSettings);
+
+        // Перечитываем: RefreshTwitchUserTokenAsync пишет новые токены в БД, а объект
+        // twitchSettings остался с теми, что были прочитаны до обновления.
+        var userAccessToken = databaseContext.TwitchSettingsRepository.GetActiveSettings().UserAccessToken;
+        if (string.IsNullOrEmpty(userAccessToken))
+            StartupDiagnostics.Log("app-init",
+                "[Twitch] Нет авторизации пользователя — Helix-вызовы работать не будут, поднимаем API только под OAuth");
+
+        // Инициализируем ВСЕГДА, даже с пустым токеном. Обмен кода на токены (OAuth-callback)
+        // идёт через этот же TwitchApiService и падает на EnsureInitialized, если объект не
+        // создан, — а именно этим вызовом первый токен и добывается. Получилась бы петля:
+        // без токена нет API, без API не получить токен. Сам обмен access-токен не использует,
+        // ему хватает client_id/client_secret, которые передаются аргументами.
+        await twitchApiService.InitializeAsync(twitchSettings.ApiClientId, userAccessToken ?? "");
     }
 
     private async Task RefreshTwitchUserTokenAsync(TwitchSettings twitchSettings)
@@ -223,6 +239,17 @@ public class AppInitializationService(
         var tokenInfo = await twitchApiService.GetTokenInfoAsync(twitchSettings.UserAccessToken);
         if (tokenInfo != null)
         {
+            // Токен может быть валиден и при этом негоден: выдан до того, как приложению
+            // понадобился chat:read. Twitch недостающий scope при refresh не доклеивает —
+            // спасает только повторная авторизация, поэтому сбрасываем и просим войти заново.
+            if (!TwitchAuthService.HasRequiredScopes(tokenInfo.Scopes))
+            {
+                StartupDiagnostics.Log("app-init",
+                    "[Twitch] Сохранённому токену не хватает scope — требуется повторная авторизация");
+                databaseService.ClearTwitchUserAuth();
+                return;
+            }
+
             StartupDiagnostics.Log("app-init", "[Twitch] User access token is valid");
             return;
         }
@@ -231,6 +258,17 @@ public class AppInitializationService(
         {
             var refreshed = await twitchApiService.RefreshTokenAsync(
                 twitchSettings.UserRefreshToken, twitchSettings.ApiClientId, twitchSettings.ApiClientSecret);
+
+            // Refresh возвращает тот же набор scope, что был выдан изначально — проверяем и его,
+            // иначе негодный токен просто продлится и чат снова не поднимется.
+            if (!TwitchAuthService.HasRequiredScopes(refreshed.Scopes))
+            {
+                StartupDiagnostics.Log("app-init",
+                    "[Twitch] Обновлённому токену не хватает scope — требуется повторная авторизация");
+                databaseService.ClearTwitchUserAuth();
+                return;
+            }
+
             databaseService.UpdateTwitchUserTokens(
                 refreshed.AccessToken, refreshed.RefreshToken,
                 twitchSettings.UserId ?? "", twitchSettings.UserLogin ?? "");
@@ -240,25 +278,6 @@ public class AppInitializationService(
         {
             StartupDiagnostics.LogError("app-init", "[Twitch] User token refresh failed, clearing auth", ex);
             databaseService.ClearTwitchUserAuth();
-        }
-    }
-
-    private async Task RefreshTwitchApiTokensAsync(TwitchSettings twitchSettings)
-    {
-        if (string.IsNullOrEmpty(twitchSettings.ApiRefreshToken) ||
-            string.IsNullOrEmpty(twitchSettings.ApiClientId) ||
-            string.IsNullOrEmpty(twitchSettings.ApiClientSecret))
-            return;
-
-        var newTokens = await twitchApiService.EnsureValidTokenAsync(
-            twitchSettings.ApiRefreshToken,
-            twitchSettings.ApiClientId,
-            twitchSettings.ApiClientSecret);
-
-        if (newTokens != null)
-        {
-            databaseService.UpdateTwitchApiTokens(newTokens.AccessToken, newTokens.RefreshToken);
-            StartupDiagnostics.Log("app-init", "Twitch API tokens refreshed");
         }
     }
 

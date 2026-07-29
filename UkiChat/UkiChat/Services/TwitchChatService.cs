@@ -52,9 +52,11 @@ public class TwitchChatService : ITwitchChatService
     // и обработчики «мёртвого» клиента (сообщения, разрывы) игнорируются по этой метке.
     private int _clientGeneration;
 
-    // Учётные данные чат-бота — нужны, чтобы инициализировать заново созданный клиент при реконнекте.
-    private string _chatbotUsername = "";
-    private string _chatbotAccessToken = "";
+    // Учётные данные для IRC — нужны, чтобы инициализировать заново созданный клиент при реконнекте.
+    // Это токен АВТОРИЗОВАННОГО ПОЛЬЗОВАТЕЛЯ (scope chat:read), а не отдельного бот-аккаунта:
+    // логин обязан принадлежать владельцу токена, иначе Twitch рвёт соединение при авторизации.
+    private string _chatUsername = "";
+    private string _chatAccessToken = "";
 
     // Сериализует цикл реконнекта: одновременно выполняется не более одного пересоздания клиента.
     private readonly SemaphoreSlim _reconnectGate = new(1, 1);
@@ -422,7 +424,7 @@ public class TwitchChatService : ITwitchChatService
             catch (Exception ex) { _logger.LogDebug(ex, "Ошибка при закрытии старого TwitchClient (игнорируем)"); }
         });
 
-        fresh.Initialize(new ConnectionCredentials(_chatbotUsername, _chatbotAccessToken));
+        fresh.Initialize(new ConnectionCredentials(_chatUsername, _chatAccessToken));
         await fresh.ConnectAsync();
         await fresh.JoinChannelAsync(channel, true);
     }
@@ -471,10 +473,24 @@ public class TwitchChatService : ITwitchChatService
             $"ConnectAsync(old={connectionParams.OldChannel}, new={connectionParams.NewChannel})");
         _broadcasterId = connectionParams.BroadcasterId;
         // Запоминаем учётные данные — они понадобятся для пересоздания клиента при реконнекте.
-        _chatbotUsername = connectionParams.ChatbotUsername;
-        _chatbotAccessToken = connectionParams.ChatbotAccessToken;
+        _chatUsername = connectionParams.ChatUsername;
+        _chatAccessToken = connectionParams.ChatAccessToken;
         _logger.LogInformation("ConnectAsync: старый={OldChannel} новый={NewChannel} broadcasterId={BroadcasterId}",
             connectionParams.OldChannel, connectionParams.NewChannel, connectionParams.BroadcasterId);
+
+        // Без авторизации подключаться нечем. Раньше здесь лежал вшитый токен чат-бота и чат
+        // работал сразу после установки; теперь до прохождения OAuth валидных учётных данных нет.
+        // Молча выходим, НЕ запуская реконнект: пустой токен сам не починится, а цикл реконнекта
+        // раз в 5 секунд писал бы в лог до конца сессии. Подключимся из ReapplyCredentialsAsync,
+        // когда пользователь авторизуется.
+        if (string.IsNullOrEmpty(_chatAccessToken) || string.IsNullOrEmpty(_chatUsername))
+        {
+            _logger.LogInformation("ConnectAsync: нет авторизации Twitch — чат не подключаем");
+            StartupDiagnostics.Log("twitch-chat", "Нет авторизации — подключение к чату пропущено");
+            _channelName = connectionParams.NewChannel;
+            await SendChatMessageNotification(_localizationService.GetString("twitch.authRequired"));
+            return;
+        }
 
         // Запоминаем целевой канал ДО попытки подключения: при неудачном ПЕРВОМ коннекте
         // (например, DNS ещё не поднялся после старта ПК) TriggerReconnect иначе отсеет
@@ -491,7 +507,7 @@ public class TwitchChatService : ITwitchChatService
             {
                 _logger.LogInformation("TwitchClient не подключён — инициализируем и подключаемся (WebSocket)");
                 var credentials =
-                    new ConnectionCredentials(connectionParams.ChatbotUsername, connectionParams.ChatbotAccessToken);
+                    new ConnectionCredentials(connectionParams.ChatUsername, connectionParams.ChatAccessToken);
                 _twitchClient.Initialize(credentials);
                 using (StartupDiagnostics.Measure("twitch-chat", "  TwitchClient.ConnectAsync (WebSocket)"))
                 {
@@ -529,6 +545,63 @@ public class TwitchChatService : ITwitchChatService
             _logger.LogError(ex, "Ошибка подключения к Twitch чату (канал {Channel})", connectionParams.NewChannel);
             // При исключении события OnDisconnected/OnConnectionError могут не прийти —
             // запускаем реконнект сами. Параллельный запуск исключён (_reconnectGate).
+            TriggerReconnect(_clientGeneration);
+        }
+    }
+
+    /// <summary>
+    ///     Перечитывает учётные данные IRC из настроек и переподключает чат под ними.
+    ///     Вызывается после авторизации и после разлогина: чат ездит на токене пользователя,
+    ///     поэтому смена авторизации обязана доехать до уже установленного соединения —
+    ///     само оно живёт на старом токене до первого разрыва.
+    /// </summary>
+    public async Task ReapplyCredentialsAsync()
+    {
+        var twitchSettings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+        var username = twitchSettings.UserLogin ?? "";
+        var accessToken = twitchSettings.UserAccessToken ?? "";
+
+        if (username == _chatUsername && accessToken == _chatAccessToken && _twitchClient.IsConnected)
+        {
+            _logger.LogDebug("ReapplyCredentialsAsync: учётные данные не изменились, подключение живо");
+            return;
+        }
+
+        _chatUsername = username;
+        _chatAccessToken = accessToken;
+
+        if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(username))
+        {
+            // Разлогин. Поднимаем поколение, чтобы обработчики гасимого клиента (в том числе
+            // OnDisconnected) не утащили нас в цикл реконнекта по уже отозванному токену.
+            _logger.LogInformation("ReapplyCredentialsAsync: авторизация снята — отключаем чат");
+            _intentionalDisconnect = true;
+            Interlocked.Increment(ref _clientGeneration);
+            var old = _twitchClient;
+            _ = Task.Run(async () =>
+            {
+                try { await old.DisconnectAsync(); }
+                catch (Exception ex) { _logger.LogDebug(ex, "Ошибка при закрытии TwitchClient после разлогина (игнорируем)"); }
+            });
+            await SendChatMessageNotification(_localizationService.GetString("twitch.authRequired"));
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_channelName))
+        {
+            _logger.LogInformation("ReapplyCredentialsAsync: канал не задан — подключаться некуда");
+            return;
+        }
+
+        _intentionalDisconnect = false;
+        _logger.LogInformation("ReapplyCredentialsAsync: переподключаем чат под {Login}", username);
+        try
+        {
+            await RebuildClientAndConnectAsync(_channelName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ReapplyCredentialsAsync: переподключение не удалось, уходим в цикл реконнекта");
             TriggerReconnect(_clientGeneration);
         }
     }

@@ -14,7 +14,6 @@ public interface ITwitchApiService
     Task<bool> ValidateAccessTokenAsync();
     Task<GetGlobalChatBadgesResponse> GetGlobalChatBadgesAsync();
     Task<GetChannelChatBadgesResponse> GetChannelChatBadgesAsync(string broadcasterId);
-    Task<RefreshResponse> RefreshAccessTokenAsync(string refreshToken, string clientId, string clientSecret);
 
     /// <summary>
     /// Получает broadcaster ID по имени канала
@@ -22,15 +21,6 @@ public interface ITwitchApiService
     /// <param name="channelName">Имя канала</param>
     /// <returns>Broadcaster ID или empty если пользователь не найден</returns>
     Task<string> GetBroadcasterIdAsync(string channelName);
-
-    /// <summary>
-    /// Проверяет валидность токена и обновляет его при необходимости.
-    /// </summary>
-    /// <param name="refreshToken">Refresh token для обновления</param>
-    /// <param name="clientId">ClientId</param>
-    /// <param name="clientSecret">ClientSecret</param>
-    /// <returns>RefreshResponse с новыми токенами если было обновление, null если токен валиден</returns>
-    Task<RefreshResponse?> EnsureValidTokenAsync(string refreshToken, string clientId, string clientSecret);
 
     /// <summary>
     /// Возвращает количество зрителей канала, или null если стрим оффлайн.

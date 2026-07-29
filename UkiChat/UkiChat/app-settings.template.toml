@@ -1,12 +1,12 @@
-﻿#https://twitchtokengenerator.com/
-[database]
+﻿[database]
 password = "your_database_password"
+# Twitch: только реквизиты приложения с dev.twitch.tv.
+# Токен чата и токен аккаунта СЮДА НЕ КЛАДЁМ — они вшиваются в exe вместе с этим файлом
+# (EmbeddedResource) и достаются из сборки без декомпилятора. Доступ к чату и Helix
+# выдаётся OAuth-авторизацией пользователя и хранится только в локальной БД.
 [twitch]
 api_client_id = "your_api_client_id"
 api_client_secret = "your_api_client_secret"
-api_refresh_token = "your_api_refresh_token"
-chatbot_username = "your_twitch_username"
-chatbot_access_token = "your_twitch_access_token"
 [vk_video_live]
 api_client_id = "your_api_client_id"
 api_client_secret = "your_api_client_secret"

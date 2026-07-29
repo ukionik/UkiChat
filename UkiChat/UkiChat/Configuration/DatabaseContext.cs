@@ -103,13 +103,12 @@ public class DatabaseContext : IDatabaseContext, IDisposable
             Profile = profile
         };
         AppSettingsRepository.Save(appSettings);
+        // Токенов здесь намеренно нет: чат и Helix работают на токене авторизованного
+        // пользователя, который появляется только после OAuth. До авторизации Twitch молчит.
         var twitchSettings = new TwitchSettings
         {
-            ChatbotUsername = defaultAppSettings.Twitch.ChatbotUsername,
-            ChatbotAccessToken = defaultAppSettings.Twitch.ChatbotAccessToken,
             ApiClientId = defaultAppSettings.Twitch.ApiClientId,
             ApiClientSecret = defaultAppSettings.Twitch.ApiClientSecret,
-            ApiRefreshToken = defaultAppSettings.Twitch.ApiRefreshToken,
             AppSettings = appSettings,
         };
         TwitchSettingsRepository.Save(twitchSettings);

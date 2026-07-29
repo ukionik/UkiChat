@@ -61,17 +61,6 @@ public class TwitchApiService : ITwitchApiService
         });
     }
 
-    public Task<RefreshResponse> RefreshAccessTokenAsync(string refreshToken, string clientId, string clientSecret)
-    {
-        return MeasureAsync("RefreshAccessTokenAsync", async () =>
-        {
-            EnsureInitialized();
-            var response = await _api!.Auth.RefreshAuthTokenAsync(refreshToken, clientSecret, clientId);
-            _api.Settings.AccessToken = response.AccessToken;
-            return response;
-        });
-    }
-
     public Task<string> GetBroadcasterIdAsync(string channelName)
     {
         return MeasureAsync($"GetBroadcasterIdAsync({channelName})", async () =>
@@ -79,22 +68,6 @@ public class TwitchApiService : ITwitchApiService
             EnsureInitialized();
             var users = await _api!.Helix.Users.GetUsersAsync(logins: [channelName.ToLower()]);
             return users.Users.Length > 0 ? users.Users[0].Id : "";
-        });
-    }
-
-    public Task<RefreshResponse?> EnsureValidTokenAsync(string refreshToken, string clientId, string clientSecret)
-    {
-        return MeasureAsync("EnsureValidTokenAsync", async () =>
-        {
-            EnsureInitialized();
-            var validationResult = await _api!.Auth.ValidateAccessTokenAsync();
-            if (validationResult != null)
-            {
-                StartupDiagnostics.Log("twitch-api", "  token still valid");
-                return (RefreshResponse?)null;
-            }
-            StartupDiagnostics.Log("twitch-api", "  token invalid, refreshing...");
-            return await RefreshAccessTokenAsync(refreshToken, clientId, clientSecret);
         });
     }
 

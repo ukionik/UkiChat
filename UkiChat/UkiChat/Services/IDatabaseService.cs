@@ -12,7 +12,6 @@ public interface IDatabaseService
     MessageHideSettingsData GetMessageHideSettings();
     ClipSettingsData GetClipSettings();
     void UpdateTwitchSettings(TwitchSettingsData data);
-    void UpdateTwitchApiTokens(string accessToken, string refreshToken);
     void UpdateTwitchUserTokens(string accessToken, string refreshToken, string userId, string login);
     void ClearTwitchUserAuth();
     TwitchAuthStatusData GetTwitchAuthStatus();

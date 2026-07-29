@@ -41,7 +41,7 @@
     "twitch": {
       "name": "Twitch",
       "authTitle": "Authorization",
-      "authHint": "Sign in with Twitch to show channel points reward names (your own channel only).",
+      "authHint": "Sign in with Twitch to read chat. Channel points reward names will also show up (your own channel only).",
       "authorize": "Sign in with Twitch",
       "logout": "Sign out",
       "authorizedAs": "Authorized as {login}",
@@ -91,6 +91,8 @@
     "disconnectedFromChannel": "Disconnected from channel {0}",
     "connectingToChannelError": "Failed connecting to channel {0}",
     "reconnectingInSeconds": "Reconnecting in {0} sec. (attempt {1})...",
+    "authRequired": "Sign in with Twitch in settings to read chat",
+    "authScopeOutdated": "Chat access was not granted — sign in with Twitch again",
     "sub": "subscribed {0}!",
     "resub": "resubscribed {0} ({1} months)!",
     "subGift": "gifted a {0} sub to {1}!",
