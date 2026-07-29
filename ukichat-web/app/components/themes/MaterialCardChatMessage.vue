@@ -15,6 +15,18 @@ const { revealed, toggleRevealDeleted } = useThemeMessage(props, emit)
 
 const s = computed(() => props.scale)
 const gap = computed(() => `${0.3 * s.value}rem`)
+
+// Подсветка типовых сообщений цветом текста — те же оттенки, что в Pastel Soft
+// (карточка белая, поэтому цвета тёмные и насыщенные).
+const textColor = computed(() => {
+  const type = props.message.messageType
+  const variant = messageVariant(type)
+  if (type === 'Notification' || type === 'Raid') return '#b45309'
+  if (variant === 'mention') return '#b91c1c'
+  if (type === 'ChannelPointsRedemption' || type === 'Subscription' || type === 'Cheer') return '#7e22ce'
+  if (variant === 'event') return '#15803d'
+  return 'inherit'
+})
 </script>
 
 <template>
@@ -32,7 +44,7 @@ const gap = computed(() => `${0.3 * s.value}rem`)
         <ChatPlatformBadges :message="message" :scale="scale" :icon-scale="1.05" />
         <span class="font-bold leading-none" :style="{ color: message.displayNameColor }">{{ message.displayName }}</span>
       </div>
-      <div class="leading-snug break-words">
+      <div class="leading-snug break-words" :style="{ color: textColor }">
         <ChatMessageContent :message="message" :scale="scale" :allow-reveal-deleted="allowRevealDeleted"
                             :revealed="revealed" @link-click="emit('linkClick', $event)" />
       </div>
