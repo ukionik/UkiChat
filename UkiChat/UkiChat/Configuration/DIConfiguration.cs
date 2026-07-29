@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
 using UkiChat.Data.DefaultAppSettingsData;
+using UkiChat.Diagnostics;
 using UkiChat.Entities;
 using UkiChat.Model.DonationAlerts;
 using UkiChat.Model.VkVideoLive;
@@ -28,8 +29,11 @@ public static class DIConfiguration
 
         var appSettings = services.BuildServiceProvider().GetRequiredService<DefaultAppSettings>();
 
+        var databasePath = AppPaths.ResolveDataPath(appSettings.Database.Filename);
+        StartupDiagnostics.Log("database", $"Файл БД: {databasePath}");
+
         services.AddSingleton<IDatabaseContext>(_ =>
-            new DatabaseContext($@"Filename={appSettings.Database.Filename};Password={appSettings.Database.Password}", appSettings)
+            new DatabaseContext($@"Filename={databasePath};Password={appSettings.Database.Password}", appSettings)
         );
 
         ConfigureLogging(services);
@@ -41,7 +45,7 @@ public static class DIConfiguration
     {
         var logger = new LoggerConfiguration()
             .MinimumLevel.Information()
-            .WriteTo.Async(a => a.File("logs/log-.txt", rollingInterval: RollingInterval.Day))
+            .WriteTo.Async(a => a.File(AppPaths.LogFile("log-.txt"), rollingInterval: RollingInterval.Day))
             .CreateLogger();
 
         services.AddLogging(builder =>
@@ -54,7 +58,7 @@ public static class DIConfiguration
 
         var vkChatLogger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File($"logs/vk-video-live-chat-{sessionTimestamp}.txt"))
+            .WriteTo.Async(a => a.File(AppPaths.LogFile($"vk-video-live-chat-{sessionTimestamp}.txt")))
             .CreateLogger();
 
         services.AddSingleton(
@@ -63,7 +67,7 @@ public static class DIConfiguration
 
         var youTubeChatLogger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File($"logs/youtube-chat-{sessionTimestamp}.txt"))
+            .WriteTo.Async(a => a.File(AppPaths.LogFile($"youtube-chat-{sessionTimestamp}.txt")))
             .CreateLogger();
 
         services.AddSingleton(
@@ -72,7 +76,7 @@ public static class DIConfiguration
 
         var twitchChatLogger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File($"logs/twitch-chat-log-{sessionTimestamp}.txt"))
+            .WriteTo.Async(a => a.File(AppPaths.LogFile($"twitch-chat-log-{sessionTimestamp}.txt")))
             .CreateLogger();
 
         services.AddSingleton(
@@ -81,7 +85,7 @@ public static class DIConfiguration
 
         var donationAlertsLogger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Async(a => a.File($"logs/donation-alerts-{sessionTimestamp}.txt"))
+            .WriteTo.Async(a => a.File(AppPaths.LogFile($"donation-alerts-{sessionTimestamp}.txt")))
             .CreateLogger();
 
         services.AddSingleton(

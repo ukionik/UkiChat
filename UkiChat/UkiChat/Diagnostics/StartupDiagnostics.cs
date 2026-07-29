@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using UkiChat.Configuration;
 
 namespace UkiChat.Diagnostics;
 
@@ -19,13 +20,14 @@ public static class StartupDiagnostics
 
     static StartupDiagnostics()
     {
-        var dir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
-        Directory.CreateDirectory(dir);
-        _logFile = Path.Combine(dir, $"startup-{_startedAt:yyyyMMdd-HHmmss}.log");
+        _logFile = AppPaths.LogFile($"startup-{_startedAt:yyyyMMdd-HHmmss}.log");
 
         // Сразу пишем шапку, чтобы файл создавался в момент первого обращения
         WriteRaw($"=== UkiChat startup diagnostics ===");
         WriteRaw($"Started at: {_startedAt:O}");
+        // BaseDir — то, от чего теперь считаются все пути; CWD оставлен для диагностики
+        // расхождений (запуск ярлыком с чужой "Рабочей папкой").
+        WriteRaw($"BaseDir: {AppPaths.BaseDirectory}");
         WriteRaw($"CWD: {Directory.GetCurrentDirectory()}");
         WriteRaw($"OS: {Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "x64" : "x86")})");
         WriteRaw($"CLR: {Environment.Version}");

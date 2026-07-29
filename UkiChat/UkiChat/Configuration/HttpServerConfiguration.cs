@@ -19,7 +19,7 @@ public static class HttpServerConfiguration
 {
     public static IWebHost CreateHost(int port = 5000)
     {
-        var staticFilesPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var staticFilesPath = AppPaths.WwwRoot;
         StartupDiagnostics.Log("kestrel", $"CreateHost(port={port}) staticFilesPath={staticFilesPath}");
         StartupDiagnostics.Log("kestrel", $"wwwroot exists: {Directory.Exists(staticFilesPath)}");
 
