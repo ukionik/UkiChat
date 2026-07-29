@@ -1,5 +1,7 @@
-﻿[database]
-password = "your_database_password"
+﻿# Пароль БД сюда НЕ кладём: ключ генерируется случайно при первом запуске и хранится
+# рядом с exe в ukichat.key под DPAPI. См. Configuration/DatabaseKeyProvider.cs.
+[database]
+filename = "ukichat.db"
 # Twitch: только реквизиты приложения с dev.twitch.tv.
 # Токен чата и токен аккаунта СЮДА НЕ КЛАДЁМ — они вшиваются в exe вместе с этим файлом
 # (EmbeddedResource) и достаются из сборки без декомпилятора. Доступ к чату и Helix

@@ -1,4 +1,5 @@
 ﻿using System;
+using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -32,9 +33,14 @@ public static class DIConfiguration
         var databasePath = AppPaths.ResolveDataPath(appSettings.Database.Filename);
         StartupDiagnostics.Log("database", $"Файл БД: {databasePath}");
 
-        services.AddSingleton<IDatabaseContext>(_ =>
-            new DatabaseContext($@"Filename={databasePath};Password={appSettings.Database.Password}", appSettings)
-        );
+        // Пароль не из app-settings: тот файл вшит в сборку и читается кем угодно.
+        var connectionString = new ConnectionString
+        {
+            Filename = databasePath,
+            Password = DatabaseKeyProvider.GetOrCreateKey()
+        };
+
+        services.AddSingleton<IDatabaseContext>(_ => new DatabaseContext(connectionString, appSettings));
 
         ConfigureLogging(services);
 

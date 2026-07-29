@@ -52,7 +52,11 @@ packages/
 *.temp
 *.cache
 *.db
+*.db.unreadable-*
 *.opendb
+
+# Ключ шифрования БД — генерируется локально, DPAPI на текущую учётку
+*.key
 
 # ----------------------------
 # Test results

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using LiteDB;
 using UkiChat.Data.DefaultAppSettingsData;
+using UkiChat.Diagnostics;
 using UkiChat.Entities;
 using UkiChat.Repositories.Database;
 
@@ -9,10 +12,10 @@ namespace UkiChat.Configuration;
 
 public class DatabaseContext : IDatabaseContext, IDisposable
 {
-    public DatabaseContext(string connectionString
+    public DatabaseContext(ConnectionString connectionString
         , DefaultAppSettings defaultAppSettings)
     {
-        var db = new LiteDatabase(connectionString);
+        var db = OpenOrRecreate(connectionString);
         ProfileRepository = new ProfileRepository(db);
         AppSettingsRepository = new AppSettingsRepository(db);
         TwitchSettingsRepository = new TwitchSettingsRepository(db);
@@ -40,6 +43,61 @@ public class DatabaseContext : IDatabaseContext, IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Открывает базу, а если текущий ключ к ней не подходит — отводит файл в сторону
+    ///     и создаёт чистую. Такое возможно, когда портативную папку перенесли на другой ПК
+    ///     или в другую учётку Windows: ключ защищён DPAPI и не переезжает вместе с файлами
+    ///     (см. <see cref="DatabaseKeyProvider" />). Расшифровать старую базу в этом случае
+    ///     нечем, поэтому единственный вариант — начать заново; файл сохраняем, чтобы
+    ///     пользователь не потерял его молча.
+    /// </summary>
+    private static LiteDatabase OpenOrRecreate(ConnectionString connectionString)
+    {
+        try
+        {
+            return new LiteDatabase(connectionString);
+        }
+        catch (LiteException ex)
+        {
+            var suffix = $"unreadable-{DateTime.Now:yyyyMMdd-HHmmss}";
+            var moved = 0;
+
+            foreach (var file in DatabaseFiles(connectionString.Filename))
+            {
+                if (!File.Exists(file))
+                    continue;
+
+                File.Move(file, $"{file}.{suffix}");
+                moved++;
+            }
+
+            // Отодвигать нечего — значит дело не в ключе, и глушить ошибку нельзя.
+            if (moved == 0)
+                throw;
+
+            StartupDiagnostics.LogError("database",
+                $"База не открывается текущим ключом, файлы отложены с суффиксом .{suffix} и создаются заново", ex);
+
+            return new LiteDatabase(connectionString);
+        }
+    }
+
+    /// <summary>
+    ///     Сама база и её служебные файлы. LiteDB держит рядом с датафайлом "-log" и "-tmp",
+    ///     зашифрованные тем же ключом: если отодвинуть только базу, новый файл подхватит
+    ///     старый лог и снова упрётся в Invalid password.
+    /// </summary>
+    private static IEnumerable<string> DatabaseFiles(string path)
+    {
+        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var name = Path.GetFileNameWithoutExtension(path);
+        var extension = Path.GetExtension(path);
+
+        yield return path;
+        yield return Path.Combine(directory, $"{name}-log{extension}");
+        yield return Path.Combine(directory, $"{name}-tmp{extension}");
     }
 
     private void InitDefaultData(DefaultAppSettings defaultAppSettings)
