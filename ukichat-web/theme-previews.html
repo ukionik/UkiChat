@@ -92,7 +92,7 @@
 <body>
   <div class="topbar">
     <h1>UkiChat — наброски тем чата</h1>
-    <span class="hint">Одни и те же сообщения в 12 вариантах. Фон имитирует стрим под оверлеем.</span>
+    <span class="hint">Одни и те же сообщения во всех темах: обычное, ответ, донат, рейд/уведомление, обращение, подписка. Фон имитирует стрим под оверлеем.</span>
     <div class="bg-toggle">
       <span>Фон:</span>
       <button data-bg="" class="active">Тёмный</button>
@@ -116,6 +116,10 @@ const messages = [
     parts:[['t','го рейд на соседний канал '],['e','🚀']] },
   { platform:'tw', plat:'T', badges:[], name:'ToxicGuy', color:'#e74c3c',
     mention:true, parts:[['t','@стример ну ты и нуб конечно ']] },
+  { platform:'tw', plat:'T', badges:[], name:'RaidCaptain', color:'#e67e22',
+    notify:true, parts:[['t','Рейд! 128 зрителей присоединились '],['e','🎊']] },
+  { platform:'vk', plat:'В', badges:[['sub','★']], name:'Верный_Зритель', color:'#9b59b6',
+    points:true, parts:[['t','Подписка 6 месяцев подряд! ']] },
 ];
 
 // рендер «частей» сообщения (текст/эмодзи) — общий
@@ -124,6 +128,16 @@ function renderParts(parts){
 }
 function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
+// Класс группы подсветки — тот же порядок, что в messageVariant() на фронте:
+// уведомление/рейд → обращение → награда/подписка/биты → донат.
+function typeClass(m){
+  if (m.notify) return 'notify';
+  if (m.mention) return 'mention';
+  if (m.points) return 'points';
+  if (m.donation) return 'donation';
+  return '';
+}
+
 // ===== Темы: каждая возвращает HTML для одного сообщения =====
 const themes = [
   {
@@ -131,14 +145,16 @@ const themes = [
     css:`
       .t-default .msg { padding:2px 4px; line-height:1.4; }
       .t-default .msg.hl { border-left:3px solid; border-radius:0 4px 4px 0; padding-left:8px; }
-      .t-default .msg.mention { background:rgba(231,76,60,.12); border-color:#e74c3c; }
-      .t-default .msg.donation { background:rgba(46,204,113,.12); border-color:#2ecc71; }
+      .t-default .msg.mention { background:rgba(239,68,68,.1); border-color:#ef4444; color:#f87171; }
+      .t-default .msg.notify { background:rgba(59,130,246,.1); border-color:#60a5fa; }
+      .t-default .msg.points { background:rgba(168,85,247,.1); border-color:#c084fc; }
+      .t-default .msg.donation { background:rgba(34,197,94,.1); border-color:#4ade80; }
       .t-default .nm { font-weight:700; }
       .t-default .reply,.t-default .dono { font-size:.8em; opacity:.8; }
       .t-default .dono { color:#2ecc71; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'hl mention':''} ${m.donation?'hl donation':''}">
+      <div class="msg ${typeClass(m)?'hl '+typeClass(m):''}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
@@ -152,13 +168,15 @@ const themes = [
     css:`
       .t-box .msg { padding:8px 10px; border-radius:8px; margin-bottom:6px; box-shadow:0 0 4px rgba(0,0,0,.4); background:linear-gradient(rgba(70,70,70,.6),rgba(50,50,50,.7)); }
       .t-box .msg.mention { background:linear-gradient(rgba(120,40,40,.7),rgba(90,20,20,.8)); }
+      .t-box .msg.notify { background:linear-gradient(rgba(40,90,170,.6),rgba(25,65,130,.7)); }
+      .t-box .msg.points { background:linear-gradient(rgba(100,40,140,.6),rgba(70,20,110,.7)); }
       .t-box .msg.donation { background:linear-gradient(rgba(34,120,70,.6),rgba(20,90,50,.7)); }
       .t-box .head { display:flex; align-items:center; gap:5px; margin-bottom:4px; }
       .t-box .nm { font-weight:700; }
       .t-box .reply,.t-box .dono { font-size:.8em; opacity:.85; margin-bottom:3px; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <div class="head">
@@ -173,8 +191,11 @@ const themes = [
     name:'Dark Glass (box на чёрной прозрачной рамке)', num:1,
     desc:'То, что часто у стримеров: чёрная полупрозрачная плашка с тонкой светлой рамкой и блюром. Читается на любом фоне.',
     css:`
-      .t-glass .msg { padding:7px 11px; border-radius:8px; margin-bottom:6px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.14); backdrop-filter:blur(3px); }
+      .t-glass .msg { padding:7px 11px; border-radius:8px; margin-bottom:6px; background:rgba(0,0,0,.85); border:1px solid rgba(255,255,255,.14); backdrop-filter:blur(3px); }
+      /* акценты держим в двух цветах темы: белый — нейтральные события, фиолетовый — платные/наградные */
       .t-glass .msg.mention { border-color:rgba(231,76,60,.7); box-shadow:0 0 0 1px rgba(231,76,60,.4) inset; }
+      .t-glass .msg.notify { border-color:rgba(255,255,255,.7); }
+      .t-glass .msg.points { border-color:rgba(145,70,255,.8); }
       .t-glass .msg.donation { border-color:rgba(46,204,113,.7); }
       .t-glass .head { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
       .t-glass .nm { font-weight:700; }
@@ -182,7 +203,7 @@ const themes = [
       .t-glass .dono { color:#2ecc71; font-weight:600; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <div class="head">
@@ -214,25 +235,6 @@ const themes = [
       </div>`
   },
   {
-    name:'YouTube Live', num:3,
-    desc:'Светлая/компактная как чат YouTube: серое имя, тонкие разделители, донат — цветная плашка (Super Chat).',
-    css:`
-      .t-yt { background:rgba(255,255,255,.96); color:#0f0f0f; border-radius:8px; padding:4px 0; }
-      .t-yt .msg { padding:5px 12px; line-height:1.3; display:flex; gap:8px; align-items:baseline; border-bottom:1px solid #00000008; }
-      .t-yt .nm { font-weight:600; color:#606060; white-space:nowrap; }
-      .t-yt .msg.donation { background:#1565c0; color:#fff; border-radius:8px; margin:3px 6px; padding:6px 10px; display:block; }
-      .t-yt .msg.donation .nm { color:#cfe0ff; }
-      .t-yt .msg.mention .nm { color:#c62828; }
-      .t-yt .reply { font-size:.8em; opacity:.6; }
-      .t-yt .dono { font-weight:700; }
-    `,
-    render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
-        ${m.donation?`<div class="dono">${m.name} · ${m.donation}</div><div>${renderParts(m.parts)}</div>`:
-        `<span class="plat ${m.platform}">${m.plat}</span><span class="nm">${m.name}</span><span>${renderParts(m.parts)}</span>`}
-      </div>`
-  },
-  {
     name:'Minimal Outline (без фона, обводка текста)', num:4,
     desc:'Полностью прозрачно, ни плашек, ни рамок — только текст с жирной обводкой/тенью. Максимально незаметно поверх игры.',
     css:`
@@ -259,14 +261,16 @@ const themes = [
     css:`
       .t-neon { font-family:"Consolas",monospace; }
       .t-neon .msg { padding:7px 10px; margin-bottom:7px; background:rgba(10,5,25,.7); border:1px solid #0ff; border-radius:4px; box-shadow:0 0 8px rgba(0,255,255,.5),inset 0 0 6px rgba(0,255,255,.15); }
-      .t-neon .msg.mention { border-color:#f0f; box-shadow:0 0 8px rgba(255,0,255,.6),inset 0 0 6px rgba(255,0,255,.15); }
+      .t-neon .msg.mention { border-color:#f00; box-shadow:0 0 8px rgba(255,0,0,.6),inset 0 0 6px rgba(255,0,0,.15); }
+      .t-neon .msg.notify { border-color:#f0f; box-shadow:0 0 8px rgba(255,0,255,.6),inset 0 0 6px rgba(255,0,255,.15); }
+      .t-neon .msg.points { border-color:#b300ff; box-shadow:0 0 8px rgba(179,0,255,.6),inset 0 0 6px rgba(179,0,255,.15); }
       .t-neon .msg.donation { border-color:#0f8; box-shadow:0 0 8px rgba(0,255,136,.6),inset 0 0 6px rgba(0,255,136,.15); }
       .t-neon .nm { font-weight:700; text-shadow:0 0 6px currentColor; }
       .t-neon .reply,.t-neon .dono { font-size:.8em; opacity:.85; }
       .t-neon .dono { color:#0f8; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">&gt; reply @${m.reply.name}</div>`:''}
         ${m.donation?`<div class="dono">[ ${m.donation} ]</div>`:''}
         <span class="nm" style="color:${m.color}">[${m.name}]</span> ${renderParts(m.parts)}
@@ -277,15 +281,17 @@ const themes = [
     desc:'Аватар-кружок слева + пузырь сообщения, как в Telegram/Discord DM. Дружелюбный и читаемый.',
     css:`
       .t-bubble .msg { display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; }
-      .t-bubble .bubble { background:rgba(255,255,255,.12); border-radius:4px 12px 12px 12px; padding:6px 10px; }
-      .t-bubble .msg.mention .bubble { background:rgba(231,76,60,.25); }
-      .t-bubble .msg.donation .bubble { background:rgba(46,204,113,.25); }
+      .t-bubble .bubble { background:rgba(64,64,64,.9); border-radius:4px 12px 12px 12px; padding:6px 10px; }
+      .t-bubble .msg.mention .bubble { background:rgb(113 11 5 / .9); }
+      .t-bubble .msg.notify .bubble { background:rgba(94,62,0,.9); }
+      .t-bubble .msg.points .bubble { background:rgb(66 13 89 / .9); }
+      .t-bubble .msg.donation .bubble { background:rgb(0 81 35 / .9); }
       .t-bubble .nm { font-weight:700; font-size:.9em; }
       .t-bubble .reply,.t-bubble .dono { font-size:.8em; opacity:.85; }
       .t-bubble .dono { color:#2ecc71; font-weight:600; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         <span class="avatar" style="background:${m.color}">${m.name[0]}</span>
         <div class="bubble">
           <div><span class="nm" style="color:${m.color}">${m.name}</span>
@@ -301,17 +307,21 @@ const themes = [
     name:'Accent Bar (полоса платформы)', num:8,
     desc:'Слева толстая цветная полоса в цвет платформы, лёгкий тёмный фон. Сразу видно, откуда сообщение.',
     css:`
-      .t-accent .msg { padding:5px 10px; margin-bottom:5px; background:rgba(0,0,0,.4); border-left:4px solid #888; border-radius:0 6px 6px 0; }
+      .t-accent .msg { padding:5px 10px; margin-bottom:5px; background:rgba(0,0,0,.9); border-left:4px solid #888; border-radius:0 6px 6px 0; }
       .t-accent .msg.tw { border-color:#9146ff; }
       .t-accent .msg.vk { border-color:#0077ff; }
       .t-accent .msg.yt { border-color:#ff0000; }
       .t-accent .msg.da { border-color:#f57d07; }
-      .t-accent .nm { font-weight:700; }
+      .t-accent .msg.mention { background:rgb(113 11 5 / .9); }
+      .t-accent .msg.notify { background:rgba(94,62,0,.9); }
+      .t-accent .msg.points { background:rgb(66 13 89 / .9); }
+      .t-accent .msg.donation { background:rgb(0 81 35 / .9); }
+      .t-accent .nm { font-weight:700; margin-right:4px; }
       .t-accent .reply,.t-accent .dono { font-size:.8em; opacity:.85; }
       .t-accent .dono { color:#2ecc71; font-weight:600; }
     `,
     render:(m)=>`
-      <div class="msg ${m.platform}">
+      <div class="msg ${m.platform} ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
@@ -327,18 +337,23 @@ const themes = [
       .t-pastel .msg.vk { background:#e3f0ff; }
       .t-pastel .msg.yt { background:#ffe3e3; }
       .t-pastel .msg.da { background:#fff0db; }
-      .t-pastel .nm { font-weight:700; }
+      .t-pastel .msg.notify .txt { color:#b45309; }
+      .t-pastel .msg.mention .txt { color:#b91c1c; }
+      .t-pastel .msg.points .txt { color:#7e22ce; }
+      .t-pastel .msg.donation .txt { color:#15803d; }
+      /* обводка ника: светлые цвета тонут в пастельной заливке */
+      .t-pastel .nm { font-weight:700; text-shadow:0 0 .8px rgba(43,43,58,.72),0 0 2px rgba(43,43,58,.38); }
       .t-pastel .reply { font-size:.8em; opacity:.7; }
       .t-pastel .dono { font-size:.85em; font-weight:700; color:#1b8a4b; }
     `,
     render:(m)=>`
-      <div class="msg ${m.platform}">
+      <div class="msg ${m.platform} ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
         ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
         <span class="nm" style="color:${m.color}">${m.name}</span>
-        <div>${renderParts(m.parts)}</div>
+        <div class="txt">${renderParts(m.parts)}</div>
       </div>`
   },
   {
@@ -347,13 +362,16 @@ const themes = [
     css:`
       .t-term { font-family:"Consolas",monospace; font-size:13px; background:rgba(0,0,0,.75); border:1px solid #0f02; border-radius:4px; padding:6px; }
       .t-term .msg { padding:2px 4px; line-height:1.4; color:#3eff7e; }
+      .t-term .msg.notify { color:#ffa733; }
       .t-term .msg.mention { color:#ff5577; }
-      .t-term .msg.donation { color:#ffe14d; }
+      .t-term .msg.points { color:#c07cff; }
+      .t-term .msg.donation { color:#a8ff3e; }
       .t-term .nm { font-weight:700; }
       .t-term .reply,.t-term .dono { opacity:.8; }
+      .t-term .reply { color:#9ca3af; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">&gt;&gt; @${m.reply.name}</div>`:''}
         ${m.donation?`<div class="dono">$ donate ${m.donation}</div>`:''}
         <span style="opacity:.5">${m.plat}:~$</span>
@@ -408,7 +426,10 @@ const themes = [
     css:`
       .t-discord .msg { display:flex; gap:10px; padding:4px 8px; border-radius:6px; align-items:flex-start; }
       .t-discord .msg:hover { background:rgba(255,255,255,.04); }
-      .t-discord .msg.mention { background:rgba(250,166,26,.12); border-left:2px solid #faa61a; }
+      .t-discord .msg.notify { background:rgba(250,166,26,.12); border-left:2px solid #faa61a; }
+      .t-discord .msg.mention { background:rgba(237,66,69,.12); border-left:2px solid #ed4245; }
+      .t-discord .msg.points { background:rgba(169,112,255,.12); border-left:2px solid #a970ff; }
+      .t-discord .msg.donation { background:rgba(35,165,90,.12); border-left:2px solid #23a55a; }
       .t-discord .body { min-width:0; }
       .t-discord .nm { font-weight:600; }
       .t-discord .ts { font-size:.72em; opacity:.5; margin-left:6px; }
@@ -416,7 +437,7 @@ const themes = [
       .t-discord .dono { color:#2ecc71; font-weight:600; }
     `,
     render:(m,i)=>`
-      <div class="msg ${m.mention?'mention':''}">
+      <div class="msg ${typeClass(m)}">
         <span class="avatar" style="background:${m.color}">${m.name[0]}</span>
         <div class="body">
           <div><span class="nm" style="color:${m.color}">${m.name}</span>
@@ -433,18 +454,23 @@ const themes = [
     name:'Vaporwave / Retro', num:14,
     desc:'Розово-фиолетовый градиент, ретро-вайб 80-х, мягкое свечение. Яркий стилизованный вариант.',
     css:`
-      .t-vapor .msg { padding:7px 11px; margin-bottom:7px; border-radius:6px; background:linear-gradient(135deg,rgba(255,90,200,.35),rgba(120,90,255,.35)); border:1px solid rgba(255,150,230,.5); box-shadow:0 0 10px rgba(255,90,200,.3); }
-      .t-vapor .nm { font-weight:800; text-shadow:0 0 6px rgba(255,255,255,.6); letter-spacing:.5px; }
+      /* градиент почти непрозрачный, но цвета подобраны под прежний вид на альфе .35 */
+      .t-vapor .msg { padding:7px 11px; margin-bottom:7px; border-radius:6px; background:linear-gradient(135deg,rgba(111,45,95,.9),rgba(59,45,116,.9)); border:1px solid rgba(255,150,230,.5); box-shadow:0 0 10px rgba(255,90,200,.3); }
+      .t-vapor .nm { font-weight:800; letter-spacing:.5px; margin-right:4px; text-shadow:0 0 1px rgba(20,8,30,.95),0 1px 2px rgba(20,8,30,.7),0 0 9px rgba(255,255,255,.35); }
+      .t-vapor .msg.notify .txt { color:#ffb26b; }
+      .t-vapor .msg.mention .txt { color:#ff7a8f; }
+      .t-vapor .msg.points .txt { color:#d6a3ff; }
+      .t-vapor .msg.donation .txt { color:#aaffea; }
       .t-vapor .reply,.t-vapor .dono { font-size:.8em; opacity:.9; }
       .t-vapor .dono { color:#aaffea; font-weight:700; }
     `,
     render:(m)=>`
-      <div class="msg">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
         ${m.donation?`<div class="dono">✦ ${m.donation} ✦</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
         ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
-        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+        <span class="nm" style="color:${m.color}">${m.name}:</span><span class="txt">${renderParts(m.parts)}</span>
       </div>`
   },
   {
@@ -458,12 +484,16 @@ const themes = [
       .t-material .msg.yt .strip { background:#ff0000; }
       .t-material .msg.da .strip { background:#f57d07; }
       .t-material .inner { padding:7px 11px; }
+      .t-material .msg.notify .txt { color:#b45309; }
+      .t-material .msg.mention .txt { color:#b91c1c; }
+      .t-material .msg.points .txt { color:#7e22ce; }
+      .t-material .msg.donation .txt { color:#15803d; }
       .t-material .nm { font-weight:700; }
       .t-material .reply { font-size:.8em; opacity:.6; }
       .t-material .dono { font-size:.85em; font-weight:700; color:#1b8a4b; }
     `,
     render:(m)=>`
-      <div class="msg ${m.platform}">
+      <div class="msg ${m.platform} ${typeClass(m)}">
         <div class="strip"></div>
         <div class="inner">
           ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
@@ -471,7 +501,7 @@ const themes = [
           <span class="plat ${m.platform}">${m.plat}</span>
           ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
           <span class="nm" style="color:${m.color}">${m.name}</span>
-          <div>${renderParts(m.parts)}</div>
+          <div class="txt">${renderParts(m.parts)}</div>
         </div>
       </div>`
   },
@@ -480,14 +510,16 @@ const themes = [
     desc:'Жирная чёрная обводка, скруглённые «комиксные» плашки. Игривый мультяшный стиль.',
     css:`
       .t-comic .msg { background:#fffbe6; color:#1a1a1a; border:3px solid #1a1a1a; border-radius:14px; padding:6px 11px; margin-bottom:8px; box-shadow:3px 3px 0 #1a1a1a; }
+      .t-comic .msg.notify { background:#ffe6c2; }
       .t-comic .msg.mention { background:#ffd9d9; }
+      .t-comic .msg.points { background:#eddcff; }
       .t-comic .msg.donation { background:#d9ffe1; }
-      .t-comic .nm { font-weight:800; }
+      .t-comic .nm { font-weight:800; margin-right:4px; }
       .t-comic .reply { font-size:.8em; opacity:.7; }
       .t-comic .dono { font-size:.85em; font-weight:800; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
@@ -499,14 +531,19 @@ const themes = [
     name:'Frosted Light Glass', num:17,
     desc:'Светлое матовое стекло (белая полупрозрачная плашка + блюр). Контраст к тёмному Dark Glass.',
     css:`
-      .t-frost .msg { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); border-radius:10px; padding:7px 11px; margin-bottom:6px; backdrop-filter:blur(6px); box-shadow:0 2px 8px rgba(0,0,0,.2); }
+      /* стекло лёгкое, читаемость держится на тени текста */
+      .t-frost .msg { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.28); border-radius:10px; padding:7px 11px; margin-bottom:6px; backdrop-filter:blur(6px); box-shadow:0 2px 8px rgba(0,0,0,.2); text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 1px rgba(0,0,0,.75); }
+      .t-frost .msg.notify { background:rgba(255,176,80,.16); border-color:rgba(255,176,80,.5); }
+      .t-frost .msg.mention { background:rgba(255,90,100,.16); border-color:rgba(255,90,100,.5); }
+      .t-frost .msg.points { background:rgba(190,130,255,.16); border-color:rgba(190,130,255,.5); }
+      .t-frost .msg.donation { background:rgba(90,230,160,.16); border-color:rgba(90,230,160,.5); }
       .t-frost .head { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
       .t-frost .nm { font-weight:700; }
       .t-frost .reply,.t-frost .dono { font-size:.8em; opacity:.9; }
       .t-frost .dono { color:#c6ffd9; font-weight:600; }
     `,
     render:(m)=>`
-      <div class="msg">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <div class="head">
@@ -521,26 +558,31 @@ const themes = [
     name:'Gradient Border', num:18,
     desc:'Тёмная плашка с ярким градиентным контуром. Минимум фона, акцент на светящейся рамке.',
     css:`
-      .t-gborder .msg { position:relative; padding:7px 11px; margin-bottom:7px; border-radius:8px; background:rgba(10,12,20,.7); }
-      .t-gborder .msg::before { content:''; position:absolute; inset:0; border-radius:8px; padding:1.5px; background:linear-gradient(135deg,#00eaff,#ff00d4); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
-      .t-gborder .nm { font-weight:700; }
+      .t-gborder .msg { position:relative; padding:7px 11px; margin-bottom:7px; border-radius:8px; background:rgba(10,12,20,.9); }
+      /* прямой переход cyan→magenta тускнеет в середине, ведём его через яркие стопы */
+      .t-gborder .msg::before { content:''; position:absolute; inset:0; border-radius:8px; padding:1.5px; background:linear-gradient(135deg,#00eaff 0%,#29a4ff 32%,#7c4dff 58%,#c72dff 80%,#ff00d4 100%); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
+      .t-gborder .nm { font-weight:700; margin-right:4px; }
+      .t-gborder .msg.notify .txt { color:#ffb266; }
+      .t-gborder .msg.mention .txt { color:#ff6b7a; }
+      .t-gborder .msg.points .txt { color:#c58bff; }
+      .t-gborder .msg.donation .txt { color:#69f0ae; }
       .t-gborder .reply,.t-gborder .dono { font-size:.8em; opacity:.85; }
       .t-gborder .dono { color:#69f0ae; font-weight:600; }
     `,
     render:(m)=>`
-      <div class="msg">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
         ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
-        <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
+        <span class="nm" style="color:${m.color}">${m.name}:</span><span class="txt">${renderParts(m.parts)}</span>
       </div>`
   },
   {
     name:'Lower-Third Banner', num:19,
     desc:'Широкая «телевизионная» плашка во всю ширину с цветным торцом платформы. Подходит для показа 1–2 сообщений как баннер.',
     css:`
-      .t-lower .msg { display:flex; align-items:stretch; margin-bottom:7px; background:linear-gradient(90deg,rgba(0,0,0,.8),rgba(0,0,0,.55)); border-radius:4px; overflow:hidden; }
+      .t-lower .msg { display:flex; align-items:stretch; margin-bottom:7px; background:linear-gradient(90deg,rgba(0,0,0,.9),rgba(0,0,0,.85)); border-radius:4px; overflow:hidden; }
       .t-lower .tab { width:6px; background:#888; flex-shrink:0; }
       .t-lower .msg.tw .tab { background:#9146ff; }
       .t-lower .msg.vk .tab { background:#0077ff; }
@@ -548,16 +590,20 @@ const themes = [
       .t-lower .msg.da .tab { background:#f57d07; }
       .t-lower .inner { padding:7px 12px; }
       .t-lower .nm { font-weight:800; text-transform:uppercase; letter-spacing:.5px; font-size:.85em; }
+      .t-lower .msg.notify .txt { color:#ffb266; }
+      .t-lower .msg.mention .txt { color:#ff6b7a; }
+      .t-lower .msg.points .txt { color:#c58bff; }
+      .t-lower .msg.donation .txt { color:#69f0ae; }
       .t-lower .dono { font-size:.8em; color:#69f0ae; font-weight:700; }
     `,
     render:(m)=>`
-      <div class="msg ${m.platform}">
+      <div class="msg ${m.platform} ${typeClass(m)}">
         <div class="tab"></div>
         <div class="inner">
           ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
           <span class="nm" style="color:${m.color}">${m.name}</span>
           ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
-          <div>${renderParts(m.parts)}</div>
+          <div class="txt">${renderParts(m.parts)}</div>
         </div>
       </div>`
   },
@@ -566,20 +612,28 @@ const themes = [
     desc:'Для девушек: мягкие пастельно-розовые скруглённые плашки, сердечко у ника. Уютный «кавайный» стиль.',
     css:`
       .t-pinksoft .msg { padding:7px 11px; margin-bottom:6px; border-radius:14px; color:#5a2a45; background:linear-gradient(135deg,#ffe3f1,#ffd0e6); box-shadow:0 1px 5px rgba(255,150,200,.45); }
-      .t-pinksoft .msg.mention { background:linear-gradient(135deg,#ffd4dc,#ffc2da); }
+      /* гамма остаётся розовой, меняется тон: персиковый, розово-красный, лиловый, малиновый */
+      .t-pinksoft .msg.notify { background:linear-gradient(135deg,#ffe4d6,#ffd0bd); }
+      .t-pinksoft .msg.mention { background:linear-gradient(135deg,#ffd4dc,#ffbfcd); }
+      .t-pinksoft .msg.points { background:linear-gradient(135deg,#f4daff,#e6c4fb); }
       .t-pinksoft .msg.donation { background:linear-gradient(135deg,#ffdcf3,#ffc9ec); }
       .t-pinksoft .head { display:flex; align-items:center; gap:5px; margin-bottom:2px; }
-      .t-pinksoft .heart { color:#ff6fb0; }
-      .t-pinksoft .nm { font-weight:800; }
+      /* сердечко берёт насыщенный вариант того же тона — пастельные заливки различаются слабо */
+      .t-pinksoft .heart { width:1.05em; height:1.05em; flex-shrink:0; color:#ff6fb0; }
+      .t-pinksoft .msg.notify .heart { color:#ff8a5c; }
+      .t-pinksoft .msg.mention .heart { color:#f4416b; }
+      .t-pinksoft .msg.points .heart { color:#b45cf0; }
+      .t-pinksoft .msg.donation .heart { color:#e83fa8; }
+      .t-pinksoft .nm { font-weight:800; text-shadow:0 0 .8px rgba(90,42,69,.72),0 0 2px rgba(90,42,69,.38); }
       .t-pinksoft .reply,.t-pinksoft .dono { font-size:.8em; opacity:.85; }
       .t-pinksoft .dono { color:#d6337a; font-weight:700; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💖 ${m.donation}</div>`:''}
         <div class="head">
-          <span class="heart">♥</span>
+          <svg class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.6l-1.34-1.22C5.9 15.07 2.75 12.2 2.75 8.69 2.75 5.82 5 3.6 7.87 3.6c1.62 0 3.18.75 4.13 1.94.95-1.19 2.51-1.94 4.13-1.94 2.87 0 5.12 2.22 5.12 5.09 0 3.51-3.15 6.38-7.91 10.69L12 20.6z"/></svg>
           <span class="plat ${m.platform}">${m.plat}</span>
           ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
           <span class="nm" style="color:${m.color}">${m.name}</span>
@@ -591,35 +645,45 @@ const themes = [
     name:'Pink Neon (розовый неон)', num:22,
     desc:'Для девушек, но ярче: горячий розовый неон со свечением на тёмном фоне, ник в розовом глоу. «Barbie»-вайб.',
     css:`
-      .t-pinkneon .msg { padding:7px 10px; margin-bottom:7px; border-radius:8px; background:rgba(35,8,28,.7); border:1px solid #ff4dd2; box-shadow:0 0 9px rgba(255,77,210,.55),inset 0 0 6px rgba(255,77,210,.15); }
-      .t-pinkneon .msg.mention { border-color:#ff4d7a; box-shadow:0 0 9px rgba(255,77,122,.6); }
-      .t-pinkneon .msg.donation { border-color:#ff8adf; }
-      .t-pinkneon .nm { font-weight:800; color:#ff9ee0; text-shadow:0 0 7px #ff4dd2; }
+      .t-pinkneon .msg { padding:7px 10px; margin-bottom:7px; border-radius:8px; background:rgba(35,8,28,.9); border:1px solid #ff4dd2; box-shadow:0 0 9px rgba(255,77,210,.55),inset 0 0 6px rgba(255,77,210,.15); }
+      /* тон меняется в розово-неоновой гамме; цвет дублируется в тексте — соседние неоны похожи */
+      .t-pinkneon .msg.notify { border-color:#ff8a5c; box-shadow:0 0 9px rgba(255,138,92,.55),inset 0 0 6px rgba(255,138,92,.15); }
+      .t-pinkneon .msg.mention { border-color:#ff4d7a; box-shadow:0 0 9px rgba(255,77,122,.55),inset 0 0 6px rgba(255,77,122,.15); }
+      .t-pinkneon .msg.points { border-color:#c14dff; box-shadow:0 0 9px rgba(193,77,255,.55),inset 0 0 6px rgba(193,77,255,.15); }
+      .t-pinkneon .msg.donation { border-color:#ff2e9f; box-shadow:0 0 9px rgba(255,46,159,.55),inset 0 0 6px rgba(255,46,159,.15); }
+      .t-pinkneon .msg.notify .txt { color:#ffc9a3; }
+      .t-pinkneon .msg.mention .txt { color:#ff9aae; }
+      .t-pinkneon .msg.points .txt { color:#dcb0ff; }
+      .t-pinkneon .msg.donation .txt { color:#ffa3d5; }
+      .t-pinkneon .nm { font-weight:800; color:#ff9ee0; text-shadow:0 0 7px #ff4dd2; margin-right:4px; }
       .t-pinkneon .reply,.t-pinkneon .dono { font-size:.8em; opacity:.9; }
       .t-pinkneon .dono { color:#ffb3ec; font-weight:700; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
         ${m.donation?`<div class="dono">✦ ${m.donation} ✦</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
         ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
-        <span class="nm">${m.name}:</span> ${renderParts(m.parts)}
+        <span class="nm">${m.name}:</span><span class="txt">${renderParts(m.parts)}</span>
       </div>`
   },
   {
     name:'Black Box (со скрина)', num:23,
     desc:'По скрину: каждое сообщение — отдельная сплошная чёрная скруглённая плашка, иконка платформы + бейджи + жирный цветной ник + белый текст. Классика стримерских оверлеев.',
     css:`
-      .t-blackbox .msg { padding:5px 11px; margin-bottom:6px; border-radius:11px; background:rgba(0,0,0,.86); border:1px solid rgba(255,255,255,.07); line-height:1.4; }
-      .t-blackbox .msg.mention { background:rgba(40,0,0,.86); }
-      .t-blackbox .msg.donation { background:rgba(0,30,12,.86); }
+      .t-blackbox .msg { padding:5px 11px; margin-bottom:6px; border-radius:11px; background:rgba(0,0,0,.9); border:1px solid rgba(255,255,255,.07); line-height:1.4; }
+      /* цвет дублируется в рамке: на почти чёрных заливках тона неразличимы */
+      .t-blackbox .msg.notify { background:rgba(42,24,0,.86); border-color:rgba(255,170,60,.22); }
+      .t-blackbox .msg.mention { background:rgba(40,0,0,.86); border-color:rgba(255,80,80,.22); }
+      .t-blackbox .msg.points { background:rgba(28,0,45,.86); border-color:rgba(180,110,255,.22); }
+      .t-blackbox .msg.donation { background:rgba(0,30,12,.86); border-color:rgba(80,230,140,.22); }
       .t-blackbox .nm { font-weight:800; }
       .t-blackbox .reply,.t-blackbox .dono { font-size:.8em; opacity:.85; }
       .t-blackbox .dono { color:#3ad17a; font-weight:600; }
     `,
     render:(m)=>`
-      <div class="msg ${m.mention?'mention':''} ${m.donation?'donation':''}">
+      <div class="msg ${typeClass(m)}">
         ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
         ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
         <span class="plat ${m.platform}">${m.plat}</span>
@@ -635,7 +699,7 @@ const styleEl = document.createElement('style');
 document.head.appendChild(styleEl);
 let allCss = '';
 
-const slugs = ['default','box','glass','twitch','yt','outline','neon','bubble','accent','pastel','term',
+const slugs = ['default','box','glass','twitch','outline','neon','bubble','accent','pastel','term',
   'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower',
   'pinksoft','pinkneon','blackbox'];
 
