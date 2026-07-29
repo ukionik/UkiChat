@@ -691,6 +691,141 @@ const themes = [
         <span class="nm" style="color:${m.color}">${m.name}:</span> ${renderParts(m.parts)}
       </div>`
   },
+  {
+    name:'Sticky Note (стикеры)', num:25,
+    desc:'Бумажки-стикеры с загнутым уголком и лёгким наклоном. Цвет бумажки — тип события. Тёплый «офисный» вайб.',
+    css:`
+      .t-sticky .msg { padding:8px 12px; margin-bottom:9px; color:#3a3320; line-height:1.4;
+        background:linear-gradient(315deg,#e8d45f 0 17px,#fff3a8 17px); box-shadow:0 2px 6px rgba(0,0,0,.35); transform:rotate(-.7deg); }
+      .t-sticky .msg:nth-child(even) { transform:rotate(.7deg); }
+      .t-sticky .msg.notify { background:linear-gradient(315deg,#e8ab5f 0 17px,#ffd9a8 17px); }
+      .t-sticky .msg.mention { background:linear-gradient(315deg,#ea8080 0 17px,#ffb8b8 17px); }
+      .t-sticky .msg.points { background:linear-gradient(315deg,#b28ded 0 17px,#dcc2ff 17px); }
+      .t-sticky .msg.donation { background:linear-gradient(315deg,#84d18b 0 17px,#bdf3c2 17px); }
+      .t-sticky .nm { font-weight:800; margin-right:4px; text-shadow:0 0 .8px rgba(58,51,32,.7); }
+      .t-sticky .reply,.t-sticky .dono { font-size:.8em; color:#7a6b3f; }
+      .t-sticky .dono { color:#1b7a3f; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Newspaper (газетная вёрстка)', num:26,
+    desc:'Кремовая бумага, антиква, ник капсом с разрядкой как подпись автора, цветная линейка рубрики сверху по типу события.',
+    css:`
+      .t-paper .msg { padding:7px 11px 8px; margin-bottom:7px; font-family:Georgia,"Times New Roman",serif; line-height:1.45;
+        color:#241f16; background:#f4ecd8; border-top:3px solid #241f16; border-bottom:1px solid rgba(36,31,22,.3); }
+      .t-paper .msg.notify { border-top-color:#a35a12; }
+      .t-paper .msg.mention { border-top-color:#a62121; }
+      .t-paper .msg.points { border-top-color:#5b2d91; }
+      .t-paper .msg.donation { border-top-color:#1a6b3c; }
+      .t-paper .nm { font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:.9em; margin-right:5px; color:#241f16; }
+      .t-paper .msg.notify .nm { color:#a35a12; }
+      .t-paper .msg.mention .nm { color:#a62121; }
+      .t-paper .msg.points .nm { color:#5b2d91; }
+      .t-paper .msg.donation .nm { color:#1a6b3c; }
+      .t-paper .reply { font-size:.8em; font-style:italic; color:#6b6152; }
+      .t-paper .dono { font-size:.85em; font-weight:700; color:#1a6b3c; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm">${m.name}</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Cyber HUD (интерфейс игры)', num:27,
+    desc:'Панель игрового интерфейса: срезанные углы, моношрифт, сигнальная полоса слева и внутреннее свечение по типу события.',
+    css:`
+      .t-hud .msg { padding:6px 11px; margin-bottom:6px; font-family:"Consolas","Cascadia Mono",monospace; line-height:1.4; color:#cfefff;
+        background:linear-gradient(100deg,rgba(0,28,44,.92),rgba(0,12,24,.88)); border-left:3px solid #28d8ff;
+        box-shadow:inset 0 0 13px rgba(40,216,255,.16),0 0 8px rgba(40,216,255,.25);
+        clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px)); }
+      .t-hud .msg.notify { color:#ffd79a; border-left-color:#ffb020; box-shadow:inset 0 0 13px rgba(255,176,32,.16),0 0 8px rgba(255,176,32,.25); }
+      .t-hud .msg.mention { color:#ff9dae; border-left-color:#ff3b5c; box-shadow:inset 0 0 13px rgba(255,59,92,.16),0 0 8px rgba(255,59,92,.25); }
+      .t-hud .msg.points { color:#d9bcff; border-left-color:#b06bff; box-shadow:inset 0 0 13px rgba(176,107,255,.16),0 0 8px rgba(176,107,255,.25); }
+      .t-hud .msg.donation { color:#a6ffdb; border-left-color:#2bffa3; box-shadow:inset 0 0 13px rgba(43,255,163,.16),0 0 8px rgba(43,255,163,.25); }
+      .t-hud .sl { opacity:.5; }
+      .t-hud .nm { font-weight:700; margin:0 5px; }
+      .t-hud .reply,.t-hud .dono { font-size:.8em; }
+      .t-hud .reply { color:#7fa6bd; }
+      .t-hud .dono { color:#2bffa3; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="sl">//</span><span class="nm" style="color:${m.color}">${m.name}</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Chalkboard (грифельная доска)', num:28,
+    desc:'Тёмно-зелёная доска с затёртой засветкой, рукописный шрифт и «пылящий» мел. Тип события — цвет мелка.',
+    css:`
+      .t-chalk { background:#22332a; border-radius:6px; padding:4px 0; }
+      .t-chalk .msg { padding:6px 12px; line-height:1.45; font-family:"Segoe Print","Comic Sans MS","Bradley Hand",cursive;
+        color:#f2f0e6; text-shadow:0 0 1.5px rgba(255,255,255,.45); border-bottom:1px solid rgba(255,255,255,.08);
+        background:radial-gradient(120% 90% at 25% 0%,rgba(255,255,255,.07),rgba(255,255,255,0) 60%); }
+      .t-chalk .msg.notify { color:#ffd08a; }
+      .t-chalk .msg.mention { color:#ff9f9f; }
+      .t-chalk .msg.points { color:#d5b3ff; }
+      .t-chalk .msg.donation { color:#b6f2a8; }
+      .t-chalk .nm { font-weight:700; margin-right:5px; }
+      .t-chalk .reply,.t-chalk .dono { font-size:.8em; }
+      .t-chalk .reply { color:#b9c9bd; }
+      .t-chalk .dono { color:#b6f2a8; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm" style="color:${m.color}">${m.name}:</span>${renderParts(m.parts)}
+      </div>`
+  },
+  {
+    name:'Gold Luxe (премиум)', num:29,
+    desc:'Чёрная плашка с тонкой металлической рамкой и ником, залитым градиентом-металлом: золото, бронза, рубин, аметист, изумруд.',
+    css:`
+      .t-luxe .msg { padding:7px 13px; margin-bottom:7px; border-radius:2px; font-family:Georgia,"Times New Roman",serif; line-height:1.45;
+        color:#efe6d2; background:linear-gradient(160deg,rgba(22,18,12,.94),rgba(8,6,4,.96)); border:1px solid #d4af37;
+        box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 2px 8px rgba(0,0,0,.55); }
+      .t-luxe .msg.notify { border-color:#cd7f32; }
+      .t-luxe .msg.mention { border-color:#d4485f; }
+      .t-luxe .msg.points { border-color:#a06cd5; }
+      .t-luxe .msg.donation { border-color:#3fae7a; }
+      /* ник залит металлом — фирменная деталь темы, цвет платформы ей уступает */
+      .t-luxe .nm { font-weight:700; letter-spacing:.03em; margin-right:6px;
+        background-image:linear-gradient(180deg,#f7e7a3 0%,#d4af37 55%,#a67c00 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+      .t-luxe .msg.notify .nm { background-image:linear-gradient(180deg,#f0c48a,#cd7f32 55%,#8c5420); }
+      .t-luxe .msg.mention .nm { background-image:linear-gradient(180deg,#f3a0ad,#d4485f 55%,#912a3c); }
+      .t-luxe .msg.points .nm { background-image:linear-gradient(180deg,#d9bff5,#a06cd5 55%,#6a3fa0); }
+      .t-luxe .msg.donation .nm { background-image:linear-gradient(180deg,#9ce6c2,#3fae7a 55%,#22754e); }
+      .t-luxe .reply,.t-luxe .dono { font-size:.8em; }
+      .t-luxe .reply { color:#9c9280; font-style:italic; }
+      .t-luxe .dono { color:#3fae7a; font-weight:700; }
+    `,
+    render:(m)=>`
+      <div class="msg ${typeClass(m)}">
+        ${m.reply?`<div class="reply">↩ @${m.reply.name}: ${escapeHtml(m.reply.text)}</div>`:''}
+        ${m.donation?`<div class="dono">💰 ${m.donation}</div>`:''}
+        <span class="plat ${m.platform}">${m.plat}</span>
+        ${m.badges.map(b=>`<span class="badge ${b[0]}">${b[1]}</span>`).join('')}
+        <span class="nm">${m.name}</span>${renderParts(m.parts)}
+      </div>`
+  },
 ];
 
 // ===== Рендер сетки =====
@@ -701,7 +836,7 @@ let allCss = '';
 
 const slugs = ['default','box','glass','twitch','outline','neon','bubble','accent','pastel','term',
   'ticker','hcards','discord','vapor','material','comic','frost','gborder','lower',
-  'pinksoft','pinkneon','blackbox'];
+  'pinksoft','pinkneon','blackbox','sticky','paper','hud','chalk','luxe'];
 
 themes.forEach((th, idx)=>{
   allCss += th.css;

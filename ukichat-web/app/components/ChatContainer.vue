@@ -24,6 +24,11 @@ import {
   ThemesPinkSoftChatMessage,
   ThemesPinkNeonChatMessage,
   ThemesBlackBoxChatMessage,
+  ThemesStickyNoteChatMessage,
+  ThemesNewspaperChatMessage,
+  ThemesCyberHudChatMessage,
+  ThemesChalkboardChatMessage,
+  ThemesGoldLuxeChatMessage,
 } from '#components'
 
 const THEME_COMPONENTS: Record<string, unknown> = {
@@ -47,6 +52,11 @@ const THEME_COMPONENTS: Record<string, unknown> = {
   ThemesPinkSoftChatMessage,
   ThemesPinkNeonChatMessage,
   ThemesBlackBoxChatMessage,
+  ThemesStickyNoteChatMessage,
+  ThemesNewspaperChatMessage,
+  ThemesCyberHudChatMessage,
+  ThemesChalkboardChatMessage,
+  ThemesGoldLuxeChatMessage,
 }
 
 const props = withDefaults(defineProps<{
