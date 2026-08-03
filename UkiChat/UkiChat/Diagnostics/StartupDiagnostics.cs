@@ -25,9 +25,11 @@ public static class StartupDiagnostics
         // Сразу пишем шапку, чтобы файл создавался в момент первого обращения
         WriteRaw($"=== UkiChat startup diagnostics ===");
         WriteRaw($"Started at: {_startedAt:O}");
-        // BaseDir — то, от чего теперь считаются все пути; CWD оставлен для диагностики
-        // расхождений (запуск ярлыком с чужой "Рабочей папкой").
+        // BaseDir — каталог с exe, DataDir — каталог пользовательских данных (они разъезжаются,
+        // если не включён портативный режим); CWD оставлен для диагностики расхождений
+        // (запуск ярлыком с чужой "Рабочей папкой").
         WriteRaw($"BaseDir: {AppPaths.BaseDirectory}");
+        WriteRaw($"DataDir: {AppPaths.DataDirectory} ({AppPaths.DataDirectoryReason})");
         WriteRaw($"CWD: {Directory.GetCurrentDirectory()}");
         WriteRaw($"OS: {Environment.OSVersion} ({(Environment.Is64BitOperatingSystem ? "x64" : "x86")})");
         WriteRaw($"CLR: {Environment.Version}");

@@ -1,5 +1,7 @@
 ﻿# Пароль БД сюда НЕ кладём: ключ генерируется случайно при первом запуске и хранится
-# рядом с exe в ukichat.key под DPAPI. См. Configuration/DatabaseKeyProvider.cs.
+# в ukichat.key под DPAPI. См. Configuration/DatabaseKeyProvider.cs.
+# Относительное имя файла считается от каталога данных (%APPDATA%\UkiChat, либо каталог с exe
+# в портативном режиме) — см. Configuration/AppPaths.cs.
 [database]
 filename = "ukichat.db"
 # Twitch: только реквизиты приложения с dev.twitch.tv.

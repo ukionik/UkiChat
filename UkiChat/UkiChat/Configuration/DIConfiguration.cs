@@ -37,6 +37,10 @@ public static class DIConfiguration
 
         var appSettings = services.BuildServiceProvider().GetRequiredService<DefaultAppSettings>();
 
+        // Строго до первого обращения к базе и к ключу: переносит данные из установки, которая
+        // держала их рядом с exe. Обратный порядок завёл бы чистую базу поверх ненайденной старой.
+        LegacyDataMigrator.MigrateIfNeeded();
+
         var databasePath = AppPaths.ResolveDataPath(appSettings.Database.Filename);
         StartupDiagnostics.Log("database", $"Файл БД: {databasePath}");
 
