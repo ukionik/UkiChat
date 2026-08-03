@@ -206,25 +206,30 @@ public class AppInitializationService(
             return;
         }
 
+        // Клиент поднимаем ПЕРВЫМ делом, ещё до разбора токена. Проверка (validate), обновление
+        // (refresh) и обмен кода на токены идут через этот же TwitchApiService и падают на
+        // EnsureInitialized, если объект не создан. Раньше порядок был обратный, и на старте с
+        // сохранённой авторизацией RefreshTwitchUserTokenAsync падал первой же строкой: до
+        // InitializeAsync дело не доходило никогда, повторы натыкались на то же самое, а чат
+        // уезжал в IRC с протухшим токеном и не поднимался до повторного входа руками.
+        // Инициализируем ВСЕГДА, даже с пустым токеном: без API не получить и первый токен.
+        await twitchApiService.InitializeAsync(twitchSettings.ApiClientId, twitchSettings.UserAccessToken ?? "");
+
         // Отдельного токена приложения (client_credentials) больше нет: Helix ходит токеном
         // авторизованного пользователя — он принимается всеми вызовами, которые нам нужны
-        // (бейджи, users, streams, награды, EventSub). Поэтому сначала приводим в порядок
-        // пользовательский токен, и только потом инициализируем API уже свежим значением.
+        // (бейджи, users, streams, награды, EventSub).
         await RefreshTwitchUserTokenAsync(twitchSettings);
 
-        // Перечитываем: RefreshTwitchUserTokenAsync пишет новые токены в БД, а объект
-        // twitchSettings остался с теми, что были прочитаны до обновления.
-        var userAccessToken = databaseContext.TwitchSettingsRepository.GetActiveSettings().UserAccessToken;
+        // Перечитываем: RefreshTwitchUserTokenAsync пишет новые токены в БД (или снимает
+        // авторизацию), а объект twitchSettings остался с теми, что были прочитаны до обновления.
+        var userAccessToken = databaseContext.TwitchSettingsRepository.GetActiveSettings().UserAccessToken ?? "";
         if (string.IsNullOrEmpty(userAccessToken))
             StartupDiagnostics.Log("app-init",
                 "[Twitch] Нет авторизации пользователя — Helix-вызовы работать не будут, поднимаем API только под OAuth");
 
-        // Инициализируем ВСЕГДА, даже с пустым токеном. Обмен кода на токены (OAuth-callback)
-        // идёт через этот же TwitchApiService и падает на EnsureInitialized, если объект не
-        // создан, — а именно этим вызовом первый токен и добывается. Получилась бы петля:
-        // без токена нет API, без API не получить токен. Сам обмен access-токен не использует,
-        // ему хватает client_id/client_secret, которые передаются аргументами.
-        await twitchApiService.InitializeAsync(twitchSettings.ApiClientId, userAccessToken ?? "");
+        // Токен изменился — пересоздаём клиент с ним, иначе Helix продолжил бы ходить старым.
+        if (userAccessToken != (twitchSettings.UserAccessToken ?? ""))
+            await twitchApiService.InitializeAsync(twitchSettings.ApiClientId, userAccessToken);
     }
 
     private async Task RefreshTwitchUserTokenAsync(TwitchSettings twitchSettings)
