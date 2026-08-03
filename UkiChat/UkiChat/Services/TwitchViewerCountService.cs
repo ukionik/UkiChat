@@ -43,10 +43,18 @@ public class TwitchViewerCountService : ITwitchViewerCountService
         try
         {
             var settings = _databaseContext.TwitchSettingsRepository.GetActiveSettings();
+
+            // Канал очистили — гасим счётчик и время эфира. Раньше опрос просто выходил, и в
+            // статус-баре навсегда зависало последнее значение уже отключённой площадки.
+            if (string.IsNullOrEmpty(settings.Channel))
+            {
+                _eventAggregator.GetEvent<TwitchViewerCountUpdatedEvent>().Publish(null);
+                _eventAggregator.GetEvent<TwitchStreamStartedAtUpdatedEvent>().Publish(null);
+                return;
+            }
+
             // Helix ходит токеном авторизованного пользователя; без авторизации счётчик молчит.
-            if (string.IsNullOrEmpty(settings.ApiClientId)
-                || string.IsNullOrEmpty(settings.UserAccessToken)
-                || string.IsNullOrEmpty(settings.Channel))
+            if (string.IsNullOrEmpty(settings.ApiClientId) || string.IsNullOrEmpty(settings.UserAccessToken))
                 return;
 
             await _twitchApiService.InitializeAsync(settings.ApiClientId, settings.UserAccessToken);

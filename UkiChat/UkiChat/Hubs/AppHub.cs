@@ -24,6 +24,8 @@ public class AppHub : Hub
     private readonly ITwitchAuthService _twitchAuthService = ContainerLocator.Container.Resolve<ITwitchAuthService>();
     private readonly IDonationAlertsService _donationAlertsService = ContainerLocator.Container.Resolve<IDonationAlertsService>();
     private readonly ITwitchViewerCountService _twitchViewerCountService = ContainerLocator.Container.Resolve<ITwitchViewerCountService>();
+    private readonly IVkVideoLiveViewerCountService _vkVideoLiveViewerCountService = ContainerLocator.Container.Resolve<IVkVideoLiveViewerCountService>();
+    private readonly IYouTubeViewerCountService _youTubeViewerCountService = ContainerLocator.Container.Resolve<IYouTubeViewerCountService>();
     private readonly IFrontendReadyService _frontendReadyService = ContainerLocator.Container.Resolve<IFrontendReadyService>();
 
     public override Task OnConnectedAsync()
@@ -154,16 +156,25 @@ public class AppHub : Hub
             () => Task.FromResult(_databaseService.GetActiveAppSettingsData()));
     }
 
+    // Счётчик зрителей после смены канала опрашивается сразу: сам по себе он ходит раз в минуту,
+    // и до следующего тика в статус-баре висело бы значение прошлого канала (а после очистки —
+    // значение уже отключённой площадки).
     public Task ChangeTwitchChannel(string newChannel)
     {
-        return Measure($"{nameof(ChangeTwitchChannel)}({newChannel})",
-            () => _twitchChatService.ChangeChannelAsync(newChannel));
+        return Measure($"{nameof(ChangeTwitchChannel)}({newChannel})", async () =>
+        {
+            await _twitchChatService.ChangeChannelAsync(newChannel);
+            await _twitchViewerCountService.PollNowAsync();
+        });
     }
 
     public Task ChangeVkVideoLiveChannel(string newChannel)
     {
-        return Measure($"{nameof(ChangeVkVideoLiveChannel)}({newChannel})",
-            () => _vkVideoLiveChatService.ChangeChannelAsync(newChannel));
+        return Measure($"{nameof(ChangeVkVideoLiveChannel)}({newChannel})", async () =>
+        {
+            await _vkVideoLiveChatService.ChangeChannelAsync(newChannel);
+            await _vkVideoLiveViewerCountService.PollNowAsync();
+        });
     }
 
     public Task UpdateTwitchSettings(TwitchSettingsData settings)
@@ -187,8 +198,11 @@ public class AppHub : Hub
 
     public Task ChangeYouTubeChannel(string newChannel)
     {
-        return Measure($"{nameof(ChangeYouTubeChannel)}({newChannel})",
-            () => _youTubeChatService.ChangeChannelAsync(newChannel));
+        return Measure($"{nameof(ChangeYouTubeChannel)}({newChannel})", async () =>
+        {
+            await _youTubeChatService.ChangeChannelAsync(newChannel);
+            await _youTubeViewerCountService.PollNowAsync();
+        });
     }
 
     public Task UpdateYouTubeSettings(YouTubeSettingsData settings)

@@ -28,6 +28,8 @@ public class YouTubeViewerCountService : IYouTubeViewerCountService
         _ = RunAsync();
     }
 
+    public Task PollNowAsync() => PollAsync();
+
     private async Task RunAsync()
     {
         await PollAsync();
@@ -41,8 +43,13 @@ public class YouTubeViewerCountService : IYouTubeViewerCountService
         try
         {
             var settings = _databaseContext.YouTubeSettingsRepository.GetActiveSettings();
+
+            // Канал очистили — гасим счётчик, иначе в статус-баре зависает последнее значение.
             if (string.IsNullOrEmpty(settings.Channel))
+            {
+                _eventAggregator.GetEvent<YouTubeViewerCountUpdatedEvent>().Publish(null);
                 return;
+            }
 
             var viewerCount = await _youTubeApiService.GetViewerCountAsync(settings.Channel);
             _eventAggregator.GetEvent<YouTubeViewerCountUpdatedEvent>().Publish(viewerCount);

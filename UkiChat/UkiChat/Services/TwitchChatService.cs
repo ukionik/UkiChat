@@ -629,6 +629,10 @@ public class TwitchChatService : ITwitchChatService
             // Намеренное отключение — гасим перезаход после авто-реконнекта.
             _intentionalDisconnect = true;
             _channelName = "";
+            // Вместе с каналом обязательно сбрасываем и его broadcasterId: иначе в базе рядом
+            // с пустым каналом оставался id прошлого, и значки с эмотами того канала считались
+            // актуальными.
+            _broadcasterId = "";
             UpdateTwitchDbSettings(twitchSettings);
             if (oldChannel != null)
                 await _twitchClient.LeaveChannelAsync(oldChannel);

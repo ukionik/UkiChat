@@ -28,6 +28,8 @@ public class VkVideoLiveViewerCountService : IVkVideoLiveViewerCountService
         _ = RunAsync();
     }
 
+    public Task PollNowAsync() => PollAsync();
+
     private async Task RunAsync()
     {
         await PollAsync();
@@ -41,7 +43,15 @@ public class VkVideoLiveViewerCountService : IVkVideoLiveViewerCountService
         try
         {
             var settings = _databaseContext.VkVideoLiveSettingsRepository.GetActiveSettings();
-            if (string.IsNullOrEmpty(settings.ApiAccessToken) || string.IsNullOrEmpty(settings.Channel))
+
+            // Канал очистили — гасим счётчик, иначе в статус-баре зависает последнее значение.
+            if (string.IsNullOrEmpty(settings.Channel))
+            {
+                _eventAggregator.GetEvent<VkVideoLiveViewerCountUpdatedEvent>().Publish(null);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(settings.ApiAccessToken))
                 return;
 
             var viewerCount = await _vkVideoLiveApiService.GetViewerCountAsync(settings.ApiAccessToken, settings.Channel);

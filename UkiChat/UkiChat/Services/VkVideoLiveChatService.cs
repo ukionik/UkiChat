@@ -138,20 +138,25 @@ public class VkVideoLiveChatService : IVkVideoLiveChatService
         if (oldChannel == newChannel)
             return;
 
-        if (string.IsNullOrEmpty(vkVideoLiveSettings.ApiAccessToken))
-            return;
-        
         // Останавливаем переподключение к старому каналу
         _intentionalDisconnect = true;
         CancelReconnectLoop();
 
+        // Очистка канала разбирается ДО проверки токена: отключиться от площадки нужно уметь
+        // всегда, даже когда доступа к API нет — иначе поле в настройках очистить невозможно.
         if (newChannel.Length == 0)
         {
+            // Раньше здесь обнулялся только _channelId, а _channelName оставался со старым
+            // значением — и UpdateVkVideoLiveDbSettings записывал очищенный канал обратно.
+            _channelName = "";
             _channelId = 0;
             UpdateVkVideoLiveDbSettings(vkVideoLiveSettings);
             await _chatClient.DisconnectAsync();
             return;
         }
+
+        if (string.IsNullOrEmpty(vkVideoLiveSettings.ApiAccessToken))
+            return;
 
         var channelInfo = await _vkVideoLiveApiService.GetChannelInfoAsync(
             vkVideoLiveSettings.ApiAccessToken, newChannel);

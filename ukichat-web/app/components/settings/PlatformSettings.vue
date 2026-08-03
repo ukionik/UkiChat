@@ -27,15 +27,17 @@ const { t } = useI18n()
 
 const activeSub = ref('twitch')
 
+// Пустой канал — это не ошибка ввода, а штатный способ отключить площадку. Раньше на пустом
+// поле валидатор показывал отладочный текст "Test", оставшийся от первой версии формы.
 const schema = v.object({
   twitch: v.object({
-    channel: v.pipe(v.string(), v.minLength(1, 'Test'))
+    channel: v.string()
   }),
   vkVideoLive: v.object({
-    channel: v.pipe(v.string(), v.minLength(1, 'Test'))
+    channel: v.string()
   }),
   youTube: v.object({
-    channel: v.pipe(v.string(), v.minLength(1, 'Test'))
+    channel: v.string()
   }),
 })
 
