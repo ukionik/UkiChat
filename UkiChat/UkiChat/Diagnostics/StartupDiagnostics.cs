@@ -24,6 +24,7 @@ public static class StartupDiagnostics
 
         // Сразу пишем шапку, чтобы файл создавался в момент первого обращения
         WriteRaw($"=== UkiChat startup diagnostics ===");
+        WriteRaw($"Version: {AppInfo.VersionWithConfiguration}");
         WriteRaw($"Started at: {_startedAt:O}");
         // BaseDir — каталог с exe, DataDir — каталог пользовательских данных (они разъезжаются,
         // если не включён портативный режим); CWD оставлен для диагностики расхождений

@@ -124,6 +124,12 @@ public static class DIConfiguration
             .WriteTo.Async(a => a.File(AppPaths.LogFile(fileName), rollingInterval: rollingInterval))
             .CreateLogger();
 
+        // Первой строкой — версия: логи присылают по одному файлу, без соседнего startup-лога,
+        // и иначе непонятно, на какой сборке воспроизводилось.
+        // (Файл с суточной ротацией получает шапку только в день запуска — это допустимо:
+        // точная версия там же, в startup-логе за ту же сессию.)
+        logger.Information("UkiChat {Version}", AppInfo.VersionWithConfiguration);
+
         Loggers.Add(logger);
         return logger;
     }

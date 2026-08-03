@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using Prism.Commands;
@@ -96,7 +95,7 @@ public class MainWindowViewModel : BindableBase
     public DelegateCommand OpenSettingsWindowCommand { get; }
     public DelegateCommand ToggleTopMostCommand { get; }
 
-    public string AppVersion { get; } = BuildAppVersion();
+    public string AppVersion { get; } = AppInfo.Version;
 
     private bool _isTopMost;
     public bool IsTopMost
@@ -222,12 +221,6 @@ public class MainWindowViewModel : BindableBase
         if (!_twitchStreamStartedAt.HasValue) return;
         var elapsed = DateTime.UtcNow - _twitchStreamStartedAt.Value;
         StreamUptimeDisplay = elapsed.ToString(@"h\:mm\:ss");
-    }
-
-    private static string BuildAppVersion()
-    {
-        var v = Assembly.GetExecutingAssembly().GetName().Version!;
-        return $"{v.Major}.{v.Minor}.{v.Build}";
     }
 
     private void OpenProfileWindow()
