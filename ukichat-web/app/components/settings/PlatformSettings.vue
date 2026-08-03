@@ -49,6 +49,33 @@ watch(() => props.twitchChannel, val => { state.twitch.channel = val }, { immedi
 watch(() => props.twitchShowStreamUptime, val => { state.twitch.showStreamUptime = val }, { immediate: true })
 watch(() => props.vkVideoLiveChannel, val => { state.vkVideoLive.channel = val }, { immediate: true })
 watch(() => props.youTubeChannel, val => { state.youTube.channel = val }, { immediate: true })
+
+// Канал сохранялся ТОЛЬКО по blur. Окно настроек закрывается вместе с WebView2, и браузер
+// в этот момент blur уже не шлёт — введённый канал терялся, если окно закрыли, не уводя
+// курсор из поля. Чаще всего это ловилось на первом запуске: канал вводят один раз и сразу
+// закрывают настройки. Поэтому дублируем сохранение с задержкой после того, как перестали
+// печатать, а blur и Enter сохраняют сразу, без ожидания.
+const SAVE_DEBOUNCE_MS = 800
+const saveTimers: Record<string, ReturnType<typeof setTimeout> | undefined> = {}
+
+type SaveEvent = 'save-twitch' | 'save-vk' | 'save-youtube'
+
+function saveNow(event: SaveEvent, channel: string) {
+  clearTimeout(saveTimers[event])
+  saveTimers[event] = undefined
+  emit(event, channel)
+}
+
+// Вешается на update:model-value, а не на watch состояния: watch срабатывал бы и на
+// значения, приехавшие с бэкенда, и гонял бы их обратно.
+function saveLater(event: SaveEvent, channel: string) {
+  clearTimeout(saveTimers[event])
+  saveTimers[event] = setTimeout(() => saveNow(event, channel), SAVE_DEBOUNCE_MS)
+}
+
+onBeforeUnmount(() => {
+  Object.values(saveTimers).forEach(clearTimeout)
+})
 </script>
 
 <template>
@@ -76,7 +103,12 @@ watch(() => props.youTubeChannel, val => { state.youTube.channel = val }, { imme
     <UForm :schema="schema" :state="state" class="p-6 space-y-4 max-w-xl">
       <template v-if="activeSub === 'twitch'">
         <HorizontalFormField :label="t('settings.channel')" name="twitch.channel">
-          <UInput v-model="state.twitch.channel" @blur="emit('save-twitch', state.twitch.channel)" />
+          <UInput
+            v-model="state.twitch.channel"
+            @update:model-value="saveLater('save-twitch', String($event))"
+            @blur="saveNow('save-twitch', state.twitch.channel)"
+            @keyup.enter="saveNow('save-twitch', state.twitch.channel)"
+          />
         </HorizontalFormField>
         <HorizontalFormField :label="t('settings.twitch.showStreamUptime')" name="twitch.showStreamUptime">
           <UCheckbox
@@ -111,12 +143,22 @@ watch(() => props.youTubeChannel, val => { state.youTube.channel = val }, { imme
       </template>
       <template v-if="activeSub === 'vkVideoLive'">
         <HorizontalFormField :label="t('settings.channel')" name="vkVideoLive.channel">
-          <UInput v-model="state.vkVideoLive.channel" @blur="emit('save-vk', state.vkVideoLive.channel)" />
+          <UInput
+            v-model="state.vkVideoLive.channel"
+            @update:model-value="saveLater('save-vk', String($event))"
+            @blur="saveNow('save-vk', state.vkVideoLive.channel)"
+            @keyup.enter="saveNow('save-vk', state.vkVideoLive.channel)"
+          />
         </HorizontalFormField>
       </template>
       <template v-if="activeSub === 'youTube'">
         <HorizontalFormField :label="t('settings.channel')" name="youTube.channel">
-          <UInput v-model="state.youTube.channel" @blur="emit('save-youtube', state.youTube.channel)" />
+          <UInput
+            v-model="state.youTube.channel"
+            @update:model-value="saveLater('save-youtube', String($event))"
+            @blur="saveNow('save-youtube', state.youTube.channel)"
+            @keyup.enter="saveNow('save-youtube', state.youTube.channel)"
+          />
         </HorizontalFormField>
       </template>
     </UForm>

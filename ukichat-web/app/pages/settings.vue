@@ -47,7 +47,12 @@ const state = reactive({
 const twitchAuth = ref<TwitchAuthStatus>({ authorized: false, login: null })
 const donationAlertsAuth = ref<DonationAlertsAuthStatus>({ authorized: false, name: null })
 
+// Локальную копию канала обязательно держим в актуальном виде: updateTwitchShowStreamUptime
+// шлёт канал вместе с флагом, а UpdateTwitchSettings на бэкенде перезаписывает им поле в БД.
+// Пока копия обновлялась только в loadState, галочка "время эфира" откатывала канал на тот,
+// что был при открытии настроек — на первом запуске пустой, то есть просто стирала его.
 async function changeTwitchChannel(channel: string) {
+  state.settings.twitch.channel = channel
   await invokeUpdate('ChangeTwitchChannel', channel)
 }
 
@@ -60,10 +65,12 @@ async function updateTwitchShowStreamUptime(showStreamUptime: boolean) {
 }
 
 async function changeVkVideoLiveChannel(channel: string) {
+  state.settings.vkVideoLive.channel = channel
   await invokeUpdate('ChangeVkVideoLiveChannel', channel)
 }
 
 async function changeYouTubeChannel(channel: string) {
+  state.settings.youTube.channel = channel
   await invokeUpdate('ChangeYouTubeChannel', channel)
 }
 
