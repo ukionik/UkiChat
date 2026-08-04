@@ -9,6 +9,7 @@ using Xunit.Abstractions;
 
 namespace UkiChat.Tests;
 
+[Trait(TestCategories.Category, TestCategories.Integration)]
 public class TwitchChatOauthTest(ITestOutputHelper testOutputHelper)
 {
     [Fact]

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UkiChat.Utils;
 
 namespace UkiChat.Model.Twitch;
 
@@ -27,7 +28,7 @@ public record TwitchWatchStreak(
 
         var displayName = tags.GetValueOrDefault("display-name", "");
         var color = tags.GetValueOrDefault("color", "");
-        var systemMsg = tags.GetValueOrDefault("system-msg", "").Replace("\\s", " ");
+        var systemMsg = IrcTagUtil.Unescape(tags.GetValueOrDefault("system-msg", ""));
 
         if (!int.TryParse(tags.GetValueOrDefault("msg-param-value", ""), out var streakCount))
             return null;

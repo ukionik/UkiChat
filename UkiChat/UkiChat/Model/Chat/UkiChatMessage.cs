@@ -35,7 +35,7 @@ public record UkiChatMessage(ChatPlatform Platform
         if (twitchMessage.ChatReply != null)
         {
             var parentColor = ColorUtil.GetDisplayNameColor(twitchMessage.ChatReply.ParentDisplayName, "");
-            var parentMsgBody = UnescapeIrcTagValue(twitchMessage.ChatReply.ParentMsgBody);
+            var parentMsgBody = IrcTagUtil.Unescape(twitchMessage.ChatReply.ParentMsgBody);
             replyTo = new UkiChatReplyInfo(
                 twitchMessage.ChatReply.ParentDisplayName,
                 parentColor,
@@ -97,7 +97,7 @@ public record UkiChatMessage(ChatPlatform Platform
     {
         var author = chatMessage.Data?.Author;
         var displayName = author?.DisplayName ?? author?.Nick ?? "Unknown";
-        var displayNameColor = ColorUtil.GetVkVideoLiveNickColor(author?.NickColor ?? 0);
+        var displayNameColor = ColorUtil.GetVkVideoLiveNickColor(author?.NickColor, displayName);
 
         // Собираем бейджи
         var badges = new List<string>();
@@ -136,7 +136,7 @@ public record UkiChatMessage(ChatPlatform Platform
         {
             var parentAuthor = parent.Author;
             var parentDisplayName = parentAuthor?.DisplayName ?? parentAuthor?.Nick ?? "Unknown";
-            var parentDisplayNameColor = ColorUtil.GetVkVideoLiveNickColor(parentAuthor?.NickColor ?? 0);
+            var parentDisplayNameColor = ColorUtil.GetVkVideoLiveNickColor(parentAuthor?.NickColor, parentDisplayName);
             var parentMessageParts = ParseVkVideoLiveContent(parent.Content);
 
             replyTo = new UkiChatReplyInfo(parentDisplayName, parentDisplayNameColor, parentMessageParts);
@@ -243,7 +243,9 @@ public record UkiChatMessage(ChatPlatform Platform
             // Ищем ник как отдельное слово, а не как подстроку внутри другого слова
             // (чтобы "uki" не срабатывал в "ukichat"). Перед ником допускается
             // символ "собаки" (@nick), но не буква/цифра другого слова.
-            var pattern = $@"(?<![\p{{L}}\p{{N}}_]){Regex.Escape(bareNick)}\b";
+            // Справа стоит такой же просмотр вперёд, а не \b: граница слова требует, чтобы
+            // последний символ ника был буквоцифрой, и ник вида "c++" не срабатывал никогда.
+            var pattern = $@"(?<![\p{{L}}\p{{N}}_]){Regex.Escape(bareNick)}(?![\p{{L}}\p{{N}}_])";
             if (Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
                 return this with { MessageType = UkiChatMessageType.Mention };
         }
@@ -257,7 +259,7 @@ public record UkiChatMessage(ChatPlatform Platform
             [new UkiChatMessagePart(UkiChatMessagePartType.Text, message)], MessageType: UkiChatMessageType.Notification, Id: Guid.NewGuid().ToString());
     }
 
-    private static string FormatDonationAmount(double amount, string currency)
+    internal static string FormatDonationAmount(double amount, string currency)
     {
         var symbol = currency?.ToUpperInvariant() switch
         {
@@ -379,7 +381,7 @@ public record UkiChatMessage(ChatPlatform Platform
         return parts;
     }
 
-    private static void ParseTextWithThirdPartyEmotes(string text, Dictionary<string, string>? thirdPartyEmotes, List<UkiChatMessagePart> parts)
+    internal static void ParseTextWithThirdPartyEmotes(string text, Dictionary<string, string>? thirdPartyEmotes, List<UkiChatMessagePart> parts)
     {
         if (string.IsNullOrEmpty(text))
             return;
@@ -430,7 +432,7 @@ public record UkiChatMessage(ChatPlatform Platform
             parts.Add(new UkiChatMessagePart(UkiChatMessagePartType.Text, currentText));
     }
 
-    private static void ParseTextWithLinks(string text, List<UkiChatMessagePart> parts)
+    internal static void ParseTextWithLinks(string text, List<UkiChatMessagePart> parts)
     {
         if (string.IsNullOrEmpty(text))
             return;
@@ -468,10 +470,6 @@ public record UkiChatMessage(ChatPlatform Platform
     private static bool IsUrl(string word) =>
         word.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
         word.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
-
-    // IRCv3 message tags кодируют спецсимволы: \s=пробел, \\=\, \:=;, \n=LF, \r=CR
-    private static string UnescapeIrcTagValue(string value) =>
-        value.Replace(@"\s", " ").Replace(@"\:", ";").Replace(@"\n", "\n").Replace(@"\r", "\r").Replace(@"\\", "\\");
 }
 
 /// <summary>

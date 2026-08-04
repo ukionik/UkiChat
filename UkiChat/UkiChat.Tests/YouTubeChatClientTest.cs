@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 
 namespace UkiChat.Tests;
 
+[Trait(TestCategories.Category, TestCategories.Integration)]
 public class YouTubeChatClientTest(ITestOutputHelper testOutputHelper)
 {
     // Канал для проверки спайка. Должен быть в эфире с включённым чатом.

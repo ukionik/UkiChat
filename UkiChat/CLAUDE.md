@@ -15,6 +15,12 @@ dotnet run --project UkiChat/UkiChat.csproj
 # Run tests
 dotnet test
 dotnet test --filter "ClassName"  # Run specific test class
+
+# Tests are split into unit and integration. Integration tests need network and a filled
+# app-settings.local.toml; some deliberately run for minutes listening to a live chat.
+# -p:SkipWebBuild=true skips the Nuxt build, which tests do not need.
+dotnet test -p:SkipWebBuild=true --filter "Category!=Integration"  # fast, offline
+dotnet test -p:SkipWebBuild=true --filter "Category=Integration"
 ```
 
 ## Configuration

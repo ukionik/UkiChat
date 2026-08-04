@@ -5,10 +5,16 @@
         <TargetFramework>net10.0-windows</TargetFramework>
         <UseWPF>true</UseWPF>
         <Nullable>enable</Nullable>
-        <AssemblyVersion>0.7.2.0</AssemblyVersion>
-        <FileVersion>0.7.2.0</FileVersion>
+        <AssemblyVersion>0.8.0.0</AssemblyVersion>
+        <FileVersion>0.8.0.0</FileVersion>
         <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
     </PropertyGroup>
+
+    <ItemGroup>
+      <!-- Юнит-тесты проверяют разбор сообщений напрямую: собирать TwitchLib-овый ChatMessage
+           ради вызова публичной обёртки непрактично, а сами функции разбора чистые. -->
+      <InternalsVisibleTo Include="UkiChat.Tests" />
+    </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Centrifugal.Centrifuge" Version="0.0.13" />
